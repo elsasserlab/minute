@@ -10,10 +10,16 @@ libraries = list(read_experiment_description())
 
 rule all:
     input:
-        expand(["igv/{library.name}.bw", "igv/{library.name}.tdf", "restricted/{library.name}.bam"], library=libraries)
+        expand([
+            "igv/{library.name}.bw",
+            "igv/{library.name}.tdf",
+            "restricted/{library.name}.bam",
+            "results/{library.name}.insertsizes.pdf",
+            "results/{library.name}.insertsizes.txt",
+        ], library=libraries)
 
 
-# TODO this needs to be replaced with a proper tool that can do this
+# TODO this needs to be replaced with a proper tool
 rule move_umi_to_header:
     output:
         fastq="noumi/{fastqbase}.interleaved.fastq.gz"
@@ -126,6 +132,22 @@ rule remove_exclude_regions:
         " > {output.bam}"
 
 
+rule insert_size_metrics:
+    output:
+        txt="results/{library}.insertsizes.txt",
+        pdf="results/{library}.insertsizes.pdf",
+    input:
+        bam="restricted/{library}.bam"
+    shell:
+        "picard"
+        " CollectInsertSizeMetrics"
+        " I={input.bam}"
+        " O={output.txt}"
+        " HISTOGRAM_FILE={output.pdf}"
+        " MINIMUM_PCT=0.5"
+        " STOP_AFTER=10000000"
+
+
 rule igvtools_count:
     output:
         tdf="igv/{library}.tdf"
@@ -140,12 +162,15 @@ rule igvtools_count:
         " {output.tdf}"
         " {input.chrom_sizes}"
 
+
 # TODO can genome_size be computed automatically?
+# TODO this is slow on tiny test datasets
 rule bigwig:
     output:
         bw="igv/{library}.bw"
     input:
-        bam="restricted/{library}.bam"
+        bam="restricted/{library}.bam",
+        bai="restricted/{library}.bai"
     shell:
         "bamCoverage"
         " -p max"
@@ -153,3 +178,12 @@ rule bigwig:
         " --effectiveGenomeSize {config[genome_size]}"
         " -b {input.bam}"
         " -o {output.bw}"
+
+
+rule samtools_index:
+    output:
+        "{name}.bai"
+    input:
+        "{name}.bam"
+    shell:
+        "samtools index {input} {output}"

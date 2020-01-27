@@ -11,4 +11,4 @@ dependencies:
   - je-suite
   - igvtools
   - deeptools
-  
+  - picard-tools
