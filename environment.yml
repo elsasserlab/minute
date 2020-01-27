@@ -5,6 +5,10 @@ channels:
 dependencies:
   - nomkl
   - snakemake-minimal
+  - samtools
   - cutadapt
   - bowtie2
-
+  - je-suite
+  - igvtools
+  - deeptools
+  

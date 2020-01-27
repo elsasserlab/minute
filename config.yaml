@@ -1,1 +1,14 @@
+# Configuration settings for the minute pipeline
+# Paths are given relative to the directory in which snakemake is run.
+
+# Path to the Bowtie2 index of the reference, without the .X.bt2 suffix
 indexed_reference: "ref/mm9"
+
+# Path to a BED file listing the regions to be excluded
+blacklist_bed: "dummy_blacklist.bed"
+
+# Chromosome lengths file (.chrom.sizes or .genome)
+chrom_sizes: "ref/mm9.chrom.sizes"
+
+# Effective genome size
+genome_size: 2150570000

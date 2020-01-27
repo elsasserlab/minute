@@ -10,7 +10,7 @@ libraries = list(read_experiment_description())
 
 rule all:
     input:
-        expand("restricted/{library.name}.bam", library=libraries)
+        expand(["igv/{library.name}.bw", "igv/{library.name}.tdf", "restricted/{library.name}.bam"], library=libraries)
 
 
 # TODO this needs to be replaced with a proper tool that can do this
@@ -124,3 +124,32 @@ rule remove_exclude_regions:
         " -abam {input.bam}"
         " -b {input.bed}"
         " > {output.bam}"
+
+
+rule igvtools_count:
+    output:
+        tdf="igv/{library}.tdf"
+    input:
+        bam="restricted/{library}.bam",
+        chrom_sizes=config["chrom_sizes"]
+    shell:
+        "igvtools"
+        " count"
+        " --extFactor 60"
+        " {input.bam}"
+        " {output.tdf}"
+        " {input.chrom_sizes}"
+
+# TODO can genome_size be computed automatically?
+rule bigwig:
+    output:
+        bw="igv/{library}.bw"
+    input:
+        bam="restricted/{library}.bam"
+    shell:
+        "bamCoverage"
+        " -p max"
+        " --normalizeUsing RPGC"
+        " --effectiveGenomeSize {config[genome_size]}"
+        " -b {input.bam}"
+        " -o {output.bw}"

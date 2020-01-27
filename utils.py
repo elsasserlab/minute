@@ -16,9 +16,9 @@ class Library(NamedTuple):
 def read_experiment_description():
     with open("experiment.tsv") as f:
         for line in f:
-            if line.startswith("#"):
+            line = line.strip()
+            if line.startswith("#") or not line:
                 continue
             fields = line.strip().split("\t")
             fields[1] = fields[1].lstrip("R")
             yield Library(*fields)
-
