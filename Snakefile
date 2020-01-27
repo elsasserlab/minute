@@ -1,48 +1,19 @@
-# kate: syntax Python;
-
 # TODO
 # - switch to interleaved files?
-
-from typing import NamedTuple
 from itertools import groupby
+from utils import read_experiment_description
 
 
 configfile: "config.yaml"
 
-
-
-class Library(NamedTuple):
-    sample: str
-    replicate: str
-    barcode: str
-    fastqbase: str
-
-    @property
-    def name(self):
-        return f"{self.sample}_replicate{self.replicate}"
-
-
-def read_experiment_description():
-    with open("experiment.tsv") as f:
-        for line in f:
-            if line.startswith("#"):
-                continue
-            fields = line.strip().split("\t")
-            fields[1] = fields[1].lstrip("R")
-            yield Library(*fields)
-
-
 libraries = list(read_experiment_description())
-
-demuxtargets = expand("demultiplexed/{library.name}_R{read}.fastq.gz", library=libraries, read=(1, 2))
-
-bams = expand("bam/{library.name}.bam", library=libraries)
 
 rule all:
     input:
-        bams
+        expand("restricted/{library.name}.bam", library=libraries)
 
 
+# TODO this needs to be replaced with a proper tool that can do this
 rule move_umi_to_header:
     output:
         fastq="noumi/{fastqbase}.interleaved.fastq.gz"
@@ -64,6 +35,7 @@ rule move_umi_to_header:
 
 
 rule barcodes:
+    """File with list of barcodes needed for demultiplexing"""
     output:
         barcodes_fasta="barcodes/{fastqbase}.fasta"
     run:
@@ -72,9 +44,6 @@ rule barcodes:
                 if library.fastqbase != wildcards.fastqbase:
                     continue
                 f.write(f">{library.name}\n^{library.barcode}\n")
-
-
-
 
 
 for key, items in groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=lambda lib: lib.fastqbase):
@@ -105,7 +74,7 @@ rule bowtie2:
     threads:
         20
     output:
-        bam="bam/{library}.bam"
+        bam="mapped/{library}.bam"
     input:
         r1="demultiplexed/{library}_R1.fastq.gz",
         r2="demultiplexed/{library}_R1.fastq.gz",
@@ -126,3 +95,32 @@ rule bowtie2:
         " 2> {log}"
         " "
         "| samtools sort -o {output.bam} -"
+
+
+# TODO have a look at UMI-tools also
+rule mark_duplicates:
+    """UMI-aware duplicate removal with je suite"""
+    output:
+        bam="dupmarked/{library}.bam",
+        metrics="dupmarked/{library}.metrics"
+    input:
+        bam="mapped/{library}.bam"
+    shell:
+        """
+        je markdupes MISMATCHES=1 REMOVE_DUPLICATES=TRUE SLOTS=-1 I={input.bam} O={output.bam} M={output.metrics}
+        """
+
+
+rule remove_exclude_regions:
+    output:
+        bam="restricted/{library}.bam"
+    input:
+        bam="dupmarked/{library}.bam",
+        bed=config["blacklist_bed"]
+    shell:
+        "bedtools"
+        " intersect"
+        " -v"
+        " -abam {input.bam}"
+        " -b {input.bed}"
+        " > {output.bam}"
