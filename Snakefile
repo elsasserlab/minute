@@ -1,5 +1,8 @@
 # kate: syntax Python;
 
+# TODO
+# - switch to interleaved files?
+
 from typing import NamedTuple
 from itertools import groupby
 
@@ -40,7 +43,24 @@ rule all:
         bams
 
 
-print("grouped")
+rule move_umi_to_header:
+    output:
+        fastq="noumi/{fastqbase}.interleaved.fastq.gz"
+    input:
+        r1="fastq/{fastqbase}_R1.fastq.gz",
+        r2="fastq/{fastqbase}_R2.fastq.gz",
+    shell:
+        "paste "
+        " <(zcat {input.r1} | paste - - - -)"
+        " <(zcat {input.r2} | paste - - - -)"
+        " "
+        "| awk -F $'\\t' -vOFS=$'\\n' "
+        "'{{ umi=substr($2, 1, 6); "
+        "sub(/\\s/, \":\" umi \" \", $1); "
+        "sub(/\\s/, \":\" umi \" \", $5); "
+        "$2 = substr($2, 7); "
+        "$4 = substr($4, 7); }};1'"
+        " | pigz > {output.fastq}"
 
 
 rule barcodes:
@@ -54,16 +74,17 @@ rule barcodes:
                 f.write(f">{library.name}\n^{library.barcode}\n")
 
 
+
+
+
 for key, items in groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=lambda lib: lib.fastqbase):
     items = list(items)
-    #print(key, list(items))
 
     rule:
         output:
             expand("demultiplexed/{library.name}_R{read}.fastq.gz", library=items, read=(1, 2))
         input:
-            r1="fastq/{fastqbase}_R1.fastq.gz".format(fastqbase=key),
-            r2="fastq/{fastqbase}_R2.fastq.gz".format(fastqbase=key),
+            fastq="noumi/{fastqbase}.interleaved.fastq.gz".format(fastqbase=key),
             barcodes_fasta="barcodes/{fastqbase}.fasta".format(fastqbase=key),
         params:
             r1=lambda wildcards: "demultiplexed/{name}_R1.fastq.gz",
@@ -72,12 +93,12 @@ for key, items in groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=
             "log/demultiplexed/{fastqbase}.log".format(fastqbase=key)
         shell:
             "cutadapt"
-            " -u 6"
+            " --interleaved"
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
             " -p {params.r2}"
-            " {input.r1}"
-            " {input.r2} > {log}"
+            " {input.fastq}"
+            " > {log}"
 
 
 rule bowtie2:
@@ -91,16 +112,17 @@ rule bowtie2:
     log:
         "log/bowtie2-{library}.log"
     # TODO
-    # - check bowtie2 options
+    # - --sensitive (instead of --fast) woul be default
     # - write uncompressed BAM?
-    # - filter unmapped reads directly? (-F 4)
+    # - filter unmapped reads directly? (samtools view -F 4 or bowtie2 --no-unal)
+    # - add RG header
     shell:
         "bowtie2"
         " -p {threads}"
         " -x {config[indexed_reference]}"
-        " -q"
         " -1 {input.r1}"
         " -2 {input.r2}"
         " --fast"
         " 2> {log}"
+        " "
         "| samtools sort -o {output.bam} -"
