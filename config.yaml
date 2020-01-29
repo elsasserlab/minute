@@ -12,3 +12,6 @@ chrom_sizes: "ref/mm9.chrom.sizes"
 
 # Effective genome size
 genome_size: 2150570000
+
+# Length of the 5' UMI
+umi_length: 6

@@ -19,25 +19,29 @@ rule all:
         ], library=libraries)
 
 
-# TODO this needs to be replaced with a proper tool
+rule clean:
+    shell:
+        "rm -rf noumi demultiplexed mapped dupmarked results restricted igv"
+
+
 rule move_umi_to_header:
     output:
-        fastq="noumi/{fastqbase}.interleaved.fastq.gz"
+        r1="noumi/{fastqbase}.1.fastq.gz",
+        r2="noumi/{fastqbase}.2.fastq.gz",
     input:
         r1="fastq/{fastqbase}_R1.fastq.gz",
         r2="fastq/{fastqbase}_R2.fastq.gz",
+    params:
+        umistring="N" * config['umi_length']
     shell:
-        "paste "
-        " <(zcat {input.r1} | paste - - - -)"
-        " <(zcat {input.r2} | paste - - - -)"
-        " "
-        "| awk -F $'\\t' -vOFS=$'\\n' "
-        "'{{ umi=substr($2, 1, 6); "
-        "sub(/\\s/, \":\" umi \" \", $1); "
-        "sub(/\\s/, \":\" umi \" \", $5); "
-        "$2 = substr($2, 7); "
-        "$4 = substr($4, 7); }};1'"
-        " | pigz > {output.fastq}"
+        "umi_tools "
+        " extract"
+        " --extract-method=string"
+        " -p {params.umistring}"
+        " -I {input.r1}"
+        " --read2-in={input.r2}"
+        " -S {output.r1}"
+        " --read2-out {output.r2}"
 
 
 rule barcodes:
@@ -59,7 +63,8 @@ for key, items in groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=
         output:
             expand("demultiplexed/{library.name}_R{read}.fastq.gz", library=items, read=(1, 2))
         input:
-            fastq="noumi/{fastqbase}.interleaved.fastq.gz".format(fastqbase=key),
+            r1="noumi/{fastqbase}.1.fastq.gz".format(fastqbase=key),
+            r2="noumi/{fastqbase}.2.fastq.gz".format(fastqbase=key),
             barcodes_fasta="barcodes/{fastqbase}.fasta".format(fastqbase=key),
         params:
             r1=lambda wildcards: "demultiplexed/{name}_R1.fastq.gz",
@@ -68,11 +73,11 @@ for key, items in groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=
             "log/demultiplexed/{fastqbase}.log".format(fastqbase=key)
         shell:
             "cutadapt"
-            " --interleaved"
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
             " -p {params.r2}"
-            " {input.fastq}"
+            " {input.r1}"
+            " {input.r2}"
             " > {log}"
 
 
@@ -87,7 +92,7 @@ rule bowtie2:
     log:
         "log/bowtie2-{library}.log"
     # TODO
-    # - --sensitive (instead of --fast) woul be default
+    # - --sensitive (instead of --fast) would be default
     # - write uncompressed BAM?
     # - filter unmapped reads directly? (samtools view -F 4 or bowtie2 --no-unal)
     # - add RG header
@@ -112,9 +117,15 @@ rule mark_duplicates:
     input:
         bam="mapped/{library}.bam"
     shell:
-        """
-        je markdupes MISMATCHES=1 REMOVE_DUPLICATES=TRUE SLOTS=-1 I={input.bam} O={output.bam} M={output.metrics}
-        """
+        "je"
+        " markdupes"
+        " MISMATCHES=1"
+        " REMOVE_DUPLICATES=TRUE"
+        " SLOTS=-1"
+        " SPLIT_CHAR=_"
+        " I={input.bam}"
+        " O={output.bam}"
+        " M={output.metrics}"
 
 
 rule remove_exclude_regions:

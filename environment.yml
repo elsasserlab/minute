@@ -12,3 +12,4 @@ dependencies:
   - igvtools
   - deeptools
   - picard-tools
+  - umi_tools
