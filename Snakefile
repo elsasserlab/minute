@@ -21,6 +21,8 @@ rule all:
             "igv/{library.name}.bw",
             "igv/{library.name}.tdf",
             "restricted/{library.name}.bam",
+            "restricted/{library.name}.flagstat.txt",
+            "restricted/{library.name}.idxstats.txt",
             "results/{library.name}.insertsizes.pdf",
             "results/{library.name}.insertsizes.txt",
         ], library=libraries),
@@ -226,3 +228,22 @@ rule samtools_index:
         "{name}.bam"
     shell:
         "samtools index {input} {output}"
+
+
+rule samtools_idxstats:
+    output:
+        txt="{name}.idxstats.txt"
+    input:
+        bam="{name}.bam",
+        bai="{name}.bai",
+    shell:
+        "samtools idxstats {input.bam} > {output.txt}"
+
+
+rule samtools_flagstat:
+    output:
+        txt="{name}.flagstat.txt"
+    input:
+        bam="{name}.bam"
+    shell:
+        "samtools flagstat {input.bam} > {output.txt}"
