@@ -1,5 +1,5 @@
 # Configuration settings for the minute pipeline
-# Paths are given relative to the directory in which snakemake is run.
+# Paths (unless absolute) are relative to the directory in which snakemake is run.
 
 # Path to the Bowtie2 index of the reference, without the .X.bt2 suffix
 indexed_reference: "ref/mm9"

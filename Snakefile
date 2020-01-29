@@ -171,10 +171,10 @@ rule bigwig:
     input:
         bam="restricted/{library}.bam",
         bai="restricted/{library}.bai"
+    threads: 1
     shell:
         "bamCoverage"
-        " -p max"
-        " --normalizeUsing RPGC"
+        " -p {threads}" # TODO " --normalizeUsing RPGC"
         " --effectiveGenomeSize {config[genome_size]}"
         " -b {input.bam}"
         " -o {output.bw}"
