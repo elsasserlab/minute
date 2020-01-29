@@ -13,3 +13,4 @@ dependencies:
   - deeptools
   - picard-tools
   - umi_tools
+  - fastqc
