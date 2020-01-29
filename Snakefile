@@ -8,6 +8,13 @@ configfile: "config.yaml"
 
 libraries = list(read_experiment_description())
 
+# Map a FASTQ prefix to list of libraries
+fastq_map = {
+    fastq_base: list(libs)
+    for fastq_base, libs in
+    groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=lambda lib: lib.fastqbase)
+}
+
 rule all:
     input:
         expand([
@@ -16,12 +23,33 @@ rule all:
             "restricted/{library.name}.bam",
             "results/{library.name}.insertsizes.pdf",
             "results/{library.name}.insertsizes.txt",
-        ], library=libraries)
+        ], library=libraries),
+        expand("fastqc/{fastq}_R{read}_fastqc.html",
+               fastq=fastq_map.keys(), read=(1, 2))
 
 
 rule clean:
     shell:
-        "rm -rf noumi demultiplexed mapped dupmarked results restricted igv"
+        "rm -rf"
+        " barcodes"
+        " noumi"
+        " demultiplexed"
+        " mapped"
+        " dupmarked"
+        " results"
+        " restricted"
+        " igv"
+        " fastqc"
+
+
+rule fastqc_input:
+    output:
+        "fastqc/{name}_fastqc.html"
+    input:
+        fastq="fastq/{name}.fastq.gz"
+    shell:
+        "fastqc -o fastqc {input.fastq}"
+        " && rm fastqc/{wildcards.name}_fastqc.zip"
 
 
 rule move_umi_to_header:
@@ -56,21 +84,21 @@ rule barcodes:
                 f.write(f">{library.name}\n^{library.barcode}\n")
 
 
-for key, items in groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=lambda lib: lib.fastqbase):
-    items = list(items)
+for fastq_base, libs in fastq_map.items():
 
     rule:
         output:
-            expand("demultiplexed/{library.name}_R{read}.fastq.gz", library=items, read=(1, 2))
+            expand("demultiplexed/{library.name}_R{read}.fastq.gz",
+                library=libs, read=(1, 2))
         input:
-            r1="noumi/{fastqbase}.1.fastq.gz".format(fastqbase=key),
-            r2="noumi/{fastqbase}.2.fastq.gz".format(fastqbase=key),
-            barcodes_fasta="barcodes/{fastqbase}.fasta".format(fastqbase=key),
+            r1="noumi/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
+            r2="noumi/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
+            barcodes_fasta="barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
         params:
             r1=lambda wildcards: "demultiplexed/{name}_R1.fastq.gz",
             r2=lambda wildcards: "demultiplexed/{name}_R2.fastq.gz",
         log:
-            "log/demultiplexed/{fastqbase}.log".format(fastqbase=key)
+            "log/demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
         shell:
             "cutadapt"
             " -g file:{input.barcodes_fasta}"
