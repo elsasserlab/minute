@@ -56,11 +56,11 @@ rule fastqc_input:
 
 rule move_umi_to_header:
     output:
-        r1="noumi/{fastqbase}.1.fastq.gz",
-        r2="noumi/{fastqbase}.2.fastq.gz",
+        r1="noumi/{name}.1.fastq.gz",
+        r2="noumi/{name}.2.fastq.gz",
     input:
-        r1="fastq/{fastqbase}_R1.fastq.gz",
-        r2="fastq/{fastqbase}_R2.fastq.gz",
+        r1="fastq/{name}_R1.fastq.gz",
+        r2="fastq/{name}_R2.fastq.gz",
     params:
         umistring="N" * config['umi_length']
     shell:
