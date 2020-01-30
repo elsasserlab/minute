@@ -24,7 +24,14 @@
    respectively.
 4. Copy the `config.yaml` file into `myexperiment/` and edit it as required.
 5. Create an `experiment.tsv` file describing your libraries (see below).
-6. Run `snakemake -s path/to/the/Snakefile`.
+6. Run `snakemake -p -s path/to/the/Snakefile`.
+
+The `-p` makes `snakemake` print the commands that it executes and can be
+omitted if you don’t want to see that.
+
+Additionally, you may want to run `snakemake` with the option `-n` first, which
+will only show which steps would be executed and not actually run them
+(“dry run”).
 
 
 ## The experiment.tsv file
