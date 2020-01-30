@@ -1,0 +1,19 @@
+# List of libraries
+#
+# Suffixes _R1.fastq.gz and _R2.fastq.gz will be added to the
+# FASTQ base name to create the actual file names.
+#
+# Columns: sample name, replicate id, barcode, FASTQ base name
+#
+IN_SL_CTR	1	CATGCTTA	testdata-Inp-100k
+IN_SL_CTR	2	GCACATCT	testdata-Inp-100k
+IN_SL_CTR	3	AGTTGCTT	testdata-Inp-100k
+IN_2i_CTR	1	GGTCCAGA	testdata-Inp-100k
+IN_2i_CTR	2	GTATAACA	testdata-Inp-100k
+IN_2i_CTR	3	AGGGTACT	testdata-Inp-100k
+H3K4m3_SL_CTR	1	CATGCTTA	testdata-H3K4m3-100k
+H3K4m3_SL_CTR	2	GCACATCT	testdata-H3K4m3-100k
+H3K4m3_SL_CTR	3	AGTTGCTT	testdata-H3K4m3-100k
+H3K4m3_2i_CTR	1	GGTCCAGA	testdata-H3K4m3-100k
+H3K4m3_2i_CTR	2	GTATAACA	testdata-H3K4m3-100k
+H3K4m3_2i_CTR	3	AGGGTACT	testdata-H3K4m3-100k
