@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-rm -r testrun
+rm -rf testrun
 mkdir testrun
 cd testrun
 cp ../minute-testdata/* .
