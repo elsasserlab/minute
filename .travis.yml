@@ -8,8 +8,8 @@ before_install:
   - source $HOME/miniconda/etc/profile.d/conda.sh
   - conda config --add channels bioconda --add channels conda-forge
   - conda info -a
-  - wget https://export.uppmax.uu.se/uppstore2018208/minute-testdata/minute-testdata-0.1.tar.gz
-  - tar xf minute-testdata-0.1.tar.gz
+  - wget https://export.uppmax.uu.se/uppstore2018208/minute-testdata/minute-testdata-0.2.tar.gz
+  - tar xf minute-testdata-0.2.tar.gz
 
 install:
   - conda env create -n testenv -f environment.yml

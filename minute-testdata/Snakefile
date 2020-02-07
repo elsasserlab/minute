@@ -1,0 +1,57 @@
+# TODO incomplete and untested, see README.md for rest
+
+# Minute pipeline test data
+#
+# Thes input files are expected to be in a fastq/ subdirectory:
+#
+# P1_H3K4m3_R1.fastq.gz
+# P1_H3K4m3_R2.fastq.gz
+# P1_Inp-PE_R1.fastq.gz
+# P1_Inp-PE_R2.fastq.gz
+
+
+rule all:
+    input:
+        "h3k4m3_R1.fastq.gz",
+        "h3k4m3_R2.fastq.gz",
+        "inp_R1.fastq.gz",
+        "inp_R2.fastq.gz",
+        "ref.fa",
+        "ref.chrom.sizes",
+        "blacklist.bed",
+
+
+rule blacklist:
+    output:
+        bed="blacklist.bed"
+    run:
+        with open(output.bed, "w") as f:
+            print("mini", 3_100_000, 3_150_000, sep="\t", file=f)
+
+
+rule download_mm9:
+    output:
+        "mm9.fa.gz"
+    shell:
+        "wget https://hgdownload.soe.ucsc.edu/goldenPath/mm9/bigZips/mm9.fa.gz"
+
+rule reference:
+    output: "ref.fa.gz"
+    input: "mm9.fa.gz"
+    shell:
+        """
+        gunzip mm9.fa.gz
+        samtools faidx mm9.fa.gz
+        samtools faidx mm9.fa chr19:1-3700000 | sed '1s/>.*/>mini chr19:1-3700000/' | bgzip > {output}
+        """
+
+rule chrom_sizes:
+    input: "ref.fa.gz"
+    output:
+        sizes="ref.chrom.sizes",
+        fai="ref.fa.gz.fai",
+    shell:
+        """
+        samtools faidx ref.fa.gz
+        cut -f1,2 ref.fa.gz.fai > {output.sizes}
+        """

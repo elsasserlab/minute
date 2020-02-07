@@ -8,4 +8,4 @@ cp ../minute-testdata/* .
 mkdir fastq
 mv *.fastq.gz fastq/
 bowtie2-build ref.fa.gz ref
-snakemake -j 1 -s ../Snakefile
+snakemake -p -j 1 -s ../Snakefile
