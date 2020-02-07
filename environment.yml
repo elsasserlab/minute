@@ -11,6 +11,6 @@ dependencies:
   - je-suite
   - igvtools
   - deeptools
-  - picard-tools
+  - picard
   - umi_tools
   - fastqc
