@@ -134,8 +134,20 @@ rule bowtie2:
         " -2 {input.r2}"
         " --fast"
         " 2> {log}"
-        " "
-        "| samtools sort -o {output.bam} -"
+        " > {output.sam}"
+
+rule sort_and_convert_to_sam:
+    threads:
+        10
+    output:
+        bam="mapped/{library}.bam"
+    input:
+        sam="mapped_sam/{library}.sam"
+    shell:
+        "samtools sort"
+        " -@ {threads}"
+        " {input.sam} "
+        " -o {output.bam}"
 
 
 # TODO have a look at UMI-tools also
