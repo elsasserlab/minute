@@ -14,3 +14,5 @@ dependencies:
   - picard
   - umi_tools
   - fastqc
+  - bedtools
+
