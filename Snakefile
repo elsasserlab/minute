@@ -136,18 +136,30 @@ rule bowtie2:
         " -1 {input.r1}"
         " -2 {input.r2}"
         " --fast"
+        " -S {output.sam}"
         " 2> {log}"
-        " | samtools sort > {output.sam}"
+        # " | samtools sort > {output.sam}"
+
+rule sort_sam:
+    output:
+        sam="mapped_sam_sorted/{library}.sam"
+    input:
+        sam="mapped_sam/{library}.sam"
+    shell:
+        "samtools sort"
+        " -O SAM"
+        " {input.sam}"
+        " > {output.sam}"
 
 rule convert_to_single_end:
     """Convert sam files to single-end for marking duplicates"""
     output:
         sam="mapped_sam_se/{library}.sam"
     input:
-        sam="mapped_sam/{library}.sam"
+        sam="mapped_sam_sorted/{library}.sam"
 
     run:
-        convert_paired_end_sam_to_single_end("{input.sam}", "{output.sam}")
+        convert_paired_end_sam_to_single_end(input.sam, output.sam)
 
 # TODO have a look at UMI-tools also
 rule mark_duplicates:
@@ -186,26 +198,27 @@ rule extract_duplicate_ids:
 
 rule build_dedup_pe_file:
     output:
-        sam="dedup_sam/{library}.sam"
+        sam="dedup_sam/{library}.sam",
     input:
         idlist="dupmarked_se/{library}.dupids.txt",
         sam="mapped_sam/{library}.sam"
 
     shell:
-        "grep ^@ {input.sam} > header.txt"
-        "fgrep -f {input.idlist} {input.sam} > reads.sam"
-        "cat header.txt reads.sam > {output.sam}"
+        # This includes the header, since no read IDs on it
+        "fgrep -vf {input.idlist} {input.sam} > {output.sam}; "
 
 
-rule convert_to_bam:
+rule sort_dedup_sam:
     output:
         bam="dedup_bam/{library}.bam"
     input:
         sam="dedup_sam/{library}.sam"
 
     shell:
-        "samtools view -Shb {input.sam} > {output.bam}"
-
+        "samtools sort"
+        " -O BAM"
+        " {input.sam}"
+        " > {output.bam}"
 
 rule remove_exclude_regions:
     output:
