@@ -17,13 +17,13 @@ See the `Snakefile`
 
 Map all reads to mm9 with BWA-MEM. It will soft-clip the UMI and barcode, so they can be left in:
 
-    bwa mem -t 16 /sw/data/igenomes/Mus_musculus/NCBI/GRCm38/Sequence/BWAIndex/genome.fa fastq/P1_H3K4m3_R* | samtools view -b - > h3k4m3.bam
-    bwa mem -t 16 /sw/data/igenomes/Mus_musculus/NCBI/GRCm38/Sequence/BWAIndex/genome.fa fastq/P1_Inp-PE_R* | samtools view -b - > inp.bam
+    bwa mem -t 14 /sw/data/igenomes/Mus_musculus/NCBI/GRCm38/Sequence/BWAIndex/genome.fa fastq/P1_H3K4m3_R* | samtools sort -@ 2 -m 2G -o h3k4m3.bam
+    bwa mem -t 16 /sw/data/igenomes/Mus_musculus/NCBI/GRCm38/Sequence/BWAIndex/genome.fa fastq/P1_Inp-PE_R* | samtools sort -@ 2 -m 2G -o inp.bam
 
 Pick names of all reads that map to chr19, position <= 3.7 Mbp:
 
-    samtools view h3k4m3.bam | awk '$3==19 && $4 <= 3700000 {print $1}' | sort -u > h3k4m3.target.txt
-    samtools view inp.bam | awk '$3==19 && $4 <= 3700000 {print $1}' | sort -u > inp.target.txt
+    samtools view h3k4m3.bam 19:1-3700000 | cut -f1 | sort -u > h3k4m3.target.txt
+    samtools view inp.bam 19:1-3700000 | cut -f1 | sort -u > inp.target.txt
 
 A couple of unmapped reads:
 
