@@ -122,7 +122,7 @@ rule bowtie2:
         bam="mapped/{library}.bam"
     input:
         r1="demultiplexed/{library}_R1.fastq.gz",
-        r2="demultiplexed/{library}_R1.fastq.gz",
+        r2="demultiplexed/{library}_R2.fastq.gz",
     log:
         "log/bowtie2-{library}.log"
     # TODO
