@@ -103,6 +103,7 @@ for fastq_base, libs in fastq_map.items():
             "log/demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
         shell:
             "cutadapt"
+            " -e 0.15"  # TODO determine from barcode length
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
             " -p {params.r2}"
