@@ -99,6 +99,7 @@ for fastq_base, libs in fastq_map.items():
         params:
             r1=lambda wildcards: "demultiplexed/{name}_R1.fastq.gz",
             r2=lambda wildcards: "demultiplexed/{name}_R2.fastq.gz",
+            fastqbase=fastq_base,
         log:
             "log/demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
         shell:
@@ -107,6 +108,8 @@ for fastq_base, libs in fastq_map.items():
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
             " -p {params.r2}"
+            " --untrimmed-output demultiplexed/{params.fastqbase}-unknown_R1.fastq.gz"
+            " --untrimmed-paired-output demultiplexed/{params.fastqbase}-unknown_R2.fastq.gz"
             " {input.r1}"
             " {input.r2}"
             " > {log}"
