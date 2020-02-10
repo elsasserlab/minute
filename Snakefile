@@ -209,7 +209,6 @@ rule igvtools_count:
 
 
 # TODO can genome_size be computed automatically?
-# TODO this is slow on tiny test datasets
 rule bigwig:
     output:
         bw="igv/{library}.bw"
@@ -219,7 +218,8 @@ rule bigwig:
     threads: 1
     shell:
         "bamCoverage"
-        " -p {threads}" # TODO " --normalizeUsing RPGC"
+        " -p {threads}"
+        " --normalizeUsing RPGC"
         " --effectiveGenomeSize {config[genome_size]}"
         " -b {input.bam}"
         " -o {output.bw}"
