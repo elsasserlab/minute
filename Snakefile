@@ -118,7 +118,7 @@ rule bowtie2:
     threads:
         20
     output:
-        bam="mapped_sam/{library}.sam"
+        sam="mapped_sam/{library}.sam"
     input:
         r1="demultiplexed/{library}_R1.fastq.gz",
         r2="demultiplexed/{library}_R1.fastq.gz",
@@ -156,7 +156,7 @@ rule mark_duplicates:
         sam="dupmarked_se/{library}.sam",
         metrics="dupmarked_se/{library}.metrics"
     input:
-        bam="mapped_sam_se/{library}.sam"
+        sam="mapped_sam_se/{library}.sam"
     # TODO: ASSUME_SORTED=True ?
     shell:
         "je"
@@ -181,20 +181,20 @@ rule extract_duplicate_ids:
         " -f 1024"
         " {input.sam} | "
         "cut"
-        " -f 1
+        " -f 1"
         " > {output.idlist}"
 
 rule build_dedup_pe_file:
     output:
-        sam="dedup/{library}.sam"
+        sam="dedup_sam/{library}.sam"
     input:
-        idlist="dupmarked_se/{library}.dupids.txt"
+        idlist="dupmarked_se/{library}.dupids.txt",
         sam="mapped_sam/{library}.sam"
 
     shell:
         "grep ^@ {input.sam} > header.txt"
         "fgrep -f {input.idlist} {input.sam} > reads.sam"
-        "cat header.txt reads.sam > {out.sam}"
+        "cat header.txt reads.sam > {output.sam}"
 
 
 rule convert_to_bam:
