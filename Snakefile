@@ -2,7 +2,7 @@
 # - switch to interleaved files?
 from itertools import groupby
 from utils import read_experiment_description
-
+from se_sam import convert_paired_end_sam_to_single_end
 
 configfile: "config.yaml"
 
@@ -36,8 +36,11 @@ rule clean:
         " barcodes"
         " noumi"
         " demultiplexed"
-        " mapped"
-        " dupmarked"
+        " mapped_sam"
+        " mapped_sam_se"
+        " dupmarked_se"
+        " dedup_sam"
+        " dedup_bam"
         " results"
         " restricted"
         " igv"
@@ -115,7 +118,7 @@ rule bowtie2:
     threads:
         20
     output:
-        bam="mapped/{library}.bam"
+        bam="mapped_sam/{library}.sam"
     input:
         r1="demultiplexed/{library}_R1.fastq.gz",
         r2="demultiplexed/{library}_R1.fastq.gz",
@@ -134,47 +137,81 @@ rule bowtie2:
         " -2 {input.r2}"
         " --fast"
         " 2> {log}"
-        " > {output.sam}"
+        " | samtools sort > {output.sam}"
 
-rule sort_and_convert_to_sam:
-    threads:
-        10
+rule convert_to_single_end:
+    """Convert sam files to single-end for marking duplicates"""
     output:
-        bam="mapped/{library}.bam"
+        sam="mapped_sam_se/{library}.sam"
     input:
         sam="mapped_sam/{library}.sam"
-    shell:
-        "samtools sort"
-        " -@ {threads}"
-        " {input.sam} "
-        " -o {output.bam}"
 
+    run:
+        convert_paired_end_sam_to_single_end("{input.sam}", "{output.sam}")
 
 # TODO have a look at UMI-tools also
 rule mark_duplicates:
-    """UMI-aware duplicate removal with je suite"""
+    """UMI-aware duplicate marking with je suite"""
     output:
-        bam="dupmarked/{library}.bam",
-        metrics="dupmarked/{library}.metrics"
+        sam="dupmarked_se/{library}.sam",
+        metrics="dupmarked_se/{library}.metrics"
     input:
-        bam="mapped/{library}.bam"
+        bam="mapped_sam_se/{library}.sam"
+    # TODO: ASSUME_SORTED=True ?
     shell:
         "je"
         " markdupes"
         " MISMATCHES=1"
-        " REMOVE_DUPLICATES=TRUE"
+        " REMOVE_DUPLICATES=FALSE"
         " SLOTS=-1"
         " SPLIT_CHAR=_"
-        " I={input.bam}"
-        " O={output.bam}"
+        " I={input.sam}"
+        " O={output.sam}"
         " M={output.metrics}"
+
+rule extract_duplicate_ids:
+    """Filter duplicate-flagged IDs"""
+    output:
+        idlist="dupmarked_se/{library}.dupids.txt"
+    input:
+        sam="dupmarked_se/{library}.sam"
+
+    shell:
+        "samtools view"
+        " -f 1024"
+        " {input.sam} | "
+        "cut"
+        " -f 1
+        " > {output.idlist}"
+
+rule build_dedup_pe_file:
+    output:
+        sam="dedup/{library}.sam"
+    input:
+        idlist="dupmarked_se/{library}.dupids.txt"
+        sam="mapped_sam/{library}.sam"
+
+    shell:
+        "grep ^@ {input.sam} > header.txt"
+        "fgrep -f {input.idlist} {input.sam} > reads.sam"
+        "cat header.txt reads.sam > {out.sam}"
+
+
+rule convert_to_bam:
+    output:
+        bam="dedup_bam/{library}.bam"
+    input:
+        sam="dedup_sam/{library}.sam"
+
+    shell:
+        "samtools view -Shb {input.sam} > {output.bam}"
 
 
 rule remove_exclude_regions:
     output:
         bam="restricted/{library}.bam"
     input:
-        bam="dupmarked/{library}.bam",
+        bam="dedup_bam/{library}.bam",
         bed=config["blacklist_bed"]
     shell:
         "bedtools"
