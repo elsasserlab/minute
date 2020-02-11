@@ -183,7 +183,10 @@ rule deduplicate_pe_file:
         proxy_bam="dupmarked/{library}.bam"
 
     run:
-        se_sam.mark_duplicates_by_proxy_bam(input.target_bam, output.proxy_bam)
+        se_sam.mark_duplicates_by_proxy_bam(
+            input.target_bam,
+            input.proxy_bam,
+            output.bam)
 
 
 rule remove_exclude_regions:
