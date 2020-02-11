@@ -153,7 +153,7 @@ rule sort_sam:
 rule convert_to_single_end:
     """Convert sam files to single-end for marking duplicates"""
     output:
-        sam="mapped_sam_se/{library}.sam"
+        sam=temp("mapped_sam_se/{library}.sam")
     input:
         sam="mapped_sam_sorted/{library}.sam"
 
