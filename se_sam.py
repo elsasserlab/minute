@@ -11,15 +11,40 @@ def convert_paired_end_to_single_end_bam(bam, out, keep_unmapped=False):
     Keyword arguments:
     keep_unmapped -- Keep unmapped reads
     """
-    with pysam.AlignmentFile(bam, "rb") as infile:
-        with pysam.AlignmentFile(out, 'wb', header=infile.header) as outfile:
-            for alignment in infile:
-                if is_read_valid(alignment, keep_unmapped):
-                    new_alignment = convert_to_single_end(alignment)
-                    outfile.write(new_alignment)
+    with pysam.AlignmentFile(bam, 'rb') as infile,\
+         pysam.AlignmentFile(out, 'wb', header=infile.header) as outfile:
+        for alignment in infile:
+            if is_read_valid(alignment, keep_unmapped):
+                new_alignment = convert_to_single_end(alignment)
+                outfile.write(new_alignment)
 
-def is_header(line):
-    return line.startswith('@')
+def get_duplicate_ids(bam):
+    idlist = []
+    with pysam.AlignmentFile(bam, 'rb') as bamfile:
+        for alignment in bamfile:
+            if alignment.is_duplicate:
+                idlist.append(alignment.id)
+    return idlist
+
+def mark_duplicates_by_proxy_bam(target_bam, proxy_bam, out, filter_dups=True):
+    """
+    Iterates through a pair of bam files, assumed to have the same
+    number of reads, sorted the same way. target_bam reads are marked as dups
+    if they are marked as such in the proxy_bam file.
+
+    Keyword argument:
+    filter_dups -- Remove duplicates in the output file.
+    """
+    with pysam.AlignmentFile(target_bam) as target_file,\
+         pysam.AlignmentFile(proxy_bam) as proxy_file,\
+         pysam.AlignmentFile(out, 'rb', header=target_bam.header) as outfile:
+
+        for proxy_alignment in proxy_file:
+            target_alignment = target_file.next()
+            target_alignment.is_duplicate = proxy_alignment.is_duplicate
+
+            if not target_alignment.is_duplicate or not filter_dups:
+                outfile.write(target_alignment)
 
 def is_read_valid(alignment, keep_unmapped):
     if alignment.is_read1:
