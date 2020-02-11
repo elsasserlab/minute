@@ -1,6 +1,5 @@
 import argparse
 import pysam
-import sys
 import tempfile
 
 from shutil import copyfile
@@ -22,7 +21,6 @@ def convert_paired_end_to_single_end_bam(bam, out, keep_unmapped=False):
 
 def get_duplicate_ids(bam):
     idlist = []
-
     with pysam.AlignmentFile(bam, 'rb') as bam_file:
         for alignment in bam_file:
             if alignment.is_duplicate:
@@ -30,7 +28,6 @@ def get_duplicate_ids(bam):
     return idlist
 
 def find_next_duplicate(alignment_file, read_id, out_file):
-
     alignment = next(alignment_file)
     while alignment.query_name != read_id:
         # These reads are not duplicates
