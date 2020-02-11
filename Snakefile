@@ -173,9 +173,9 @@ rule mark_duplicates:
         "je"
         " markdupes"
         " MISMATCHES=1"
-        " ASSUME_SORTED=TRUE"
         " REMOVE_DUPLICATES=FALSE"
         " SLOTS=-1"
+        " ASSUME_SORTED=TRUE"
         " SPLIT_CHAR=_"
         " I={input.sam}"
         " O={output.sam}"
@@ -236,7 +236,6 @@ rule remove_exclude_regions:
         " -b {input.bed}"
         " > {output.bam}"
 
-
 rule insert_size_metrics:
     output:
         txt="results/{library}.insertsizes.txt",
@@ -250,8 +249,9 @@ rule insert_size_metrics:
         " O={output.txt}"
         " HISTOGRAM_FILE={output.pdf}"
         " MINIMUM_PCT=0.5"
-        " STOP_AFTER=10000000"
-
+        " STOP_AFTER=10000000; "
+        "touch {output.txt}; "
+        "touch {output.pdf}"
 
 rule igvtools_count:
     output:
