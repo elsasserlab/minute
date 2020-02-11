@@ -3,6 +3,8 @@ import pysam
 import sys
 import tempfile
 
+from shutil import copyfile
+
 def convert_paired_end_to_single_end_bam(bam, out, keep_unmapped=False):
     """
     Iterates through a paired-end BAM file and keeps only the first
@@ -27,28 +29,48 @@ def get_duplicate_ids(bam):
                 idlist.append(alignment.query_name)
     return idlist
 
+def find_next_duplicate(alignment_file, read_id, out_file):
+
+    alignment = next(alignment_file)
+    while alignment.query_name != read_id:
+        # These reads are not duplicates
+        print(alignment.query_name)
+        out_file.write(alignment)
+        alignment = next(alignment_file)
+    return alignment
+
 def mark_duplicates_by_proxy_bam(target_bam, proxy_bam, out, filter_dups=True):
     """
-    Iterates through a pair of bam files, assumed to have the same
-    number of reads, sorted the same way. target_bam reads are marked as dups
-    if they are marked as such in the proxy_bam file.
+    Iterates through a pair of bam files, assumed to have IDs in the same order
+    (they come from the same sorted bam file). target_bam reads are marked as
+    dups if they are marked as such in the proxy_bam file.
 
     Keyword argument:
     filter_dups -- Remove duplicates in the output file.
     """
-    #TODO: Iterate in a smarter way: These bams are sorted, so it should not
-    # be necessary to check the whole list for each read.
+
     dup_ids = get_duplicate_ids(proxy_bam)
+
+    if not dup_ids:
+        copyfile(target_bam, out)
+        return
 
     with pysam.AlignmentFile(target_bam) as target_file,\
          pysam.AlignmentFile(out, 'wb', header=target_file.header) as out_file:
 
-        for target_alignment in target_file:
-            if target_alignment.query_name in dup_ids:
-                target_alignment.is_duplicate = True
+        for read_id in dup_ids:
+            target_alignment = find_next_duplicate(
+                target_file,
+                read_id,
+                out_file)
 
-            if not target_alignment.is_duplicate or not filter_dups:
+            target_alignment.is_duplicate = True
+            if not filter_dups:
                 out_file.write(target_alignment)
+
+        for remaining_alignment in target_file:
+            print(remaining_alignment.query_name)
+            out_file.write(remaining_alignment)
 
 def is_read_valid(alignment, keep_unmapped):
     if alignment.is_read1:
@@ -66,7 +88,7 @@ def strand_flag(alignment):
         return 0
 
 def convert_to_single_end(alignment):
-    alignment.flag = strand_flag(alignment)
+    # alignment.flag = strand_flag(alignment)
     alignment.is_paired = False
     alignment.is_read1 = False
     alignment.is_proper_pair = False
@@ -79,5 +101,5 @@ def convert_to_single_end(alignment):
 
 
 if __name__ == '__main__':
-    convert_paired_end_to_single_end_bam(sys.argv[1], 'test.bam')
-    # mark_duplicates_by_proxy_bam(sys.argv[1], sys.argv[2], 'test.bam')
+    # convert_paired_end_to_single_end_bam(sys.argv[1], 'test.bam')
+    mark_duplicates_by_proxy_bam(sys.argv[1], sys.argv[2], 'test.bam')
