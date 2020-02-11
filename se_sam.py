@@ -34,7 +34,6 @@ def find_next_duplicate(alignment_file, read_id, out_file):
     alignment = next(alignment_file)
     while alignment.query_name != read_id:
         # These reads are not duplicates
-        print(alignment.query_name)
         out_file.write(alignment)
         alignment = next(alignment_file)
     return alignment
@@ -69,7 +68,6 @@ def mark_duplicates_by_proxy_bam(target_bam, proxy_bam, out, filter_dups=True):
                 out_file.write(target_alignment)
 
         for remaining_alignment in target_file:
-            print(remaining_alignment.query_name)
             out_file.write(remaining_alignment)
 
 def is_read_valid(alignment, keep_unmapped):
@@ -81,14 +79,7 @@ def is_read_valid(alignment, keep_unmapped):
 
     return False
 
-def strand_flag(alignment):
-    if alignment.is_reverse:
-        return 16
-    else:
-        return 0
-
 def convert_to_single_end(alignment):
-    # alignment.flag = strand_flag(alignment)
     alignment.is_paired = False
     alignment.is_read1 = False
     alignment.is_proper_pair = False
@@ -98,8 +89,3 @@ def convert_to_single_end(alignment):
     alignment.next_reference_start = 0
     alignment.next_reference_name = None
     return alignment
-
-
-if __name__ == '__main__':
-    # convert_paired_end_to_single_end_bam(sys.argv[1], 'test.bam')
-    mark_duplicates_by_proxy_bam(sys.argv[1], sys.argv[2], 'test.bam')
