@@ -1,72 +1,47 @@
 import argparse
+import pysam
+import sys
 import tempfile
 
-
-def convert_paired_end_sam_to_single_end(sam, out, keep_unmapped=False, sep='\t'):
+def convert_paired_end_to_single_end_bam(bam, out, keep_unmapped=False):
     """
-    Manually iterates through a paired-end SAM file and keeps only the first
-    mate of each pair. Flags and mate-pair fields are changed accordingly.
+    Iterates through a paired-end BAM file and keeps only the first
+    mate of each pair.
 
     Keyword arguments:
-    keep_unmapped -- Keep unmapped reads (flag 0x04)
-    sep -- Separator between fields (this defaults to tab as in SAM specs)
-    
+    keep_unmapped -- Keep unmapped reads
     """
-
-    fi = open(sam)
-    fo = open(out, 'w')
-    flags_field = 1
-
-    for line in fi:
-        if is_header(line):
-            fo.write(line)
-
-        else:
-            fields = line.split(sep)
-            flags = fields[flags_field]
-            if valid_flag(flags, keep_unmapped):
-                new_alignment_fields = convert_to_single_end(fields)
-                fo.write(sep.join(new_alignment_fields))
-
-    fo.close()
-    fi.close()
+    with pysam.AlignmentFile(bam, "rb") as infile:
+        with pysam.AlignmentFile(out, 'wb', header=infile.header) as outfile:
+            for alignment in infile:
+                if is_read_valid(alignment, keep_unmapped):
+                    new_alignment = convert_to_single_end(alignment)
+                    outfile.write(new_alignment)
 
 def is_header(line):
-    if line.startswith('@'):
-        return True
+    return line.startswith('@')
+
+def is_read_valid(alignment, keep_unmapped):
+    if alignment.is_read1:
+        if keep_unmapped:
+            return True
+        elif not alignment.is_unmapped:
+            return True
+
     return False
 
-def valid_flag(flags, keep_unmapped):
-    # Bits for unmapped and second in pair need to be zero
-    discard_mask = 0x84
-    if keep_unmapped:
-        discard_mask = 0x80
-
-    try:
-        flag_int = int(flags)
-        if not (flag_int & discard_mask):
-            return True
-        else:
-            return False
-
-    except ValueError:
-        msg = "Invalid flag field value found: {}".format(flags)
-        raise ValueError(msg)
-        # print(msg)
-
-def mask_paired_end_flags(flag):
-    if int(flag) & 0x10: # reverse
-        return "16"
+def strand_flag(alignment):
+    if alignment.is_reverse:
+        return 16
     else:
-        return "0"
+        return 0
 
-def convert_to_single_end(fields):
-    flag_field = 1
-    read_id = fields[0]
-    new_flag = mask_paired_end_flags(fields[flag_field])
+def convert_to_single_end(alignment):
+    alignment.flag = strand_flag(alignment)
+    alignment.next_reference_id = 0
+    alignment.next_reference_start = 0
+    return alignment
 
-    # mate_id, mate_start, mate_end replaced with "missing" values
-    mate_info = ["*", "0", "0"]
 
-    new_sam_fields = [read_id, new_flag] + fields[2:6] + mate_info + fields[9:]
-    return new_sam_fields
+if __name__ == '__main__':
+    convert_paired_end_to_single_end_bam(sys.argv[1], 'test.bam')
