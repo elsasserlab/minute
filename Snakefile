@@ -1,8 +1,9 @@
+import se_sam
 # TODO
 # - switch to interleaved files?
 from itertools import groupby
 from utils import read_experiment_description
-from se_sam import convert_paired_end_sam_to_single_end
+
 
 configfile: "config.yaml"
 
@@ -36,11 +37,10 @@ rule clean:
         " barcodes"
         " noumi"
         " demultiplexed"
-        " mapped_sam"
-        " mapped_sam_se"
-        " dupmarked_se"
-        " dedup_sam"
-        " dedup_bam"
+        " mapped"
+        " mapped_se"
+        " dupmarked"
+        " dedup"
         " results"
         " restricted"
         " igv"
@@ -118,10 +118,10 @@ rule bowtie2:
     threads:
         20
     output:
-        sam=temp("mapped_sam/{library}.sam")
+        bam="mapped/{library}.bam"
     input:
         r1="demultiplexed/{library}_R1.fastq.gz",
-        r2="demultiplexed/{library}_R1.fastq.gz",
+        r2="demultiplexed/{library}_R2.fastq.gz",
     log:
         "log/bowtie2-{library}.log"
     # TODO
@@ -136,38 +136,30 @@ rule bowtie2:
         " -1 {input.r1}"
         " -2 {input.r2}"
         " --fast"
-        " -S {output.sam}"
         " 2> {log}"
+        " "
+        "| samtools sort -o {output.bam} -"
 
-rule sort_sam:
-    output:
-        sam=temp("mapped_sam_sorted/{library}.sam")
-    input:
-        sam="mapped_sam/{library}.sam"
-    shell:
-        "samtools sort"
-        " -O SAM"
-        " {input.sam}"
-        " > {output.sam}"
 
 rule convert_to_single_end:
     """Convert sam files to single-end for marking duplicates"""
     output:
-        sam=temp("mapped_sam_se/{library}.sam")
+        bam="mapped_se/{library}.bam"
     input:
-        sam="mapped_sam_sorted/{library}.sam"
+        bam="mapped/{library}.bam"
 
     run:
-        convert_paired_end_sam_to_single_end(input.sam, output.sam)
+        se_sam.convert_paired_end_to_single_end_bam(input.bam, output.bam)
+
 
 # TODO have a look at UMI-tools also
 rule mark_duplicates:
     """UMI-aware duplicate marking with je suite"""
     output:
-        sam=temp("dupmarked_se/{library}.sam"),
-        metrics="dupmarked_se/{library}.metrics"
+        bam="dupmarked/{library}.bam",
+        metrics="dupmarked/{library}.metrics"
     input:
-        sam="mapped_sam_se/{library}.sam"
+        bam="mapped_se/{library}.bam"
     # TODO: ASSUME_SORTED=True ?
     shell:
         "je"
@@ -177,56 +169,28 @@ rule mark_duplicates:
         " SLOTS=-1"
         " ASSUME_SORTED=TRUE"
         " SPLIT_CHAR=_"
-        " I={input.sam}"
-        " O={output.sam}"
+        " I={input.bam}"
+        " O={output.bam}"
         " M={output.metrics}"
 
-rule extract_duplicate_ids:
-    """Select duplicate-flagged IDs"""
+
+rule deduplicate_pe_file:
+    """Select duplicate-flagged alignments and filter in the PE file"""
     output:
-        idlist="dupmarked_se/{library}.dupids.txt"
+        bam="dedup/{library}.bam"
     input:
-        sam="dupmarked_se/{library}.sam"
+        target_bam="mapped/{library}.bam",
+        proxy_bam="dupmarked/{library}.bam"
 
-    shell:
-        "samtools view"
-        " -f 1024"
-        " {input.sam} | "
-        "cut"
-        " -f 1"
-        " > {output.idlist}"
+    run:
+        se_sam.mark_duplicates_by_proxy_bam(input.target_bam, output.proxy_bam)
 
-rule build_dedup_pe_file:
-    """Take PE alignments from previous SAM, removing dups marked from SE"""
-    output:
-        sam=temp("dedup_sam/{library}.sam"),
-    input:
-        idlist="dupmarked_se/{library}.dupids.txt",
-        sam="mapped_sam/{library}.sam"
-
-    shell:
-        # This includes the header, since no read IDs on it
-        "fgrep -vf {input.idlist} {input.sam} > {output.sam}; "
-
-
-rule sort_dedup_sam:
-    """Sort a SAM file, output directly BAM"""
-    output:
-        bam="dedup_bam/{library}.bam"
-    input:
-        sam="dedup_sam/{library}.sam"
-
-    shell:
-        "samtools sort"
-        " -O BAM"
-        " {input.sam}"
-        " > {output.bam}"
 
 rule remove_exclude_regions:
     output:
         bam="restricted/{library}.bam"
     input:
-        bam="dedup_bam/{library}.bam",
+        bam="dedup/{library}.bam",
         bed=config["blacklist_bed"]
     shell:
         "bedtools"

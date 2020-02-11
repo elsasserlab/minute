@@ -63,8 +63,14 @@ def strand_flag(alignment):
 
 def convert_to_single_end(alignment):
     alignment.flag = strand_flag(alignment)
+    alignment.is_paired = False
+    alignment.is_read1 = False
+    alignment.is_proper_pair = False
+    alignment.mate_is_reverse = False
+    alignment.mate_is_unmapped = False
     alignment.next_reference_id = 0
     alignment.next_reference_start = 0
+    alignment.next_reference_name = None
     return alignment
 
 
