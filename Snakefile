@@ -216,9 +216,8 @@ rule insert_size_metrics:
         " O={output.txt}"
         " HISTOGRAM_FILE={output.pdf}"
         " MINIMUM_PCT=0.5"
-        " STOP_AFTER=10000000; "
-        "touch {output.txt}; "
-        "touch {output.pdf}"
+        " STOP_AFTER=10000000"
+
 
 rule igvtools_count:
     output:
