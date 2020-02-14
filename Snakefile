@@ -107,9 +107,12 @@ for fastq_base, libs in fastq_map.items():
             "log/demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
         shell:
             "cutadapt"
+            " -e 0.15"  # TODO determine from barcode length
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
             " -p {params.r2}"
+            " --untrimmed-output demultiplexed/{params.fastqbase}-unknown_R1.fastq.gz"
+            " --untrimmed-paired-output demultiplexed/{params.fastqbase}-unknown_R2.fastq.gz"
             " {input.r1}"
             " {input.r2}"
             " > {log}"
@@ -148,7 +151,6 @@ rule convert_to_single_end:
         bam="mapped_se/{library}.bam"
     input:
         bam="mapped/{library}.bam"
-
     run:
         se_bam.convert_paired_end_to_single_end_bam(input.bam, output.bam)
 
@@ -161,14 +163,12 @@ rule mark_duplicates:
         metrics="dupmarked/{library}.metrics"
     input:
         bam="mapped_se/{library}.bam"
-    # TODO: ASSUME_SORTED=True ?
     shell:
         "je"
         " markdupes"
         " MISMATCHES=1"
         " REMOVE_DUPLICATES=FALSE"
         " SLOTS=-1"
-        " ASSUME_SORTED=TRUE"
         " SPLIT_CHAR=_"
         " I={input.bam}"
         " O={output.bam}"
@@ -245,7 +245,8 @@ rule bigwig:
     threads: 1
     shell:
         "bamCoverage"
-        " -p {threads}" # TODO " --normalizeUsing RPGC"
+        " -p {threads}"
+        " --normalizeUsing RPGC"
         " --effectiveGenomeSize {config[genome_size]}"
         " -b {input.bam}"
         " -o {output.bw}"

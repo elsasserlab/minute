@@ -3,6 +3,7 @@ import os
 import pysam
 import tempfile
 
+
 def convert_paired_end_to_single_end_bam(bam, out, keep_unmapped=False):
     """
     Iterates through a paired-end BAM file and keeps only the first
