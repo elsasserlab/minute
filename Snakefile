@@ -1,4 +1,4 @@
-import se_sam
+import se_bam
 # TODO
 # - switch to interleaved files?
 from itertools import groupby
@@ -102,6 +102,7 @@ for fastq_base, libs in fastq_map.items():
         params:
             r1=lambda wildcards: "demultiplexed/{name}_R1.fastq.gz",
             r2=lambda wildcards: "demultiplexed/{name}_R2.fastq.gz",
+            fastqbase=fastq_base,
         log:
             "log/demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
         shell:
@@ -149,7 +150,7 @@ rule convert_to_single_end:
         bam="mapped/{library}.bam"
 
     run:
-        se_sam.convert_paired_end_to_single_end_bam(input.bam, output.bam)
+        se_bam.convert_paired_end_to_single_end_bam(input.bam, output.bam)
 
 
 # TODO have a look at UMI-tools also
@@ -181,9 +182,8 @@ rule deduplicate_pe_file:
     input:
         target_bam="mapped/{library}.bam",
         proxy_bam="dupmarked/{library}.bam"
-
     run:
-        se_sam.mark_duplicates_by_proxy_bam(
+        se_bam.mark_duplicates_by_proxy_bam(
             input.target_bam,
             input.proxy_bam,
             output.bam)
@@ -202,6 +202,7 @@ rule remove_exclude_regions:
         " -abam {input.bam}"
         " -b {input.bed}"
         " > {output.bam}"
+
 
 rule insert_size_metrics:
     output:
@@ -235,7 +236,6 @@ rule igvtools_count:
 
 
 # TODO can genome_size be computed automatically?
-# TODO this is slow on tiny test datasets
 rule bigwig:
     output:
         bw="igv/{library}.bw"
