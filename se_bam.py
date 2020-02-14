@@ -36,10 +36,9 @@ def _convert_to_single_end(alignment):
     return alignment
 
 
-def mark_duplicates_by_proxy_bam(target_bam, proxy_bam, out, filter_dups=True):
+def mark_duplicates_by_proxy_bam(source_bam, proxy_bam, out, filter_dups=True):
     """
-    Iterates through a pair of BAM files, assumed to have IDs in the same order
-    (they come from the same sorted BAM file). target_bam reads are marked as
+    Iterates through a pair of BAM files. source_bam reads are marked as
     dups if they are marked as such in the proxy_bam file.
 
     Keyword argument:
@@ -49,39 +48,22 @@ def mark_duplicates_by_proxy_bam(target_bam, proxy_bam, out, filter_dups=True):
     dup_ids = _get_duplicate_ids(proxy_bam)
 
     if not dup_ids:
-        os.link(target_bam, out)
+        os.link(source_bam, out)
         return
 
-    with pysam.AlignmentFile(target_bam) as target_file,\
-         pysam.AlignmentFile(out, 'wb', header=target_file.header) as out_file:
+    with pysam.AlignmentFile(source_bam) as source_file,\
+         pysam.AlignmentFile(out, 'wb', header=source_file.header) as out_file:
 
-        for read_id in dup_ids:
-            target_alignment = _find_next_duplicate(
-                target_file,
-                read_id,
-                out_file)
+        for alignment in source_file:
+            if alignment.query_name in dup_ids:
+                alignment.is_duplicate = True
 
-            target_alignment.is_duplicate = True
-            if not filter_dups:
-                out_file.write(target_alignment)
-
-        for remaining_alignment in target_file:
-            out_file.write(remaining_alignment)
+            if not filter_dups or not alignment.is_duplicate:
+                out_file.write(alignment)
 
 
 def _get_duplicate_ids(bam):
-    idlist = []
     with pysam.AlignmentFile(bam, 'rb') as bam_file:
-        for alignment in bam_file:
-            idlist = [alignment.query_name
-                for alignment in bam_file if alignment.is_duplicate]
-    return idlist
-
-
-def _find_next_duplicate(alignment_file, read_id, out_file):
-    alignment = next(alignment_file)
-    while alignment.query_name != read_id:
-        # These reads are not duplicates
-        out_file.write(alignment)
-        alignment = next(alignment_file)
-    return alignment
+        idlist = {alignment.query_name
+            for alignment in bam_file if alignment.is_duplicate}
+        return idlist
