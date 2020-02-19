@@ -1,3 +1,4 @@
+import se_bam
 # TODO
 # - switch to interleaved files?
 from itertools import groupby
@@ -37,7 +38,9 @@ rule clean:
         " noumi"
         " demultiplexed"
         " mapped"
+        " mapped_se"
         " dupmarked"
+        " dedup"
         " results"
         " restricted"
         " igv"
@@ -142,19 +145,29 @@ rule bowtie2:
         "| samtools sort -o {output.bam} -"
 
 
+rule convert_to_single_end:
+    """Convert sam files to single-end for marking duplicates"""
+    output:
+        bam="mapped_se/{library}.bam"
+    input:
+        bam="mapped/{library}.bam"
+    run:
+        se_bam.convert_paired_end_to_single_end_bam(input.bam, output.bam)
+
+
 # TODO have a look at UMI-tools also
 rule mark_duplicates:
-    """UMI-aware duplicate removal with je suite"""
+    """UMI-aware duplicate marking with je suite"""
     output:
         bam="dupmarked/{library}.bam",
         metrics="dupmarked/{library}.metrics"
     input:
-        bam="mapped/{library}.bam"
+        bam="mapped_se/{library}.bam"
     shell:
         "je"
         " markdupes"
         " MISMATCHES=1"
-        " REMOVE_DUPLICATES=TRUE"
+        " REMOVE_DUPLICATES=FALSE"
         " SLOTS=-1"
         " SPLIT_CHAR=_"
         " I={input.bam}"
@@ -162,11 +175,25 @@ rule mark_duplicates:
         " M={output.metrics}"
 
 
+rule deduplicate_pe_file:
+    """Select duplicate-flagged alignments and filter in the PE file"""
+    output:
+        bam="dedup/{library}.bam"
+    input:
+        target_bam="mapped/{library}.bam",
+        proxy_bam="dupmarked/{library}.bam"
+    run:
+        se_bam.mark_duplicates_by_proxy_bam(
+            input.target_bam,
+            input.proxy_bam,
+            output.bam)
+
+
 rule remove_exclude_regions:
     output:
         bam="restricted/{library}.bam"
     input:
-        bam="dupmarked/{library}.bam",
+        bam="dedup/{library}.bam",
         bed=config["blacklist_bed"]
     shell:
         "bedtools"
