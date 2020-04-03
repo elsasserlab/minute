@@ -13,7 +13,7 @@ jobs:
           conda env create --quiet -n testenv -f environment.yml
       - name: Download test dataset
         run: |
-          wget -nv https://export.uppmax.uu.se/uppstore2018208/minute-testdata/minute-testdata-0.2.tar.gz
+          wget -nv https://export.uppmax.uu.se/snic2020-6-3/minute-testdata/minute-testdata-0.2.tar.gz
           tar xf minute-testdata-0.2.tar.gz
       - name: Run pipeline
         run: |
