@@ -57,3 +57,51 @@ The FASTQ base name refers to files within the `fastq/` folder. The suffixes
 
 The `config.yaml` is used to configure everything else. Create a copy of the
 example `config.yaml` and edit it to suit your needs.
+
+## Running on SLURM clusters (Uppmax in Sweden)
+
+Snakemake supports running on HPC environments. As such, it is possible to
+run minute on SLURM clusters, including the Swedish UPPMAX clusters. Handling
+of `config.yaml` and `experiment.tsv` files
+will work the same. You just need to have conda available
+and an active minute environment that you can install as described in the
+**setup** section.
+
+**Note:** creating a Conda environment on a shared filesystem can be a
+lengthy process.
+It is not advised to run this on a login node. You can wrap your conda
+environment installation on a `sbatch` file and submit it to the queue.
+
+To specify cluster-specific parameters you can create a `cluster.yaml`
+config file with your defaults:
+
+        __default__:
+            partition: "core"
+            cpus: "{threads}"
+            time: "0-06:00:00"
+            project: "snicYYYY-NNN-N"
+            jobname: "{rule}_{jobid}"
+            
+Note that you can use rule-dependent parameters such as `rule`, `jobid` and
+`threads`. Then you call `snakemake`:
+
+        snakemake -p -s path/to/the/Snakefile --jobs 20 --cluster-config path/to/cluster.yaml --cluster 'sbatch -A {cluster.project} -t {cluster.time} -c {cluster.cpus} -e logs_slurm/{cluster.jobname}.err -o logs_slurm/{cluster.jobname}.out -J {cluster.jobname}'
+
+The `project` field is required, as SLURM will not queue your jobs if they are
+not attached to a computing project. The `--jobs` parameter in the `snakemake`
+command limits the maximum number of jobs to be queued, and it's also required.
+
+In this example, separate log files for each job (stdout and stderr) are written
+to a `logs_slurm` folder (otherwise you get a bunch of `slurm-<jobid>.out` files
+in the working directory). If you want this behavior, you need to create that
+directory before running `snakemake`.
+
+You can also wrap your minute pipeline call in a `sbatch` file itself, so
+the scheduler does not run on a login node:
+
+- Create the `logs_slurm` directory in the `myexperiment` directory.
+- Assign a `-t` (time) parameter long enough, as this will be mostly waiting
+  for other jobs to run. Consider that this includes not only running time but
+  also queuing time.
+- Ask only for 1 core.
+- Make sure you call `conda init && conda activate minute` in the wrapper.
