@@ -83,7 +83,7 @@ def parse_insert_size_metrics(path):
     return result
 
 
-def compute_scaling(treatments, controls, infofile, genome_size, fragment_size):
+def compute_scaling(normalization_pairs, treatments, controls, infofile, genome_size, fragment_size):
     print("sample_name", "#reads", "n_scaled_reads", "input_name", "n_input_reads", "factor", sep="\t", file=infofile)
     first = True
     scaling_factor = -1
@@ -101,6 +101,7 @@ def compute_scaling(treatments, controls, infofile, genome_size, fragment_size):
         sample_scaling_factor = scaling_factor / control_reads
         scaled_treatment_reads = sample_scaling_factor * treatment_reads
 
+        # TODO factor this out
         print(pair.treatment.name, treatment_reads, scaled_treatment_reads, pair.control.name, control_reads, sample_scaling_factor, sep="\t", file=infofile)
 
         # TODO scaled.idxstats.txt file

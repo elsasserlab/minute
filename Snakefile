@@ -265,6 +265,7 @@ rule compute_scaling_factors:
     run:
         with open(output.info, "w") as outf:
             factors = compute_scaling(
+                normalization_pairs,
                 input.treatments,
                 input.controls,
                 outf,
