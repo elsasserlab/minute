@@ -105,3 +105,15 @@ the scheduler does not run on a login node:
   also queuing time.
 - Ask only for 1 core.
 - Make sure you call `conda init && conda activate minute` in the wrapper.
+
+
+# Result folders
+
+* `fastqc/`: FastQC report for input reads
+* `noumi/`: Input reads without UMIs
+* `demultiplexed/`: Demultiplexed “noumi” reads
+* `mapped/`: Demultiplexed reads mapped to reference
+* `mapped_se/`: Mapped reads converted to single end
+* `dupmarked/`: Duplicate-marked (single-end) reads
+* `restricted/`: Mapped reads restricted to regions of interest. Currently this
+  folder is the one that contains the final BAMs.
