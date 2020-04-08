@@ -15,3 +15,6 @@ genome_size: 3700000
 
 # Length of the 5' UMI
 umi_length: 6
+
+# Fragment length (insert size)
+fragment_size: 150
