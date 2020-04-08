@@ -2,14 +2,15 @@ import se_bam
 # TODO
 # - switch to interleaved files?
 from itertools import groupby
-from utils import read_experiment_description
+from utils import read_libraries, read_controls, flagstat_mapped_reads, compute_scaling
 
 
 configfile: "config.yaml"
 
-libraries = list(read_experiment_description())
+libraries = list(read_libraries())
+normalization_pairs = list(read_controls(libraries))  # or: normalization_groups
 
-# Map a FASTQ prefix to list of libraries
+# Map a FASTQ prefix to its list of libraries
 fastq_map = {
     fastq_base: list(libs)
     for fastq_base, libs in
@@ -22,13 +23,14 @@ rule all:
             "igv/{library.name}.bw",
             "igv/{library.name}.tdf",
             "restricted/{library.name}.bam",
-            "restricted/{library.name}.flagstat.txt",
             "restricted/{library.name}.idxstats.txt",
-            "results/{library.name}.insertsizes.pdf",
-            "results/{library.name}.insertsizes.txt",
+            "restricted/{library.name}.insertsizes.pdf",
+            "restricted/{library.name}.insertsizes.txt",
         ], library=libraries),
         expand("fastqc/{fastq}_R{read}_fastqc.html",
-               fastq=fastq_map.keys(), read=(1, 2))
+            fastq=fastq_map.keys(), read=(1, 2)),
+        expand("scaled/{library.name}.scaled.bw",
+            library=[np.treatment for np in normalization_pairs]),
 
 
 rule clean:
@@ -206,8 +208,8 @@ rule remove_exclude_regions:
 
 rule insert_size_metrics:
     output:
-        txt="results/{library}.insertsizes.txt",
-        pdf="results/{library}.insertsizes.pdf",
+        txt="restricted/{library}.insertsizes.txt",
+        pdf="restricted/{library}.insertsizes.pdf",
     input:
         bam="restricted/{library}.bam"
     shell:
@@ -249,6 +251,49 @@ rule bigwig:
         " --normalizeUsing RPGC"
         " --effectiveGenomeSize {config[genome_size]}"
         " -b {input.bam}"
+        " -o {output.bw}"
+
+
+rule compute_scaling_factors:
+    input:
+        treatments=["restricted/{library.name}.flagstat.txt".format(library=np.treatment) for np in normalization_pairs],
+        controls=["restricted/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
+    output:
+        factors=["factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs],
+        info="scalinginfo.txt"
+
+    run:
+        with open(output.info, "w") as outf:
+            factors = compute_scaling(
+                input.treatments,
+                input.controls,
+                outf,
+                genome_size=config["genome_size"],
+                fragment_size=config["fragment_size"],
+            )
+            for factor, factor_path in zip(factors, output.factors):
+                with open(factor_path, "w") as f:
+                    print(factor, file=f)
+
+
+rule scaled_bigwig:
+    output:
+        bw="scaled/{library}.scaled.bw"
+    input:
+        factor="factors/{library}.factor.txt",
+        bam="restricted/{library}.bam",
+        bai="restricted/{library}.bai",
+    threads: 4
+    shell:
+        # TODO also run this
+        # - with "--binSize 50 --smoothLength 150"
+        # - with "--binSize 500 --smoothLength 5000"
+        "bamCoverage"
+        " -p {threads}"
+        " --binSize 1"
+        " --extendReads"
+        " --scaleFactor $(< {input.factor})"
+        " --bam {input.bam}"
         " -o {output.bw}"
 
 
