@@ -166,7 +166,7 @@ rule mark_duplicates:
     input:
         bam="mapped_se/{library}.bam"
     shell:
-        "je"
+        "LC_ALL=C je"
         " markdupes"
         " MISMATCHES=1"
         " REMOVE_DUPLICATES=FALSE"
