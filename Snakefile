@@ -128,6 +128,24 @@ for fastq_base, libs in fastq_map.items():
             " > {log}"
 
 
+def set_demultiplex_rule_names():
+    """
+    This sets the names of the demultiplexing rules, which need to be
+    defined anonymously because they are defined (above) in a loop.
+    """
+    for rul in workflow.rules:
+        if not "barcodes_fasta" in rul.input.keys():
+            # Ensure we get the demultiplexing rules only
+            continue
+        input = rul.input["r1"]
+        assert input.startswith("noumi/")
+        # Remove the initial "noumi/" and trailing ".1.fastq.gz" parts
+        rul.name = "demultiplex_" + rul.input["r1"][6:-11]
+
+
+set_demultiplex_rule_names()
+
+
 rule bowtie2:
     threads:
         20
