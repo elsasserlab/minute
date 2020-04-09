@@ -23,7 +23,8 @@
    read 2 files must have names ending in `_R1.fastq.gz` and `_R2.fastq.gz`,
    respectively.
 4. Copy the `config.yaml` file into `myexperiment/` and edit it as required.
-5. Create an `experiment.tsv` file describing your libraries (see below).
+5. Create `experiment.tsv` and `controls.tsv` files describing your libraries
+   (see below).
 6. Run `snakemake -p -s path/to/the/Snakefile`.
 
 The `-p` makes `snakemake` print the commands that it executes and can be
@@ -34,11 +35,16 @@ will only show which steps would be executed and not actually run them
 (“dry run”).
 
 
-## The experiment.tsv file
+## Configuration files
+
+The configuration files `experiment.tsv`, `controls.tsv` and `config.yaml`
+need to be placed in the `myexperiment/` directory. Use the provided
+example files as templates and adjust as needed.
+
+### The experiment.tsv file
 
 `experiment.tsv` is a text file in tab-separated value format describing the
-sequenced libraries, one row per library. It needs to be placed in the
-`myexperiment/` directory.
+sequenced libraries, one row per library.
 
 The columns are:
 
@@ -47,16 +53,28 @@ The columns are:
 3. Barcode
 4. FASTQ base name
 
-Use the provided `experiment.tsv` example file and edit it.
-
 The FASTQ base name refers to files within the `fastq/` folder. The suffixes
 `_R1.fastq.gz` and `_R2.fastq.gz` will be added automatically.
 
 
+## The controls.tsv file
+
+The `controls.tsv` file is a text file in tab-separated value format that
+defines which of the libraries are the treatments and which are the
+controls (or “inputs”).
+
+The columns are are:
+
+1. Treatment sample name
+2. Replicate id
+3. Control sample name
+
+
 ## The config.yaml file
 
-The `config.yaml` is used to configure everything else. Create a copy of the
-example `config.yaml` and edit it to suit your needs.
+The `config.yaml` is used to configure everything else. Please open the
+file in an editor, read through the comments and edit as required.
+
 
 ## Running on SLURM clusters (Uppmax in Sweden)
 
