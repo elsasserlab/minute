@@ -51,6 +51,10 @@ rule clean:
         " restricted"
         " igv"
         " fastqc"
+        " scaled"
+        " stats"
+        " factors"
+        " log"
 
 
 rule fastqc_input:
