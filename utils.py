@@ -3,6 +3,10 @@ from typing import NamedTuple
 from itertools import groupby, islice
 
 
+class ParseError(Exception):
+    pass
+
+
 class Library(NamedTuple):
     sample: str
     replicate: str
@@ -57,12 +61,21 @@ def flagstat_mapped_reads(path):
 
 
 def parse_insert_size_metrics(path):
-    """
-    Parse a metrics file created by Picard InsertSizeMetrics. The histogram
-    in the file is not parsed.
+    return parse_picard_metrics(path, metrics_class="picard.analysis.InsertSizeMetrics")
 
-    Return a dictionary that has keys "median_insert_size", "mode_insert_size"
-    etc.
+
+def parse_duplication_metrics(path):
+    return parse_picard_metrics(path, metrics_class="picard.sam.DuplicationMetrics")
+
+
+def parse_picard_metrics(path, metrics_class: str):
+    """
+    Parse the METRICS section in a metrics file created by Picard. The string
+    given after 'METRICS CLASS' in the file must match the metrics_class
+    parameter. Anything else in the file is not parsed.
+
+    Return a dictionary that has keys such as "median_insert_size",
+    "estimated_library_size" etc. (this depends on the headers in the file).
     """
     def float_or_int(s):
         try:
@@ -76,6 +89,12 @@ def parse_insert_size_metrics(path):
     with open(path) as f:
         for line in f:
             if line.startswith("## METRICS CLASS"):
+                fields = line.strip().split(sep="\t")
+                if fields[1] != metrics_class:
+                    raise ParseError(
+                        "While parsing Picard metrics file '{}':"
+                        "Expected metrics class {}, but found {}".format(
+                            path, metrics_class, fields[1]))
                 break
         header = next(f).strip().split()
         values = next(f).strip().split()

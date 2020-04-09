@@ -2,7 +2,14 @@ import se_bam
 # TODO
 # - switch to interleaved files?
 from itertools import groupby
-from utils import read_libraries, read_controls, flagstat_mapped_reads, compute_scaling
+from utils import (
+    read_libraries,
+    read_controls,
+    flagstat_mapped_reads,
+    compute_scaling,
+    parse_duplication_metrics,
+    parse_insert_size_metrics,
+)
 
 
 configfile: "config.yaml"
@@ -22,10 +29,7 @@ rule all:
         expand([
             "igv/{library.name}.bw",
             "igv/{library.name}.tdf",
-            "restricted/{library.name}.bam",
-            "restricted/{library.name}.idxstats.txt",
-            "restricted/{library.name}.insertsizes.pdf",
-            "restricted/{library.name}.insertsizes.txt",
+            "stats/{library.name}.txt",
         ], library=libraries),
         expand("fastqc/{fastq}_R{read}_fastqc.html",
             fastq=fastq_map.keys(), read=(1, 2)),
@@ -261,7 +265,6 @@ rule compute_scaling_factors:
     output:
         factors=["factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs],
         info="scalinginfo.txt"
-
     run:
         with open(output.info, "w") as outf:
             factors = compute_scaling(
@@ -296,6 +299,31 @@ rule scaled_bigwig:
         " --scaleFactor $(< {input.factor})"
         " --bam {input.bam}"
         " -o {output.bw}"
+
+
+rule stats:
+    output:
+        txt="stats/{library}.txt"
+    input:
+        mapped="mapped/{library}.flagstat.txt",
+        dupmarked="dupmarked/{library}.flagstat.txt",
+        restricted="restricted/{library}.flagstat.txt",
+        metrics="dupmarked/{library}.metrics",
+        insertsizes="restricted/{library}.insertsizes.txt",
+    run:
+        row = []
+        for flagstat, name in [
+            (input.mapped, "mapped"),
+            (input.dupmarked, "dupmarked"),
+            (input.restricted, "restricted"),
+        ]:
+            mapped_reads = flagstat_mapped_reads(flagstat)
+            row.append(mapped_reads)
+        row.append(parse_duplication_metrics(input.metrics)["estimated_library_size"])
+        row.append(parse_insert_size_metrics(input.insertsizes)["median_insert_size"])
+        with open(output.txt, "w") as f:
+            print("mapped", "dupmarked_mapped", "restricted_mapped", "library_size", "insert_size", sep="\t", file=f)
+            print(*row, sep="\t", file=f)
 
 
 rule samtools_index:
