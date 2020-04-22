@@ -270,7 +270,7 @@ rule bigwig:
     input:
         bam="restricted/{library}.bam",
         bai="restricted/{library}.bai"
-    threads: 1
+    threads: 20
     shell:
         "bamCoverage"
         " -p {threads}"
@@ -309,7 +309,7 @@ rule scaled_bigwig:
         factor="factors/{library}.factor.txt",
         bam="restricted/{library}.bam",
         bai="restricted/{library}.bai",
-    threads: 4
+    threads: 20
     shell:
         # TODO also run this
         # - with "--binSize 50 --smoothLength 150"
