@@ -122,7 +122,7 @@ the scheduler does not run on a login node:
   for other jobs to run. Consider that this includes not only running time but
   also queuing time.
 - Ask only for 1 core.
-- Make sure you call `conda init && conda activate minute` in the wrapper.
+- Make sure you call `conda activate minute` in the wrapper.
 
 
 # Result folders
