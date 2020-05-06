@@ -180,8 +180,10 @@ rule convert_to_single_end:
     input:
         bam="mapped/{library}.bam"
     run:
-        se_bam.convert_paired_end_to_single_end_bam(input.bam, output.bam)
-
+        se_bam.convert_paired_end_to_single_end_bam(
+            input.bam,
+            output.bam,
+            keep_unmapped=False)
 
 # TODO have a look at UMI-tools also
 rule mark_duplicates:
