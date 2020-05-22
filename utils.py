@@ -140,7 +140,7 @@ def parse_stats_fields(stats_file):
         header = f.readline().strip().split("\t")
         values = f.readline().strip().split("\t")
         result = {key.lower(): value for key, value in zip(header, values)}
-        result["library"] = os.path.splitext(stats_file)[0]
+        result["library"] = os.path.splitext(os.path.basename(stats_file))[0]
         return result
 
 def parse_scaling_factor(filename):
