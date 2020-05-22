@@ -1,3 +1,4 @@
+import os
 import pysam
 from typing import NamedTuple
 from itertools import groupby, islice
@@ -96,8 +97,14 @@ def parse_picard_metrics(path, metrics_class: str):
                         "Expected metrics class {}, but found {}".format(
                             path, metrics_class, fields[1]))
                 break
-        header = next(f).strip().split()
-        values = next(f).strip().split()
+        header = next(f).strip().split("\t")
+        values = next(f).strip().split("\t")
+
+    # PICARD issue: it leaves library size blank sometimes, I think for small
+    # sample sizes. 
+    if len(values) == (len(header)-1):
+        values.append('NA')
+
     result = {key.lower(): float_or_int(value) for key, value in zip(header, values)}
     return result
 
@@ -126,3 +133,16 @@ def compute_scaling(normalization_pairs, treatments, controls, infofile, genome_
         # TODO scaled.idxstats.txt file
 
         yield sample_scaling_factor
+
+
+def parse_stats_fields(stats_file):
+    with open(stats_file) as f:
+        header = f.readline().strip().split("\t")
+        values = f.readline().strip().split("\t")
+        result = {key.lower(): value for key, value in zip(header, values)}
+        result["library"] = os.path.splitext(stats_file)[0]
+        return result
+
+def parse_scaling_factor(filename):
+    with open(filename) as f:
+        return f.readline().strip()

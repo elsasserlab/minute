@@ -9,6 +9,7 @@ from utils import (
     compute_scaling,
     parse_duplication_metrics,
     parse_insert_size_metrics,
+    parse_stats_fields,
 )
 
 
@@ -35,6 +36,7 @@ rule all:
             fastq=fastq_map.keys(), read=(1, 2)),
         expand("scaled/{library.name}.scaled.bw",
             library=[np.treatment for np in normalization_pairs]),
+        "summaries/stats_summary.txt",
 
 
 rule clean:
@@ -53,6 +55,7 @@ rule clean:
         " fastqc"
         " scaled"
         " stats"
+        " summaries"
         " factors"
         " log"
 
@@ -288,7 +291,7 @@ rule compute_scaling_factors:
         controls=["restricted/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
     output:
         factors=["factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs],
-        info="scalinginfo.txt"
+        info="summaries/scalinginfo.txt"
     run:
         with open(output.info, "w") as outf:
             factors = compute_scaling(
@@ -330,7 +333,7 @@ rule stats:
         txt="stats/{library}.txt"
     input:
         mapped="mapped/{library}.flagstat.txt",
-        dupmarked="dupmarked/{library}.flagstat.txt",
+        dedup="dedup/{library}.flagstat.txt",
         restricted="restricted/{library}.flagstat.txt",
         metrics="dupmarked/{library}.metrics",
         insertsizes="restricted/{library}.insertsizes.txt",
@@ -338,16 +341,45 @@ rule stats:
         row = []
         for flagstat, name in [
             (input.mapped, "mapped"),
-            (input.dupmarked, "dupmarked"),
+            (input.dedup, "dedup"),
             (input.restricted, "restricted"),
         ]:
             mapped_reads = flagstat_mapped_reads(flagstat)
             row.append(mapped_reads)
+
         row.append(parse_duplication_metrics(input.metrics)["estimated_library_size"])
+        row.append(parse_duplication_metrics(input.metrics)["percent_duplication"])
         row.append(parse_insert_size_metrics(input.insertsizes)["median_insert_size"])
         with open(output.txt, "w") as f:
-            print("mapped", "dupmarked_mapped", "restricted_mapped", "library_size", "insert_size", sep="\t", file=f)
+            print("mapped", "dedup_mapped", "restricted_mapped", "library_size", "perc_duplication", "insert_size", sep="\t", file=f)
             print(*row, sep="\t", file=f)
+
+
+rule stats_summary:
+    output:
+        txt="summaries/stats_summary.txt"
+    input:
+        expand("stats/{library.name}.txt", library=libraries)
+    run:
+
+        stats_summaries = [parse_stats_fields(st_file) for st_file in input]
+
+        # I am considering we want the keys to be in a specific order
+        fields_list = [
+            "mapped",
+            "dedup_mapped",
+            "restricted_mapped",
+            "library_size",
+            "perc_duplication",
+            "insert_size"]
+
+        header = ["library"] + fields_list
+        s="\t"
+        with open(output.txt, "w") as f:
+            print(*header, sep=s, file=f)
+            for stats in stats_summaries:
+                row = [stats[k] for k in header]
+                print(*row, sep=s, file=f)
 
 
 rule samtools_index:
