@@ -309,21 +309,25 @@ rule scaled_bigwig:
         bw="scaled/{library}.scaled.bw"
     input:
         factor="factors/{library}.factor.txt",
+        insertsizes="restricted/{library}.insertsizes.txt",
         bam="restricted/{library}.bam",
         bai="restricted/{library}.bai",
     threads: 20
-    shell:
+    run:
+        fragsize = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
+
         # TODO also run this
         # - with "--binSize 50 --smoothLength 150"
         # - with "--binSize 500 --smoothLength 5000"
-        "bamCoverage"
-        " -p {threads}"
-        " --binSize 1"
-        " --extendReads"
-        " --scaleFactor $(< {input.factor})"
-        " --bam {input.bam}"
-        " -o {output.bw}"
 
+        shell("bamCoverage"
+            " -p {threads}"
+            " --binSize 1"
+            " --extendReads {fragsize}"
+            " --scaleFactor $(< {input.factor})"
+            " --bam {input.bam}"
+            " -o {output.bw}")
+ 
 
 rule stats:
     output:
