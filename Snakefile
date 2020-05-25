@@ -321,7 +321,7 @@ rule scaled_bigwig:
         factor="factors/{library}.factor.txt",
         fragsize="restricted/{library}.fragsize.txt",
         bam="restricted/{library}.bam",
-        bai="restricted/{library}.bai"
+        bai="restricted/{library}.bai",
     threads: 20
     shell:
         # TODO also run this
@@ -334,7 +334,7 @@ rule scaled_bigwig:
         " --scaleFactor $(< {input.factor})"
         " --bam {input.bam}"
         " -o {output.bw}"
- 
+
 
 rule stats:
     output:
