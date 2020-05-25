@@ -303,30 +303,37 @@ rule compute_scaling_factors:
                 with open(factor_path, "w") as f:
                     print(factor, file=f)
 
+rule extract_fragment_size:
+    input:
+        insertsizes="restricted/{library}.insertsizes.txt"
+    output:
+        fragsize="restricted/{library}.fragsize.txt"
+    run:
+        with open(output.fragsize, "w") as f:
+            print(parse_insert_size_metrics(input.insertsizes)["median_insert_size"],
+                  file=f)
+
 
 rule scaled_bigwig:
     output:
         bw="scaled/{library}.scaled.bw"
     input:
         factor="factors/{library}.factor.txt",
-        insertsizes="restricted/{library}.insertsizes.txt",
+        fragsize="restricted/{library}.fragsize.txt",
         bam="restricted/{library}.bam",
-        bai="restricted/{library}.bai",
+        bai="restricted/{library}.bai"
     threads: 20
-    run:
-        fragsize = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
-
+    shell:
         # TODO also run this
         # - with "--binSize 50 --smoothLength 150"
         # - with "--binSize 500 --smoothLength 5000"
-
-        shell("bamCoverage"
-            " -p {threads}"
-            " --binSize 1"
-            " --extendReads {fragsize}"
-            " --scaleFactor $(< {input.factor})"
-            " --bam {input.bam}"
-            " -o {output.bw}")
+        "bamCoverage"
+        " -p {threads}"
+        " --binSize 1"
+        " --extendReads $(< {input.fragsize})"
+        " --scaleFactor $(< {input.factor})"
+        " --bam {input.bam}"
+        " -o {output.bw}"
  
 
 rule stats:
