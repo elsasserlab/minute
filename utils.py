@@ -102,7 +102,7 @@ def parse_picard_metrics(path, metrics_class: str):
 
     # PICARD issue: it leaves library size blank sometimes, I think for small
     # sample sizes. 
-    if len(values) == (len(header)-1):
+    if len(values) == len(header) - 1:
         values.append('NA')
 
     result = {key.lower(): float_or_int(value) for key, value in zip(header, values)}
@@ -142,6 +142,7 @@ def parse_stats_fields(stats_file):
         result = {key.lower(): value for key, value in zip(header, values)}
         result["library"] = os.path.splitext(os.path.basename(stats_file))[0]
         return result
+
 
 def parse_scaling_factor(filename):
     with open(filename) as f:
