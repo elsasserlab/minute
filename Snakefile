@@ -351,7 +351,7 @@ rule stats:
         row.append(parse_duplication_metrics(input.metrics)["percent_duplication"])
         row.append(parse_insert_size_metrics(input.insertsizes)["median_insert_size"])
         with open(output.txt, "w") as f:
-            print("mapped", "dedup_mapped", "restricted_mapped", "library_size", "perc_duplication", "insert_size", sep="\t", file=f)
+            print("mapped", "dedup_mapped", "restricted_mapped", "library_size", "percent_duplication", "insert_size", sep="\t", file=f)
             print(*row, sep="\t", file=f)
 
 
