@@ -361,25 +361,25 @@ rule stats_summary:
     input:
         expand("stats/{library.name}.txt", library=libraries)
     run:
-
         stats_summaries = [parse_stats_fields(st_file) for st_file in input]
 
         # I am considering we want the keys to be in a specific order
-        fields_list = [
+        header = [
+            "library",
             "mapped",
             "dedup_mapped",
             "restricted_mapped",
             "library_size",
-            "perc_duplication",
-            "insert_size"]
-
-        header = ["library"] + fields_list
-        s="\t"
+            "percent_duplication",
+            "insert_size",
+        ]
+       
         with open(output.txt, "w") as f:
-            print(*header, sep=s, file=f)
-            for stats in stats_summaries:
-                row = [stats[k] for k in header]
-                print(*row, sep=s, file=f)
+            print(*header, sep="\t", file=f)
+            for stats_file in input:
+                summary = parse_stats_fields(stats_file)
+                row = [summary[k] for k in header]
+                print(*row, sep="\t", file=f)
 
 
 rule samtools_index:
