@@ -1,3 +1,4 @@
+import os
 import pysam
 from typing import NamedTuple
 from itertools import groupby, islice
@@ -97,8 +98,14 @@ def parse_picard_metrics(path, metrics_class: str):
                         "Expected metrics class {}, but found {}".format(
                             path, metrics_class, fields[1]))
                 break
-        header = next(f).strip().split()
-        values = next(f).strip().split()
+        header = next(f).strip().split("\t")
+        values = next(f).strip().split("\t")
+
+    # Picard issue: it leaves library size blank sometimes, I think for small
+    # sample sizes. 
+    if len(values) == len(header) - 1:
+        values.append('NA')
+
     result = {key.lower(): float_or_int(value) for key, value in zip(header, values)}
     return result
 
@@ -127,6 +134,21 @@ def compute_scaling(normalization_pairs, treatments, controls, infofile, genome_
         # TODO scaled.idxstats.txt file
 
         yield sample_scaling_factor
+
+
+def parse_stats_fields(stats_file):
+    """
+    Parse contents of a stats file created in the stats rule, which consists
+    of a header line and a values line.
+
+    Return a dictionary where keys are defined by the values of the header.
+    """
+    with open(stats_file) as f:
+        header = f.readline().strip().split("\t")
+        values = f.readline().strip().split("\t")
+        result = {key.lower(): value for key, value in zip(header, values)}
+        result["library"] = Path(stats_file).stem
+        return result
 
 
 def detect_bowtie_index_name(fasta_path):
