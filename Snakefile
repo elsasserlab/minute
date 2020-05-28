@@ -10,10 +10,18 @@ from utils import (
     parse_duplication_metrics,
     parse_insert_size_metrics,
     parse_stats_fields,
+    detect_bowtie_index_name,
 )
 
 
 configfile: "config.yaml"
+
+if "bowtie_index_name" not in config:
+    try:
+        config["bowtie_index_name"] = detect_bowtie_index_name(config["reference_fasta"])
+    except FileNotFoundError as e:
+        sys.exit(str(e))
+
 
 libraries = list(read_libraries())
 normalization_pairs = list(read_controls(libraries))  # or: normalization_groups
@@ -167,7 +175,7 @@ rule bowtie2:
     shell:
         "bowtie2"
         " -p {threads}"
-        " -x {config[indexed_reference]}"
+        " -x {config[bowtie_index_name]}"
         " -1 {input.r1}"
         " -2 {input.r2}"
         " --fast"

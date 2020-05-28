@@ -149,3 +149,32 @@ def parse_stats_fields(stats_file):
         result = {key.lower(): value for key, value in zip(header, values)}
         result["library"] = Path(stats_file).stem
         return result
+
+
+def detect_bowtie_index_name(fasta_path):
+    """
+    Given the path to a reference FASTA (which may optionally be compressed),
+    detect the base name of the Bowtie2 index assumed to be in the same
+    location.
+
+    Given "ref.fasta.gz", this function checks for the existence of
+    - "ref.fasta.gz.1.bt2"
+    - "ref.fasta.1.bt2"
+    - "ref.1.bt2"
+    in that order and then returns the name of the first file it finds
+    minus the ".1.bt2" suffix.
+    """
+    path = Path(fasta_path)
+    bowtie_index_extension = ".1.bt2"
+    bases = [path]
+    if path.suffix == ".gz":
+        bases.append(path.with_suffix(""))
+    if bases[-1].suffix:
+        bases.append(bases[-1].with_suffix(""))
+    for base in bases:
+        if base.with_name(base.name + bowtie_index_extension).exists():
+            return base
+    raise FileNotFoundError(
+        "No Bowtie2 index found, expected one of\n- "
+        + "\n- ".join(str(b) + bowtie_index_extension for b in bases)
+    )

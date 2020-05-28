@@ -1,8 +1,9 @@
 # Configuration settings for the minute pipeline
 # Paths (unless absolute) are relative to the directory in which snakemake is run.
 
-# Path to the Bowtie2 index of the reference, without the .X.bt2 suffix
-indexed_reference: "ref/mm9"
+# Path to a reference FASTA file (may be gzip-compressed)
+# with a matching Bowtie2 index in the same location
+reference_fasta: "ref/mm9.fasta.gz"
 
 # Path to a BED file listing the regions to be excluded
 blacklist_bed: "dummy_blacklist.bed"
@@ -18,3 +19,15 @@ umi_length: 6
 
 # Fragment length (insert size)
 fragment_size: 150
+
+
+#
+# Optional settings
+#
+# These usually don’t need to be changed
+#
+
+# The base name of the Bowtie2 index. This is normally found automatically
+# in the same folder as the reference_fasta.
+#
+# - bowtie_index_name: "ref/mm9"
