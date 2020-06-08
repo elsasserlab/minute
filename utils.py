@@ -18,7 +18,6 @@ class Library(NamedTuple):
     @property
     def name(self):
         rep_str = f"replicate{self.replicate}"
-
         if self.replicate == "pooled":
             rep_str = f"pooled"
 
@@ -196,3 +195,11 @@ def detect_bowtie_index_name(fasta_path):
 def get_replicates(libraries, sample):
     replicates = [lib.replicate for lib in libraries if lib.sample==sample]
     return replicates
+
+
+def infer_pooled_libraries(libraries):
+    samples = set([library.sample for library in libraries])
+    return([
+        Library(sample=sample, replicate='pooled', barcode='', fastqbase='')
+        for sample in samples
+    ])

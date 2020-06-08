@@ -316,7 +316,6 @@ rule compute_scaling_factors:
         factors=["factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs],
         info="summaries/scalinginfo.txt"
     run:
-        print(normalization_pairs)
         with open(output.info, "w") as outf:
             factors = compute_scaling(
                 normalization_pairs,
