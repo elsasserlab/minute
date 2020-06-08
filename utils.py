@@ -17,7 +17,12 @@ class Library(NamedTuple):
 
     @property
     def name(self):
-        return f"{self.sample}_replicate{self.replicate}"
+        rep_str = f"replicate{self.replicate}"
+
+        if self.replicate == "pooled":
+            rep_str = f"pooled"
+
+        return f"{self.sample}_{rep_str}"
 
 
 class TreatmentControlPair(NamedTuple):
@@ -33,6 +38,14 @@ def read_libraries():
 def read_controls(libraries):
     library_map = {
         (library.sample, library.replicate): library for library in libraries}
+
+    for library in libraries:
+        library_map[(library.sample, 'pooled')] = Library(
+            sample=library.sample,
+            replicate='pooled',
+            barcode='-',
+            fastqbase='-')
+
     for row in read_tsv("controls.tsv"):
         treatment = library_map[(row[0], row[1])]
         control = library_map[(row[2], row[1])]
@@ -178,3 +191,8 @@ def detect_bowtie_index_name(fasta_path):
         "No Bowtie2 index found, expected one of\n- "
         + "\n- ".join(str(b) + bowtie_index_extension for b in bases)
     )
+
+
+def get_replicates(libraries, sample):
+    replicates = [lib.replicate for lib in libraries if lib.sample==sample]
+    return replicates

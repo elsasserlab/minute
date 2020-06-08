@@ -11,6 +11,7 @@ from utils import (
     parse_insert_size_metrics,
     parse_stats_fields,
     detect_bowtie_index_name,
+    get_replicates,
 )
 
 
@@ -39,7 +40,7 @@ rule all:
             "igv/{library.name}.bw",
             "igv/{library.name}.tdf",
             "stats/{library.name}.txt",
-            "restricted/{library.sample}.pooled.bam",
+            "igv/{library.sample}_pooled.bw",
         ], library=libraries),
         expand("fastqc/{fastq}_R{read}_fastqc.html",
             fastq=fastq_map.keys(), read=(1, 2)),
@@ -248,11 +249,13 @@ rule remove_exclude_regions:
 
 rule pool_replicates:
     output:
-        bam="restricted/{sample}.pooled.bam"
+        bam="restricted/{sample}_pooled.bam"
     input:
-        bam_replicates=expand("restricted/{{sample}}_replicate{replicates}.bam",
-            replicates=[1,2,3])
+        bam_replicates=lambda wildcards: expand(
+            "restricted/{{sample}}_replicate{replicates}.bam",
+            replicates=get_replicates(libraries, wildcards.sample))
     shell:
+        # samtools merge output is already sorted
         "samtools merge {output.bam} {input.bam_replicates}"
 
 
@@ -302,6 +305,7 @@ rule bigwig:
         " --effectiveGenomeSize {config[genome_size]}"
         " -b {input.bam}"
         " -o {output.bw}"
+        " --binSize 1"
 
 
 rule compute_scaling_factors:
@@ -312,6 +316,7 @@ rule compute_scaling_factors:
         factors=["factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs],
         info="summaries/scalinginfo.txt"
     run:
+        print(normalization_pairs)
         with open(output.info, "w") as outf:
             factors = compute_scaling(
                 normalization_pairs,
