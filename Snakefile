@@ -39,6 +39,7 @@ rule all:
             "igv/{library.name}.bw",
             "igv/{library.name}.tdf",
             "stats/{library.name}.txt",
+            "restricted/{library.sample}.pooled.bam",
         ], library=libraries),
         expand("fastqc/{fastq}_R{read}_fastqc.html",
             fastq=fastq_map.keys(), read=(1, 2)),
@@ -232,9 +233,9 @@ rule deduplicate_pe_file:
 
 rule remove_exclude_regions:
     output:
-        bam="restricted/{library}.bam"
+        bam="restricted/{sample}_replicate{replicate}.bam"
     input:
-        bam="dedup/{library}.bam",
+        bam="dedup/{sample}_replicate{replicate}.bam",
         bed=config["blacklist_bed"]
     shell:
         "bedtools"
@@ -243,6 +244,16 @@ rule remove_exclude_regions:
         " -abam {input.bam}"
         " -b {input.bed}"
         " > {output.bam}"
+
+
+rule pool_replicates:
+    output:
+        bam="restricted/{sample}.pooled.bam"
+    input:
+        bam_replicates=expand("restricted/{{sample}}_replicate{replicates}.bam",
+            replicates=[1,2,3])
+    shell:
+        "samtools merge {output.bam} {input.bam_replicates}"
 
 
 rule insert_size_metrics:
