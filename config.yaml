@@ -8,9 +8,6 @@ reference_fasta: "ref/mm9.fasta.gz"
 # Path to a BED file listing the regions to be excluded
 blacklist_bed: "dummy_blacklist.bed"
 
-# Effective genome size
-genome_size: 2150570000
-
 # Length of the 5' UMI
 umi_length: 6
 

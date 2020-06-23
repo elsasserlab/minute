@@ -4,6 +4,8 @@ from typing import NamedTuple
 from itertools import groupby, islice
 from pathlib import Path
 
+from xopen import xopen
+
 
 class ParseError(Exception):
     pass
@@ -149,6 +151,22 @@ def parse_stats_fields(stats_file):
         result = {key.lower(): value for key, value in zip(header, values)}
         result["library"] = Path(stats_file).stem
         return result
+
+
+def read_int_from_file(path):
+    with open(path) as f:
+        data = f.read()
+    return int(data.strip())
+
+
+def compute_genome_size(fasta):
+    n = 0
+    with xopen(fasta) as f:
+        for line in f:
+            if line[:1] != ">":
+                line = line.rstrip().upper()
+                n += len(line) - line.count("N")
+    return n
 
 
 def detect_bowtie_index_name(fasta_path):
