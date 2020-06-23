@@ -39,7 +39,6 @@ rule multiqc:
     input:
         expand([
             "igv/{library.name}.bw",
-            "igv/{library.name}.tdf",
             "stats/{library.name}.txt",
         ], library=libraries),
         expand("fastqc/{fastq}_R{read}_fastqc.html",
@@ -265,21 +264,6 @@ rule insert_size_metrics:
         " HISTOGRAM_FILE={output.pdf}"
         " MINIMUM_PCT=0.5"
         " STOP_AFTER=10000000"
-
-
-rule igvtools_count:
-    output:
-        tdf="igv/{library}.tdf"
-    input:
-        bam="restricted/{library}.bam",
-        chrom_sizes=config["chrom_sizes"]
-    shell:
-        "igvtools"
-        " count"
-        " --extFactor 60"
-        " {input.bam}"
-        " {output.tdf}"
-        " {input.chrom_sizes}"
 
 
 # TODO can genome_size be computed automatically?
