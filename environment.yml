@@ -16,3 +16,4 @@ dependencies:
   - fastqc
   - bedtools
   - multiqc
+  - xopen
