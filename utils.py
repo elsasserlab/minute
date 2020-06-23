@@ -17,11 +17,8 @@ class Library(NamedTuple):
 
     @property
     def name(self):
-        rep_str = f"replicate{self.replicate}"
-        if self.replicate == "pooled":
-            rep_str = f"pooled"
-
-        return f"{self.sample}_{rep_str}"
+        extra = "pooled" if self.replicate == "pooled" else f"replicate{self.replicate}"
+        return f"{self.sample}_{extra}"
 
 
 class TreatmentControlPair(NamedTuple):
