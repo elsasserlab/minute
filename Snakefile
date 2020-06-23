@@ -33,7 +33,9 @@ fastq_map = {
     groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=lambda lib: lib.fastqbase)
 }
 
-rule all:
+
+rule multiqc:
+    output: "multiqc_report.html"
     input:
         expand([
             "igv/{library.name}.bw",
@@ -45,6 +47,8 @@ rule all:
         expand("scaled/{library.name}.scaled.bw",
             library=[np.treatment for np in normalization_pairs]),
         "summaries/stats_summary.txt",
+    shell:
+        "multiqc ."
 
 
 rule clean:
@@ -66,6 +70,8 @@ rule clean:
         " summaries"
         " factors"
         " log"
+        " multiqc_report.html"
+        " multiqc_data"
 
 
 rule fastqc_input:
