@@ -10,6 +10,8 @@ from utils import (
     parse_duplication_metrics,
     parse_insert_size_metrics,
     parse_stats_fields,
+    read_int_from_file,
+    compute_genome_size,
     detect_bowtie_index_name,
 )
 
@@ -266,19 +268,19 @@ rule insert_size_metrics:
         " STOP_AFTER=10000000"
 
 
-# TODO can genome_size be computed automatically?
 rule bigwig:
     output:
         bw="igv/{library}.bw"
     input:
         bam="restricted/{library}.bam",
-        bai="restricted/{library}.bai"
+        bai="restricted/{library}.bai",
+        genome_size="genome_size.txt",
     threads: 20
     shell:
         "bamCoverage"
         " -p {threads}"
         " --normalizeUsing RPGC"
-        " --effectiveGenomeSize {config[genome_size]}"
+        " --effectiveGenomeSize $(< {input.genome_size})"
         " -b {input.bam}"
         " -o {output.bw}"
         " --binSize 1"
@@ -288,6 +290,7 @@ rule compute_scaling_factors:
     input:
         treatments=["restricted/{library.name}.flagstat.txt".format(library=np.treatment) for np in normalization_pairs],
         controls=["restricted/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
+        genome_size="genome_size.txt",
     output:
         factors=["factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs],
         info="summaries/scalinginfo.txt"
@@ -298,7 +301,7 @@ rule compute_scaling_factors:
                 input.treatments,
                 input.controls,
                 outf,
-                genome_size=config["genome_size"],
+                genome_size=read_int_from_file(input.genome_size),
                 fragment_size=config["fragment_size"],
             )
             for factor, factor_path in zip(factors, output.factors):
@@ -390,6 +393,16 @@ rule stats_summary:
                 summary = parse_stats_fields(stats_file)
                 row = [summary[k] for k in header]
                 print(*row, sep="\t", file=f)
+
+
+rule compute_effective_genome_size:
+    output:
+        txt="genome_size.txt"
+    input:
+        fasta=config["reference_fasta"]
+    run:
+        with open(output.txt, "w") as f:
+            print(compute_genome_size(input.fasta), file=f)
 
 
 rule samtools_index:
