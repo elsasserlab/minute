@@ -281,6 +281,7 @@ rule bigwig:
         " --effectiveGenomeSize {config[genome_size]}"
         " -b {input.bam}"
         " -o {output.bw}"
+        " --binSize 1"
 
 
 rule compute_scaling_factors:
