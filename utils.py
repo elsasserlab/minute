@@ -112,13 +112,24 @@ def parse_picard_metrics(path, metrics_class: str):
     return result
 
 
-def compute_scaling(normalization_pairs, treatments, controls, infofile, genome_size, fragment_size):
+def compute_scaling(
+    normalization_pairs,
+    treatments,
+    controls,
+    treatment_fragment_sizes,
+    control_fragment_sizes,
+    infofile,
+    genome_size,
+):
     print("sample_name", "#reads", "n_scaled_reads", "input_name", "n_input_reads", "factor", sep="\t", file=infofile)
     first = True
     scaling_factor = -1
-    for pair, treatment_path, control_path in zip(normalization_pairs, treatments, controls):
+    tuples = zip(normalization_pairs, treatments, controls, treatment_fragment_sizes, control_fragment_sizes)
+    for pair, treatment_path, control_path, treatment_fragment_path, control_fragment_path in tuples:
         treatment_reads = flagstat_mapped_reads(treatment_path)
         control_reads = flagstat_mapped_reads(control_path)
+        treatment_fragment_size = read_int_from_file(treatment_fragment_path)
+        control_fragment_size = read_int_from_file(control_fragment_path)
         if first:
             scaling_factor = (
                 genome_size / fragment_size / treatment_reads * control_reads

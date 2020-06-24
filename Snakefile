@@ -290,6 +290,8 @@ rule compute_scaling_factors:
     input:
         treatments=["restricted/{library.name}.flagstat.txt".format(library=np.treatment) for np in normalization_pairs],
         controls=["restricted/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
+        treatment_fragment_sizes=["restricted/{library.name}.fragsize.txt".format(library=np.treatment) for np in normalization_pairs],
+        control_fragment_sizes=["restricted/{library.name}.fragsize.txt".format(library=np.controls) for np in normalization_pairs],
         genome_size="genome_size.txt",
     output:
         factors=["factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs],
@@ -300,9 +302,10 @@ rule compute_scaling_factors:
                 normalization_pairs,
                 input.treatments,
                 input.controls,
+                input.treatment_fragment_sizes,
+                input.control_fragment_sizes,
                 outf,
                 genome_size=read_int_from_file(input.genome_size),
-                fragment_size=config["fragment_size"],
             )
             for factor, factor_path in zip(factors, output.factors):
                 with open(factor_path, "w") as f:
