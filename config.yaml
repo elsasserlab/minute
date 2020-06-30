@@ -6,13 +6,7 @@
 reference_fasta: "ref/mm9.fasta.gz"
 
 # Path to a BED file listing the regions to be excluded
-blacklist_bed: "dummy_blacklist.bed"
-
-# Chromosome lengths file (.chrom.sizes or .genome)
-chrom_sizes: "ref/mm9.chrom.sizes"
-
-# Effective genome size
-genome_size: 2150570000
+exclude_regions: "exclude.bed"
 
 # Length of the 5' UMI
 umi_length: 6

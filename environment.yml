@@ -15,4 +15,5 @@ dependencies:
   - umi_tools
   - fastqc
   - bedtools
-
+  - multiqc
+  - xopen
