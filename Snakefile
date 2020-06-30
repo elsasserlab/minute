@@ -242,7 +242,7 @@ rule remove_exclude_regions:
         bam="restricted/{library}.bam"
     input:
         bam="dedup/{library}.bam",
-        bed=config["blacklist_bed"]
+        bed=config["exclude_regions"],
     shell:
         "bedtools"
         " intersect"

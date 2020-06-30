@@ -6,16 +6,22 @@
 reference_fasta: "ref.fa.gz"
 
 # Path to a BED file listing the regions to be excluded
-blacklist_bed: "blacklist.bed"
-
-# Chromosome lengths file (.chrom.sizes or .genome)
-chrom_sizes: "ref.chrom.sizes"
-
-# Effective genome size
-genome_size: 3700000
+exclude_regions: "exclude.bed"
 
 # Length of the 5' UMI
 umi_length: 6
 
 # Fragment length (insert size)
 fragment_size: 150
+
+
+#
+# Optional settings
+#
+# These usually don’t need to be changed
+#
+
+# The base name of the Bowtie2 index. This is normally found automatically
+# in the same folder as the reference_fasta.
+#
+# - bowtie_index_name: "ref/mm9"

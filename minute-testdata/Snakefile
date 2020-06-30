@@ -18,12 +18,12 @@ rule all:
         "inp_R2.fastq.gz",
         "ref.fa",
         "ref.chrom.sizes",
-        "blacklist.bed",
+        "exclude.bed",
 
 
-rule blacklist:
+rule exclude_regions:
     output:
-        bed="blacklist.bed"
+        bed="exclude.bed"
     run:
         with open(output.bed, "w") as f:
             print("mini", 3_100_000, 3_150_000, sep="\t", file=f)
