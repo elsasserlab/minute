@@ -190,5 +190,5 @@ def detect_bowtie_index_name(fasta_path):
 
 
 def get_replicates(libraries, sample):
-    replicates = [lib.replicate for lib in libraries if lib.sample==sample]
+    replicates = [lib.replicate for lib in libraries if lib.sample == sample]
     return replicates
