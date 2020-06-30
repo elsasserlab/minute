@@ -46,15 +46,7 @@ def group_pools(libraries):
 
 def read_controls(libraries):
     library_map = {
-        (library.sample, library.replicate): library for library in libraries}
-
-    for library in libraries:
-        library_map[(library.sample, "pooled")] = Library(
-            sample=library.sample,
-            replicate="pooled",
-            barcode="-",
-            fastqbase="-",
-        )
+        (library.sample, library.replicate): library for library in libraries }
 
     for row in read_tsv("controls.tsv"):
         treatment = library_map[(row[0], row[1])]

@@ -28,8 +28,9 @@ if "bowtie_index_name" not in config:
 
 
 libraries = list(read_libraries())
-normalization_pairs = list(read_controls(libraries))  # or: normalization_groups
 pools = list(group_pools(libraries))
+normalization_pairs = list(read_controls(libraries + pools))  # or: normalization_groups
+
 
 # Map a FASTQ prefix to its list of libraries
 fastq_map = {
@@ -362,7 +363,7 @@ rule stats:
     output:
         txt="stats/{library}.txt"
     input:
-        mapped="dupmarked/{library}.flagstat.txt",
+        mapped="mapped/{library}.flagstat.txt",
         dedup="dedup/{library}.flagstat.txt",
         restricted="restricted/{library}.flagstat.txt",
         metrics="dupmarked/{library}.metrics",
