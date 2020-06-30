@@ -173,7 +173,7 @@ rule bowtie2:
     threads:
         20
     output:
-        bam="mapped/{sample}_replicate{replicate}.bam"
+        bam=temp("mapped/{sample}_replicate{replicate}.bam")
     input:
         r1="demultiplexed/{sample}_replicate{replicate}_R1.fastq.gz",
         r2="demultiplexed/{sample}_replicate{replicate}_R2.fastq.gz",
@@ -211,7 +211,7 @@ rule pool_replicates:
 rule convert_to_single_end:
     """Convert sam files to single-end for marking duplicates"""
     output:
-        bam="mapped_se/{library}.bam"
+        bam=temp("mapped_se/{library}.bam")
     input:
         bam="mapped/{library}.bam"
     run:
@@ -224,7 +224,7 @@ rule convert_to_single_end:
 rule mark_duplicates:
     """UMI-aware duplicate marking with je suite"""
     output:
-        bam="dupmarked/{library}.bam",
+        bam=temp("dupmarked/{library}.bam"),
         metrics="dupmarked/{library}.metrics"
     input:
         bam="mapped_se/{library}.bam"
@@ -243,7 +243,7 @@ rule mark_duplicates:
 rule mark_pe_duplicates:
     """Select duplicate-flagged alignments and mark them in the PE file"""
     output:
-        bam="dedup/{library}.bam"
+        bam=temp("dedup/{library}.bam")
     input:
         target_bam="mapped/{library}.bam",
         proxy_bam="dupmarked/{library}.bam"
