@@ -105,6 +105,30 @@ rule move_umi_to_header:
         " --read2-out {output.r2}"
 
 
+rule remove_contamination:
+    threads:
+        8
+    output:
+        r1="noadapters/{name}.1.fastq.gz",
+        r2="noadapters/{name}.2.fastq.gz",
+    input:
+        r1="noumi/{name}.1.fastq.gz",
+        r2="noumi/{name}.2.fastq.gz",
+    log:
+        "noadapters/{name}.trimmed.log"
+    shell:
+        "cutadapt"
+        " -j {threads}"
+        " -e 0.15"
+        " -A TTTTTCTTTTCTTTTTTCTTTTCCTTCCTTCTAA"
+        " --discard-trimmed"
+        " -o {output.r1}"
+        " -p {output.r2}"
+        " {input.r1}"
+        " {input.r2}"
+        " > {log}"
+
+
 rule barcodes:
     """File with list of barcodes needed for demultiplexing"""
     output:
@@ -124,8 +148,8 @@ for fastq_base, libs in fastq_map.items():
             expand("demultiplexed/{library.name}_R{read}.fastq.gz",
                 library=libs, read=(1, 2))
         input:
-            r1="noumi/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
-            r2="noumi/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
+            r1="noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
+            r2="noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
             barcodes_fasta="barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
         params:
             r1=lambda wildcards: "demultiplexed/{name}_R1.fastq.gz",
@@ -156,9 +180,9 @@ def set_demultiplex_rule_names():
             # Ensure we get the demultiplexing rules only
             continue
         input = rul.input["r1"]
-        assert input.startswith("noumi/")
-        # Remove the initial "noumi/" and trailing ".1.fastq.gz" parts
-        rul.name = "demultiplex_" + rul.input["r1"][6:-11]
+        assert input.startswith("noadapters/")
+        # Remove the initial "noadapters/" and trailing ".1.fastq.gz" parts
+        rul.name = "demultiplex_" + rul.input["r1"][len("noadapters/"):-11]
 
 
 set_demultiplex_rule_names()
