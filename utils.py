@@ -33,6 +33,17 @@ def read_libraries():
         yield Library(*row)
 
 
+def group_pools(libraries):
+    samples = set([library.sample for library in libraries])
+    for s in samples:
+        yield Library(
+            sample=s,
+            replicate="pooled",
+            barcode="-",
+            fastqbase="-",
+        )
+
+
 def read_controls(libraries):
     library_map = {
         (library.sample, library.replicate): library for library in libraries}
