@@ -339,7 +339,7 @@ rule extract_fragment_size:
         fragsize="restricted/{library}.fragsize.txt"
     run:
         with open(output.fragsize, "w") as f:
-            print(parse_insert_size_metrics(input.insertsizes)["median_insert_size"],
+            print(int(parse_insert_size_metrics(input.insertsizes)["median_insert_size"]),
                   file=f)
 
 
