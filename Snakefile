@@ -2,6 +2,7 @@ import se_bam
 # TODO
 # - switch to interleaved files?
 from itertools import groupby
+from pathlib import Path
 from utils import (
     read_libraries,
     read_controls,
@@ -199,14 +200,17 @@ rule bowtie2:
 
 rule pool_replicates:
     output:
-        bam="mapped/{sample}_pooled.bam"
+        bam=temp("mapped/{sample}_pooled.bam")
     input:
         bam_replicates=lambda wildcards: expand(
             "mapped/{{sample}}_replicate{replicates}.bam",
             replicates=get_replicates(libraries, wildcards.sample))
-    shell:
-        # samtools merge output is already sorted
-        "samtools merge {output.bam} {input.bam_replicates}"
+    run:
+        if len(input.bam_replicates) == 1:
+            os.link(input.bam_replicates[0], output.bam)
+        else:
+            # samtools merge output is already sorted
+            shell("samtools merge {output.bam} {input.bam_replicates}")
 
 
 rule convert_to_single_end:
