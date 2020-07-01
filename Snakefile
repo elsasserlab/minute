@@ -2,6 +2,7 @@ import se_bam
 # TODO
 # - switch to interleaved files?
 from itertools import groupby
+from pathlib import Path
 from utils import (
     read_libraries,
     read_controls,
@@ -13,6 +14,8 @@ from utils import (
     read_int_from_file,
     compute_genome_size,
     detect_bowtie_index_name,
+    get_replicates,
+    group_pools,
 )
 
 
@@ -26,7 +29,9 @@ if "bowtie_index_name" not in config:
 
 
 libraries = list(read_libraries())
-normalization_pairs = list(read_controls(libraries))  # or: normalization_groups
+pools = list(group_pools(libraries))
+normalization_pairs = list(read_controls(libraries + pools))  # or: normalization_groups
+
 
 # Map a FASTQ prefix to its list of libraries
 fastq_map = {
@@ -42,6 +47,8 @@ rule multiqc:
         expand([
             "igv/{library.name}.bw",
             "stats/{library.name}.txt",
+            "igv/{library.sample}_pooled.bw",
+            "stats/{library.sample}_pooled.txt",
         ], library=libraries),
         expand("fastqc/{fastq}_R{read}_fastqc.html",
             fastq=fastq_map.keys(), read=(1, 2)),
@@ -192,12 +199,12 @@ rule bowtie2:
     threads:
         20
     output:
-        bam=temp("mapped/{library}.bam")
+        bam=temp("mapped/{sample}_replicate{replicate}.bam")
     input:
-        r1="demultiplexed/{library}_R1.fastq.gz",
-        r2="demultiplexed/{library}_R2.fastq.gz",
+        r1="demultiplexed/{sample}_replicate{replicate}_R1.fastq.gz",
+        r2="demultiplexed/{sample}_replicate{replicate}_R2.fastq.gz",
     log:
-        "log/bowtie2-{library}.log"
+        "log/bowtie2-{sample}_replicate{replicate}.log"
     # TODO
     # - --sensitive (instead of --fast) would be default
     # - write uncompressed BAM?
@@ -213,6 +220,21 @@ rule bowtie2:
         " 2> {log}"
         " "
         "| samtools sort -o {output.bam} -"
+
+
+rule pool_replicates:
+    output:
+        bam=temp("mapped/{sample}_pooled.bam")
+    input:
+        bam_replicates=lambda wildcards: expand(
+            "mapped/{{sample}}_replicate{replicates}.bam",
+            replicates=get_replicates(libraries, wildcards.sample))
+    run:
+        if len(input.bam_replicates) == 1:
+            os.link(input.bam_replicates[0], output.bam)
+        else:
+            # samtools merge output is already sorted
+            shell("samtools merge {output.bam} {input.bam_replicates}")
 
 
 rule convert_to_single_end:
@@ -247,8 +269,8 @@ rule mark_duplicates:
         " M={output.metrics}"
 
 
-rule deduplicate_pe_file:
-    """Select duplicate-flagged alignments and filter in the PE file"""
+rule mark_pe_duplicates:
+    """Select duplicate-flagged alignments and mark them in the PE file"""
     output:
         bam=temp("dedup/{library}.bam")
     input:
@@ -266,7 +288,7 @@ rule remove_exclude_regions:
         bam="restricted/{library}.bam"
     input:
         bam="dedup/{library}.bam",
-        bed=config["exclude_regions"],
+        bed=config["exclude_regions"]
     shell:
         "bedtools"
         " intersect"
@@ -396,7 +418,7 @@ rule stats_summary:
     output:
         txt="summaries/stats_summary.txt"
     input:
-        expand("stats/{library.name}.txt", library=libraries)
+        expand("stats/{library.name}.txt", library=libraries) + expand("stats/{pool.name}.txt", pool=pools)
     run:
         stats_summaries = [parse_stats_fields(st_file) for st_file in input]
 
@@ -410,7 +432,7 @@ rule stats_summary:
             "percent_duplication",
             "insert_size",
         ]
-       
+
         with open(output.txt, "w") as f:
             print(*header, sep="\t", file=f)
             for stats_file in input:
