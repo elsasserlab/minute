@@ -63,11 +63,6 @@ rule clean:
     shell:
         "rm -rf"
         " tmp"
-        " demultiplexed"
-        " mapped"
-        " mapped_se"
-        " dupmarked"
-        " dedup"
         " results"
         " restricted"
         " igv"
@@ -199,7 +194,7 @@ rule bowtie2:
     threads:
         20
     output:
-        bam=temp("mapped/{sample}_replicate{replicate}.bam")
+        bam=temp("tmp/mapped/{sample}_replicate{replicate}.bam")
     input:
         r1="tmp/demultiplexed/{sample}_replicate{replicate}_R1.fastq.gz",
         r2="tmp/demultiplexed/{sample}_replicate{replicate}_R2.fastq.gz",
@@ -224,10 +219,10 @@ rule bowtie2:
 
 rule pool_replicates:
     output:
-        bam=temp("mapped/{sample}_pooled.bam")
+        bam=temp("tmp/mapped/{sample}_pooled.bam")
     input:
         bam_replicates=lambda wildcards: expand(
-            "mapped/{{sample}}_replicate{replicates}.bam",
+            "tmp/mapped/{{sample}}_replicate{replicates}.bam",
             replicates=get_replicates(libraries, wildcards.sample))
     run:
         if len(input.bam_replicates) == 1:
@@ -240,9 +235,9 @@ rule pool_replicates:
 rule convert_to_single_end:
     """Convert sam files to single-end for marking duplicates"""
     output:
-        bam=temp("mapped_se/{library}.bam")
+        bam=temp("tmp/mapped_se/{library}.bam")
     input:
-        bam="mapped/{library}.bam"
+        bam="tmp/mapped/{library}.bam"
     run:
         se_bam.convert_paired_end_to_single_end_bam(
             input.bam,
@@ -253,10 +248,10 @@ rule convert_to_single_end:
 rule mark_duplicates:
     """UMI-aware duplicate marking with je suite"""
     output:
-        bam=temp("dupmarked/{library}.bam"),
-        metrics="dupmarked/{library}.metrics"
+        bam=temp("tmp/dupmarked/{library}.bam"),
+        metrics="tmp/dupmarked/{library}.metrics"
     input:
-        bam="mapped_se/{library}.bam"
+        bam="tmp/mapped_se/{library}.bam"
     shell:
         "LC_ALL=C je"
         " markdupes"
@@ -272,10 +267,10 @@ rule mark_duplicates:
 rule mark_pe_duplicates:
     """Select duplicate-flagged alignments and mark them in the PE file"""
     output:
-        bam=temp("dedup/{library}.bam")
+        bam=temp("tmp/dedup/{library}.bam")
     input:
-        target_bam="mapped/{library}.bam",
-        proxy_bam="dupmarked/{library}.bam"
+        target_bam="tmp/mapped/{library}.bam",
+        proxy_bam="tmp/dupmarked/{library}.bam"
     run:
         se_bam.mark_duplicates_by_proxy_bam(
             input.target_bam,
@@ -287,7 +282,7 @@ rule remove_exclude_regions:
     output:
         bam="restricted/{library}.bam"
     input:
-        bam="dedup/{library}.bam",
+        bam="tmp/dedup/{library}.bam",
         bed=config["exclude_regions"]
     shell:
         "bedtools"
@@ -391,10 +386,10 @@ rule stats:
     output:
         txt="stats/{library}.txt"
     input:
-        mapped="mapped/{library}.flagstat.txt",
-        dedup="dedup/{library}.flagstat.txt",
+        mapped="tmp/mapped/{library}.flagstat.txt",
+        dedup="tmp/dedup/{library}.flagstat.txt",
         restricted="restricted/{library}.flagstat.txt",
-        metrics="dupmarked/{library}.metrics",
+        metrics="tmp/dupmarked/{library}.metrics",
         insertsizes="restricted/{library}.insertsizes.txt",
     run:
         row = []
