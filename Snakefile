@@ -63,7 +63,6 @@ rule clean:
     shell:
         "rm -rf"
         " tmp"
-        " noumi"
         " demultiplexed"
         " mapped"
         " mapped_se"
@@ -94,8 +93,8 @@ rule fastqc_input:
 
 rule move_umi_to_header:
     output:
-        r1="noumi/{name}.1.fastq.gz",
-        r2="noumi/{name}.2.fastq.gz",
+        r1="tmp/noumi/{name}.1.fastq.gz",
+        r2="tmp/noumi/{name}.2.fastq.gz",
     input:
         r1="fastq/{name}_R1.fastq.gz",
         r2="fastq/{name}_R2.fastq.gz",
@@ -119,8 +118,8 @@ rule remove_contamination:
         r1="noadapters/{name}.1.fastq.gz",
         r2="noadapters/{name}.2.fastq.gz",
     input:
-        r1="noumi/{name}.1.fastq.gz",
-        r2="noumi/{name}.2.fastq.gz",
+        r1="tmp/noumi/{name}.1.fastq.gz",
+        r2="tmp/noumi/{name}.2.fastq.gz",
     log:
         "noadapters/{name}.trimmed.log"
     shell:
