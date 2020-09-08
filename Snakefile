@@ -115,8 +115,8 @@ rule remove_contamination:
     threads:
         8
     output:
-        r1="tmp/noadapters/{name}.1.fastq.gz",
-        r2="tmp/noadapters/{name}.2.fastq.gz",
+        r1=temp("tmp/noadapters/{name}.1.fastq.gz"),
+        r2=temp("tmp/noadapters/{name}.2.fastq.gz"),
     input:
         r1="tmp/noumi/{name}.1.fastq.gz",
         r2="tmp/noumi/{name}.2.fastq.gz",
