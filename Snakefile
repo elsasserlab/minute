@@ -114,7 +114,7 @@ rule remove_contamination:
         r1="tmp/1-noumi/{name}.1.fastq.gz",
         r2="tmp/1-noumi/{name}.2.fastq.gz",
     log:
-        "tmp/2-noadapters/{name}.trimmed.log"
+        "log/2-noadapters/{name}.trimmed.log"
     shell:
         "cutadapt"
         " -j {threads}"
@@ -156,7 +156,7 @@ for fastq_base, libs in fastq_map.items():
             r2=lambda wildcards: "tmp/3-demultiplexed/{name}_R2.fastq.gz",
             fastqbase=fastq_base,
         log:
-            "log/demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
+            "log/3-demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
         shell:
             "cutadapt"
             " -e 0.15"  # TODO determine from barcode length
@@ -198,7 +198,7 @@ rule bowtie2:
         r1="tmp/3-demultiplexed/{sample}_replicate{replicate}_R1.fastq.gz",
         r2="tmp/3-demultiplexed/{sample}_replicate{replicate}_R2.fastq.gz",
     log:
-        "log/bowtie2-{sample}_replicate{replicate}.log"
+        "log/4-mapped/{sample}_replicate{replicate}.bowtie2.log"
     # TODO
     # - --sensitive (instead of --fast) would be default
     # - write uncompressed BAM?
