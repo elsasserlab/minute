@@ -62,7 +62,7 @@ rule multiqc:
 rule clean:
     shell:
         "rm -rf"
-        " barcodes"
+        " tmp"
         " noumi"
         " demultiplexed"
         " mapped"
@@ -139,7 +139,7 @@ rule remove_contamination:
 rule barcodes:
     """File with list of barcodes needed for demultiplexing"""
     output:
-        barcodes_fasta="barcodes/{fastqbase}.fasta"
+        barcodes_fasta=temp("tmp/barcodes/{fastqbase}.fasta")
     run:
         with open(output.barcodes_fasta, "w") as f:
             for library in libraries:
@@ -157,7 +157,7 @@ for fastq_base, libs in fastq_map.items():
         input:
             r1="noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
             r2="noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
-            barcodes_fasta="barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
+            barcodes_fasta="tmp/barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
         params:
             r1=lambda wildcards: "demultiplexed/{name}_R1.fastq.gz",
             r2=lambda wildcards: "demultiplexed/{name}_R2.fastq.gz",
