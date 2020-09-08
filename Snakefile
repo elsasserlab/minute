@@ -70,7 +70,6 @@ rule clean:
         " scaled"
         " stats"
         " summaries"
-        " factors"
         " log"
         " multiqc_report.html"
         " multiqc_data"
@@ -333,7 +332,7 @@ rule compute_scaling_factors:
         controls=["restricted/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
         genome_size="genome_size.txt",
     output:
-        factors=["factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs],
+        factors=temp(["tmp/factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs]),
         info="summaries/scalinginfo.txt"
     run:
         with open(output.info, "w") as outf:
@@ -364,7 +363,7 @@ rule scaled_bigwig:
     output:
         bw="scaled/{library}.scaled.bw"
     input:
-        factor="factors/{library}.factor.txt",
+        factor="tmp/factors/{library}.factor.txt",
         fragsize="restricted/{library}.fragsize.txt",
         bam="restricted/{library}.bam",
         bai="restricted/{library}.bai",
