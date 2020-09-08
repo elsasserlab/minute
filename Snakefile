@@ -314,7 +314,7 @@ rule unscaled_bigwig:
     input:
         bam="final/{library}.bam",
         bai="final/{library}.bai",
-        genome_size="genome_size.txt",
+        genome_size="tmp/genome_size.txt",
     threads: 20
     shell:
         "bamCoverage"
@@ -330,7 +330,7 @@ rule compute_scaling_factors:
     input:
         treatments=["final/{library.name}.flagstat.txt".format(library=np.treatment) for np in normalization_pairs],
         controls=["final/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
-        genome_size="genome_size.txt",
+        genome_size="tmp/genome_size.txt",
     output:
         factors=temp(["tmp/factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs]),
         info="summaries/scalinginfo.txt"
@@ -437,7 +437,7 @@ rule stats_summary:
 
 rule compute_effective_genome_size:
     output:
-        txt="genome_size.txt"
+        txt="tmp/genome_size.txt"
     input:
         fasta=config["reference_fasta"]
     run:
