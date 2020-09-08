@@ -87,8 +87,8 @@ rule fastqc_input:
 
 rule move_umi_to_header:
     output:
-        r1=temp("tmp/noumi/{name}.1.fastq.gz"),
-        r2=temp("tmp/noumi/{name}.2.fastq.gz"),
+        r1=temp("tmp/1-noumi/{name}.1.fastq.gz"),
+        r2=temp("tmp/1-noumi/{name}.2.fastq.gz"),
     input:
         r1="fastq/{name}_R1.fastq.gz",
         r2="fastq/{name}_R2.fastq.gz",
@@ -109,13 +109,13 @@ rule remove_contamination:
     threads:
         8
     output:
-        r1=temp("tmp/noadapters/{name}.1.fastq.gz"),
-        r2=temp("tmp/noadapters/{name}.2.fastq.gz"),
+        r1=temp("tmp/2-noadapters/{name}.1.fastq.gz"),
+        r2=temp("tmp/2-noadapters/{name}.2.fastq.gz"),
     input:
-        r1="tmp/noumi/{name}.1.fastq.gz",
-        r2="tmp/noumi/{name}.2.fastq.gz",
+        r1="tmp/1-noumi/{name}.1.fastq.gz",
+        r2="tmp/1-noumi/{name}.2.fastq.gz",
     log:
-        "tmp/noadapters/{name}.trimmed.log"
+        "tmp/2-noadapters/{name}.trimmed.log"
     shell:
         "cutadapt"
         " -j {threads}"
@@ -132,7 +132,7 @@ rule remove_contamination:
 rule barcodes:
     """File with list of barcodes needed for demultiplexing"""
     output:
-        barcodes_fasta=temp("tmp/barcodes/{fastqbase}.fasta")
+        barcodes_fasta=temp("tmp/3-barcodes/{fastqbase}.fasta")
     run:
         with open(output.barcodes_fasta, "w") as f:
             for library in libraries:
@@ -145,16 +145,16 @@ for fastq_base, libs in fastq_map.items():
 
     rule:
         output:
-            temp(expand("tmp/demultiplexed/{library.name}_R{read}.fastq.gz", library=libs, read=(1, 2))),
-            unknown_r1=temp("tmp/demultiplexed/{fastqbase}-unknown_R1.fastq.gz".format(fastqbase=fastq_base)),
-            unknown_r2=temp("tmp/demultiplexed/{fastqbase}-unknown_R2.fastq.gz".format(fastqbase=fastq_base)),
+            temp(expand("tmp/3-demultiplexed/{library.name}_R{read}.fastq.gz", library=libs, read=(1, 2))),
+            unknown_r1=temp("tmp/3-demultiplexed/{fastqbase}-unknown_R1.fastq.gz".format(fastqbase=fastq_base)),
+            unknown_r2=temp("tmp/3-demultiplexed/{fastqbase}-unknown_R2.fastq.gz".format(fastqbase=fastq_base)),
         input:
-            r1="tmp/noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
-            r2="tmp/noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
-            barcodes_fasta="tmp/barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
+            r1="tmp/2-noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
+            r2="tmp/2-noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
+            barcodes_fasta="tmp/3-barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
         params:
-            r1=lambda wildcards: "tmp/demultiplexed/{name}_R1.fastq.gz",
-            r2=lambda wildcards: "tmp/demultiplexed/{name}_R2.fastq.gz",
+            r1=lambda wildcards: "tmp/3-demultiplexed/{name}_R1.fastq.gz",
+            r2=lambda wildcards: "tmp/3-demultiplexed/{name}_R2.fastq.gz",
             fastqbase=fastq_base,
         log:
             "log/demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
@@ -164,8 +164,8 @@ for fastq_base, libs in fastq_map.items():
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
             " -p {params.r2}"
-            " --untrimmed-output tmp/demultiplexed/{params.fastqbase}-unknown_R1.fastq.gz"
-            " --untrimmed-paired-output tmp/demultiplexed/{params.fastqbase}-unknown_R2.fastq.gz"
+            " --untrimmed-output tmp/3-demultiplexed/{params.fastqbase}-unknown_R1.fastq.gz"
+            " --untrimmed-paired-output tmp/3-demultiplexed/{params.fastqbase}-unknown_R2.fastq.gz"
             " {input.r1}"
             " {input.r2}"
             " > {log}"
@@ -176,7 +176,7 @@ def set_demultiplex_rule_names():
     This sets the names of the demultiplexing rules, which need to be
     defined anonymously because they are defined (above) in a loop.
     """
-    prefix = "tmp/noadapters/"
+    prefix = "tmp/2-noadapters/"
     for rul in workflow.rules:
         if not "barcodes_fasta" in rul.input.keys():
             # Ensure we get the demultiplexing rules only
@@ -194,10 +194,10 @@ rule bowtie2:
     threads:
         20
     output:
-        bam=temp("tmp/mapped/{sample}_replicate{replicate}.bam")
+        bam=temp("tmp/4-mapped/{sample}_replicate{replicate}.bam")
     input:
-        r1="tmp/demultiplexed/{sample}_replicate{replicate}_R1.fastq.gz",
-        r2="tmp/demultiplexed/{sample}_replicate{replicate}_R2.fastq.gz",
+        r1="tmp/3-demultiplexed/{sample}_replicate{replicate}_R1.fastq.gz",
+        r2="tmp/3-demultiplexed/{sample}_replicate{replicate}_R2.fastq.gz",
     log:
         "log/bowtie2-{sample}_replicate{replicate}.log"
     # TODO
@@ -219,10 +219,10 @@ rule bowtie2:
 
 rule pool_replicates:
     output:
-        bam=temp("tmp/mapped/{sample}_pooled.bam")
+        bam=temp("tmp/4-mapped/{sample}_pooled.bam")
     input:
         bam_replicates=lambda wildcards: expand(
-            "tmp/mapped/{{sample}}_replicate{replicates}.bam",
+            "tmp/4-mapped/{{sample}}_replicate{replicates}.bam",
             replicates=get_replicates(libraries, wildcards.sample))
     run:
         if len(input.bam_replicates) == 1:
@@ -235,9 +235,9 @@ rule pool_replicates:
 rule convert_to_single_end:
     """Convert sam files to single-end for marking duplicates"""
     output:
-        bam=temp("tmp/mapped_se/{library}.bam")
+        bam=temp("tmp/5-mapped_se/{library}.bam")
     input:
-        bam="tmp/mapped/{library}.bam"
+        bam="tmp/4-mapped/{library}.bam"
     run:
         se_bam.convert_paired_end_to_single_end_bam(
             input.bam,
@@ -248,10 +248,10 @@ rule convert_to_single_end:
 rule mark_duplicates:
     """UMI-aware duplicate marking with je suite"""
     output:
-        bam=temp("tmp/dupmarked/{library}.bam"),
-        metrics="tmp/dupmarked/{library}.metrics"
+        bam=temp("tmp/6-dupmarked/{library}.bam"),
+        metrics="tmp/6-dupmarked/{library}.metrics"
     input:
-        bam="tmp/mapped_se/{library}.bam"
+        bam="tmp/5-mapped_se/{library}.bam"
     shell:
         "LC_ALL=C je"
         " markdupes"
@@ -267,10 +267,10 @@ rule mark_duplicates:
 rule mark_pe_duplicates:
     """Select duplicate-flagged alignments and mark them in the PE file"""
     output:
-        bam=temp("tmp/dedup/{library}.bam")
+        bam=temp("tmp/7-dedup/{library}.bam")
     input:
-        target_bam="tmp/mapped/{library}.bam",
-        proxy_bam="tmp/dupmarked/{library}.bam"
+        target_bam="tmp/4-mapped/{library}.bam",
+        proxy_bam="tmp/6-dupmarked/{library}.bam"
     run:
         se_bam.mark_duplicates_by_proxy_bam(
             input.target_bam,
@@ -282,7 +282,7 @@ rule remove_exclude_regions:
     output:
         bam="restricted/{library}.bam"
     input:
-        bam="tmp/dedup/{library}.bam",
+        bam="tmp/7-dedup/{library}.bam",
         bed=config["exclude_regions"]
     shell:
         "bedtools"
@@ -386,10 +386,10 @@ rule stats:
     output:
         txt="stats/{library}.txt"
     input:
-        mapped="tmp/mapped/{library}.flagstat.txt",
-        dedup="tmp/dedup/{library}.flagstat.txt",
+        mapped="tmp/4-mapped/{library}.flagstat.txt",
+        metrics="tmp/6-dupmarked/{library}.metrics",
+        dedup="tmp/7-dedup/{library}.flagstat.txt",
         restricted="restricted/{library}.flagstat.txt",
-        metrics="tmp/dupmarked/{library}.metrics",
         insertsizes="restricted/{library}.insertsizes.txt",
     run:
         row = []
