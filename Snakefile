@@ -115,13 +115,13 @@ rule remove_contamination:
     threads:
         8
     output:
-        r1="noadapters/{name}.1.fastq.gz",
-        r2="noadapters/{name}.2.fastq.gz",
+        r1="tmp/noadapters/{name}.1.fastq.gz",
+        r2="tmp/noadapters/{name}.2.fastq.gz",
     input:
         r1="tmp/noumi/{name}.1.fastq.gz",
         r2="tmp/noumi/{name}.2.fastq.gz",
     log:
-        "noadapters/{name}.trimmed.log"
+        "tmp/noadapters/{name}.trimmed.log"
     shell:
         "cutadapt"
         " -j {threads}"
@@ -154,8 +154,8 @@ for fastq_base, libs in fastq_map.items():
             expand("demultiplexed/{library.name}_R{read}.fastq.gz",
                 library=libs, read=(1, 2))
         input:
-            r1="noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
-            r2="noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
+            r1="tmp/noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
+            r2="tmp/noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
             barcodes_fasta="tmp/barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
         params:
             r1=lambda wildcards: "demultiplexed/{name}_R1.fastq.gz",
@@ -181,14 +181,15 @@ def set_demultiplex_rule_names():
     This sets the names of the demultiplexing rules, which need to be
     defined anonymously because they are defined (above) in a loop.
     """
+    prefix = "tmp/noadapters/"
     for rul in workflow.rules:
         if not "barcodes_fasta" in rul.input.keys():
             # Ensure we get the demultiplexing rules only
             continue
         input = rul.input["r1"]
-        assert input.startswith("noadapters/")
-        # Remove the initial "noadapters/" and trailing ".1.fastq.gz" parts
-        rul.name = "demultiplex_" + rul.input["r1"][len("noadapters/"):-11]
+        assert input.startswith(prefix)
+        # Remove the prefix and the ".1.fastq.gz" suffix
+        rul.name = "demultiplex_" + rul.input["r1"][len(prefix):-11]
 
 
 set_demultiplex_rule_names()
