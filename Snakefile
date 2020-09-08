@@ -64,7 +64,7 @@ rule clean:
         "rm -rf"
         " tmp"
         " results"
-        " restricted"
+        " final"
         " igv"
         " fastqc"
         " scaled"
@@ -280,7 +280,7 @@ rule mark_pe_duplicates:
 
 rule remove_exclude_regions:
     output:
-        bam="restricted/{library}.bam"
+        bam="final/{library}.bam"
     input:
         bam="tmp/7-dedup/{library}.bam",
         bed=config["exclude_regions"]
@@ -295,10 +295,10 @@ rule remove_exclude_regions:
 
 rule insert_size_metrics:
     output:
-        txt="restricted/{library}.insertsizes.txt",
-        pdf="restricted/{library}.insertsizes.pdf",
+        txt="final/{library}.insertsizes.txt",
+        pdf="final/{library}.insertsizes.pdf",
     input:
-        bam="restricted/{library}.bam"
+        bam="final/{library}.bam"
     shell:
         "picard"
         " CollectInsertSizeMetrics"
@@ -313,8 +313,8 @@ rule bigwig:
     output:
         bw="igv/{library}.bw"
     input:
-        bam="restricted/{library}.bam",
-        bai="restricted/{library}.bai",
+        bam="final/{library}.bam",
+        bai="final/{library}.bai",
         genome_size="genome_size.txt",
     threads: 20
     shell:
@@ -329,8 +329,8 @@ rule bigwig:
 
 rule compute_scaling_factors:
     input:
-        treatments=["restricted/{library.name}.flagstat.txt".format(library=np.treatment) for np in normalization_pairs],
-        controls=["restricted/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
+        treatments=["final/{library.name}.flagstat.txt".format(library=np.treatment) for np in normalization_pairs],
+        controls=["final/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
         genome_size="genome_size.txt",
     output:
         factors=temp(["tmp/factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs]),
@@ -351,9 +351,9 @@ rule compute_scaling_factors:
 
 rule extract_fragment_size:
     input:
-        insertsizes="restricted/{library}.insertsizes.txt"
+        insertsizes="final/{library}.insertsizes.txt"
     output:
-        fragsize="restricted/{library}.fragsize.txt"
+        fragsize="final/{library}.fragsize.txt"
     run:
         with open(output.fragsize, "w") as f:
             print(int(parse_insert_size_metrics(input.insertsizes)["median_insert_size"]),
@@ -365,9 +365,9 @@ rule scaled_bigwig:
         bw="scaled/{library}.scaled.bw"
     input:
         factor="tmp/factors/{library}.factor.txt",
-        fragsize="restricted/{library}.fragsize.txt",
-        bam="restricted/{library}.bam",
-        bai="restricted/{library}.bai",
+        fragsize="final/{library}.fragsize.txt",
+        bam="final/{library}.bam",
+        bai="final/{library}.bai",
     threads: 20
     shell:
         # TODO also run this
@@ -386,17 +386,17 @@ rule stats:
     output:
         txt="stats/{library}.txt"
     input:
-        mapped="tmp/4-mapped/{library}.flagstat.txt",
+        mapped_flagstat="tmp/4-mapped/{library}.flagstat.txt",
         metrics="tmp/6-dupmarked/{library}.metrics",
-        dedup="tmp/7-dedup/{library}.flagstat.txt",
-        restricted="restricted/{library}.flagstat.txt",
-        insertsizes="restricted/{library}.insertsizes.txt",
+        dedup_flagstat="tmp/7-dedup/{library}.flagstat.txt",
+        final_flagstat="final/{library}.flagstat.txt",
+        insertsizes="final/{library}.insertsizes.txt",
     run:
         row = []
         for flagstat, name in [
-            (input.mapped, "mapped"),
-            (input.dedup, "dedup"),
-            (input.restricted, "restricted"),
+            (input.mapped_flagstat, "mapped"),
+            (input.dedup_flagstat, "dedup"),
+            (input.final_flagstat, "final"),
         ]:
             mapped_reads = flagstat_mapped_reads(flagstat)
             row.append(mapped_reads)
@@ -405,7 +405,7 @@ rule stats:
         row.append(parse_duplication_metrics(input.metrics)["percent_duplication"])
         row.append(parse_insert_size_metrics(input.insertsizes)["median_insert_size"])
         with open(output.txt, "w") as f:
-            print("mapped", "dedup_mapped", "restricted_mapped", "library_size", "percent_duplication", "insert_size", sep="\t", file=f)
+            print("mapped", "dedup_mapped", "final_mapped", "library_size", "percent_duplication", "insert_size", sep="\t", file=f)
             print(*row, sep="\t", file=f)
 
 
@@ -422,7 +422,7 @@ rule stats_summary:
             "library",
             "mapped",
             "dedup_mapped",
-            "restricted_mapped",
+            "final_mapped",
             "library_size",
             "percent_duplication",
             "insert_size",
