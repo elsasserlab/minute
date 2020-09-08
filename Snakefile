@@ -45,14 +45,14 @@ rule multiqc:
     output: "multiqc_report.html"
     input:
         expand([
-            "igv/{library.name}.bw",
+            "bigwig/{library.name}.unscaled.bw",
             "stats/{library.name}.txt",
-            "igv/{library.sample}_pooled.bw",
+            "bigwig/{library.sample}_pooled.unscaled.bw",
             "stats/{library.sample}_pooled.txt",
         ], library=libraries),
         expand("fastqc/{fastq}_R{read}_fastqc.html",
             fastq=fastq_map.keys(), read=(1, 2)),
-        expand("scaled/{library.name}.scaled.bw",
+        expand("bigwig/{library.name}.scaled.bw",
             library=[np.treatment for np in normalization_pairs]),
         "summaries/stats_summary.txt",
     shell:
@@ -65,9 +65,8 @@ rule clean:
         " tmp"
         " results"
         " final"
-        " igv"
+        " bigwig"
         " fastqc"
-        " scaled"
         " stats"
         " summaries"
         " log"
@@ -309,9 +308,9 @@ rule insert_size_metrics:
         " STOP_AFTER=10000000"
 
 
-rule bigwig:
+rule unscaled_bigwig:
     output:
-        bw="igv/{library}.bw"
+        bw="bigwig/{library}.unscaled.bw"
     input:
         bam="final/{library}.bam",
         bai="final/{library}.bai",
@@ -362,7 +361,7 @@ rule extract_fragment_size:
 
 rule scaled_bigwig:
     output:
-        bw="scaled/{library}.scaled.bw"
+        bw="bigwig/{library}.scaled.bw"
     input:
         factor="tmp/factors/{library}.factor.txt",
         fragsize="final/{library}.fragsize.txt",
