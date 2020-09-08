@@ -46,9 +46,7 @@ rule multiqc:
     input:
         expand([
             "bigwig/{library.name}.unscaled.bw",
-            "stats/{library.name}.txt",
             "bigwig/{library.sample}_pooled.unscaled.bw",
-            "stats/{library.sample}_pooled.txt",
         ], library=libraries),
         expand("fastqc/{fastq}_R{read}_fastqc.html",
             fastq=fastq_map.keys(), read=(1, 2)),
@@ -383,7 +381,7 @@ rule scaled_bigwig:
 
 rule stats:
     output:
-        txt="stats/{library}.txt"
+        txt="tmp/8-stats/{library}.txt"
     input:
         mapped_flagstat="tmp/4-mapped/{library}.flagstat.txt",
         metrics="tmp/6-dupmarked/{library}.metrics",
@@ -412,7 +410,7 @@ rule stats_summary:
     output:
         txt="summaries/stats_summary.txt"
     input:
-        expand("stats/{library.name}.txt", library=libraries) + expand("stats/{pool.name}.txt", pool=pools)
+        expand("tmp/8-stats/{library.name}.txt", library=libraries) + expand("tmp/8-stats/{pool.name}.txt", pool=pools)
     run:
         stats_summaries = [parse_stats_fields(st_file) for st_file in input]
 
