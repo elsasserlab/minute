@@ -145,8 +145,9 @@ for fastq_base, libs in fastq_map.items():
 
     rule:
         output:
-            temp(expand("tmp/demultiplexed/{library.name}_R{read}.fastq.gz",
-                library=libs, read=(1, 2)))
+            temp(expand("tmp/demultiplexed/{library.name}_R{read}.fastq.gz", library=libs, read=(1, 2))),
+            unknown_r1=temp("tmp/demultiplexed/{fastqbase}-unknown_R1.fastq.gz".format(fastqbase=fastq_base)),
+            unknown_r2=temp("tmp/demultiplexed/{fastqbase}-unknown_R2.fastq.gz".format(fastqbase=fastq_base)),
         input:
             r1="tmp/noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
             r2="tmp/noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
