@@ -2,7 +2,6 @@ import se_bam
 # TODO
 # - switch to interleaved files?
 from itertools import groupby
-from pathlib import Path
 from utils import (
     read_libraries,
     read_controls,

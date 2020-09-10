@@ -1,7 +1,4 @@
-import os
-import pysam
 from dataclasses import dataclass
-from itertools import groupby, islice
 from pathlib import Path
 
 from xopen import xopen
