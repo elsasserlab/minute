@@ -30,7 +30,7 @@ if "bowtie_index_name" not in config:
 
 libraries = list(read_libraries())
 pools = list(group_pools(libraries))
-normalization_pairs = list(read_controls(libraries + pools))  # or: normalization_groups
+normalization_pairs = list(read_controls(libraries))
 
 if not is_snakemake_calling_itself():
     print_metadata_overview(libraries, pools, normalization_pairs)
