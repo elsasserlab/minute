@@ -1,6 +1,6 @@
 import os
 import pysam
-from typing import NamedTuple
+from dataclasses import dataclass
 from itertools import groupby, islice
 from pathlib import Path
 
@@ -11,7 +11,8 @@ class ParseError(Exception):
     pass
 
 
-class Library(NamedTuple):
+@dataclass
+class Library:
     sample: str
     replicate: str
     barcode: str
@@ -23,7 +24,8 @@ class Library(NamedTuple):
         return f"{self.sample}_{extra}"
 
 
-class TreatmentControlPair(NamedTuple):
+@dataclass
+class TreatmentControlPair:
     treatment: Library
     control: Library
 
