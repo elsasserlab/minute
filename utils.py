@@ -44,7 +44,7 @@ class TreatmentControlPair:
 
 
 def read_libraries():
-    for row in read_tsv("experiment.tsv"):
+    for row in read_tsv("experiment.tsv", columns=4):
         yield FastqLibrary(*row)
 
 
@@ -60,17 +60,20 @@ def read_controls(libraries):
     library_map = {
         (library.sample, library.replicate): library for library in libraries}
 
-    for row in read_tsv("controls.tsv"):
+    for row in read_tsv("controls.tsv", columns=3):
         treatment = library_map[(row[0], row[1])]
         control = library_map[(row[2], row[1])]
         yield TreatmentControlPair(treatment, control)
 
 
-def read_tsv(path):
+def read_tsv(path, columns: int):
     """
     Read a tab-separated value file from path, allowing "#"-prefixed comments
 
     Yield a list of fields for every row (ignoring comments and empty lines)
+
+    If the number of fields in a row does not match *columns*, a ParseError
+    is raised.
     """
     with open(path) as f:
         for line in f:
@@ -78,6 +81,9 @@ def read_tsv(path):
             if line.startswith("#") or not line:
                 continue
             fields = line.strip().split("\t")
+            if len(fields) != columns:
+                raise ParseError(
+                    f"Expected {columns} tab-separated fields in {path}, but found {len(fields)}")
             yield fields
 
 
