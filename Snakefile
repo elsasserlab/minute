@@ -13,7 +13,7 @@ from utils import (
     compute_genome_size,
     detect_bowtie_index_name,
     get_replicates,
-    group_pools,
+    group_libraries_by_sample,
     print_metadata_overview,
     is_snakemake_calling_itself,
     map_fastq_prefix_to_list_of_libraries,
@@ -29,7 +29,7 @@ if "bowtie_index_name" not in config:
         sys.exit(str(e))
 
 libraries = list(read_libraries())
-pools = list(group_pools(libraries))
+pools = list(group_libraries_by_sample(libraries))
 normalization_pairs = list(read_controls(libraries))
 
 if not is_snakemake_calling_itself():

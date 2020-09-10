@@ -48,7 +48,7 @@ def read_libraries():
         yield FastqLibrary(*row)
 
 
-def group_pools(libraries):
+def group_libraries_by_sample(libraries):
     samples = defaultdict(list)
     for library in libraries:
         samples[library.sample].append(library)
