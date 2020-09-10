@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+import sys
 
 from xopen import xopen
 
@@ -213,3 +214,23 @@ def detect_bowtie_index_name(fasta_path):
 def get_replicates(libraries, sample):
     replicates = [lib.replicate for lib in libraries if lib.sample == sample]
     return replicates
+
+
+def print_metadata_overview(libraries, pools, normalization_pairs):
+    print("# Libraries")
+    for library in libraries:
+        print(" -", library)
+
+    print()
+    print("# Pools")
+    for pool in pools:
+        print(" -", pool)
+
+    print()
+    print("# Normalization Pairs (treatment -- control)")
+    for pair in normalization_pairs:
+        print(" -", pair.treatment.name, "--", pair.control.name)
+
+
+def is_snakemake_calling_itself():
+    return "snakemake/__main__.py" in sys.argv[0]

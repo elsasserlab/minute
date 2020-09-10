@@ -15,6 +15,8 @@ from utils import (
     detect_bowtie_index_name,
     get_replicates,
     group_pools,
+    print_metadata_overview,
+    is_snakemake_calling_itself,
 )
 
 
@@ -26,11 +28,12 @@ if "bowtie_index_name" not in config:
     except FileNotFoundError as e:
         sys.exit(str(e))
 
-
 libraries = list(read_libraries())
 pools = list(group_pools(libraries))
 normalization_pairs = list(read_controls(libraries + pools))  # or: normalization_groups
 
+if not is_snakemake_calling_itself():
+    print_metadata_overview(libraries, pools, normalization_pairs)
 
 # Map a FASTQ prefix to its list of libraries
 fastq_map = {
