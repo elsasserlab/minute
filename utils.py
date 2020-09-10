@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 import sys
@@ -14,14 +15,26 @@ class ParseError(Exception):
 @dataclass
 class Library:
     sample: str
+
+
+@dataclass
+class FastqLibrary(Library):
     replicate: str
     barcode: str
     fastqbase: str
 
     @property
     def name(self):
-        extra = "pooled" if self.replicate == "pooled" else f"replicate{self.replicate}"
-        return f"{self.sample}_{extra}"
+        return f"{self.sample}_replicate{self.replicate}"
+
+
+@dataclass
+class PooledLibrary(Library):
+    replicates: List[FastqLibrary]
+
+    @property
+    def name(self):
+        return f"{self.sample}_pooled"
 
 
 @dataclass
@@ -32,23 +45,20 @@ class TreatmentControlPair:
 
 def read_libraries():
     for row in read_tsv("experiment.tsv"):
-        yield Library(*row)
+        yield FastqLibrary(*row)
 
 
 def group_pools(libraries):
-    samples = set([library.sample for library in libraries])
-    for s in samples:
-        yield Library(
-            sample=s,
-            replicate="pooled",
-            barcode="-",
-            fastqbase="-",
-        )
+    samples = defaultdict(list)
+    for library in libraries:
+        samples[library.sample].append(library)
+    for sample, replicates in samples.items():
+        yield PooledLibrary(sample=sample, replicates=replicates)
 
 
 def read_controls(libraries):
     library_map = {
-        (library.sample, library.replicate): library for library in libraries }
+        (library.sample, library.replicate): library for library in libraries}
 
     for row in read_tsv("controls.tsv"):
         treatment = library_map[(row[0], row[1])]
@@ -226,7 +236,7 @@ def print_metadata_overview(libraries, pools, normalization_pairs):
     print()
     print("# Pools")
     for pool in pools:
-        print(" -", pool)
+        print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")")
 
     print()
     print("# Normalization Pairs (treatment -- control)")
