@@ -1,7 +1,6 @@
 import se_bam
 # TODO
 # - switch to interleaved files?
-from itertools import groupby
 from utils import (
     read_libraries,
     read_controls,
@@ -17,6 +16,7 @@ from utils import (
     group_pools,
     print_metadata_overview,
     is_snakemake_calling_itself,
+    map_fastq_prefix_to_list_of_libraries,
 )
 
 
@@ -35,12 +35,7 @@ normalization_pairs = list(read_controls(libraries + pools))  # or: normalizatio
 if not is_snakemake_calling_itself():
     print_metadata_overview(libraries, pools, normalization_pairs)
 
-# Map a FASTQ prefix to its list of libraries
-fastq_map = {
-    fastq_base: list(libs)
-    for fastq_base, libs in
-    groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=lambda lib: lib.fastqbase)
-}
+fastq_map = map_fastq_prefix_to_list_of_libraries(libraries)
 
 
 rule multiqc:

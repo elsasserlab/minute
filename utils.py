@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 import sys
+from itertools import groupby
+from typing import List
 
 from xopen import xopen
 
@@ -234,3 +236,11 @@ def print_metadata_overview(libraries, pools, normalization_pairs):
 
 def is_snakemake_calling_itself():
     return "snakemake/__main__.py" in sys.argv[0]
+
+
+def map_fastq_prefix_to_list_of_libraries(libraries: List[Library]):
+    return {
+        fastq_base: list(libs)
+        for fastq_base, libs in
+        groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=lambda lib: lib.fastqbase)
+    }
