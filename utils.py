@@ -1,8 +1,9 @@
-import os
-import pysam
-from typing import NamedTuple
-from itertools import groupby, islice
+from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
+import sys
+from itertools import groupby
+from typing import List
 
 from xopen import xopen
 
@@ -11,54 +12,68 @@ class ParseError(Exception):
     pass
 
 
-class Library(NamedTuple):
+@dataclass
+class Library:
     sample: str
+
+
+@dataclass
+class FastqLibrary(Library):
     replicate: str
     barcode: str
     fastqbase: str
 
     @property
     def name(self):
-        extra = "pooled" if self.replicate == "pooled" else f"replicate{self.replicate}"
-        return f"{self.sample}_{extra}"
+        return f"{self.sample}_replicate{self.replicate}"
 
 
-class TreatmentControlPair(NamedTuple):
+@dataclass
+class PooledLibrary(Library):
+    replicates: List[FastqLibrary]
+
+    @property
+    def name(self):
+        return f"{self.sample}_pooled"
+
+
+@dataclass
+class TreatmentControlPair:
     treatment: Library
     control: Library
 
 
 def read_libraries():
-    for row in read_tsv("experiment.tsv"):
-        yield Library(*row)
+    for row in read_tsv("experiment.tsv", columns=4):
+        yield FastqLibrary(*row)
 
 
-def group_pools(libraries):
-    samples = set([library.sample for library in libraries])
-    for s in samples:
-        yield Library(
-            sample=s,
-            replicate="pooled",
-            barcode="-",
-            fastqbase="-",
-        )
+def group_libraries_by_sample(libraries):
+    samples = defaultdict(list)
+    for library in libraries:
+        samples[library.sample].append(library)
+    for sample, replicates in samples.items():
+        yield PooledLibrary(sample=sample, replicates=replicates)
 
 
 def read_controls(libraries):
     library_map = {
-        (library.sample, library.replicate): library for library in libraries }
+        (library.sample, library.replicate): library for library in libraries}
 
-    for row in read_tsv("controls.tsv"):
+    for row in read_tsv("controls.tsv", columns=3):
         treatment = library_map[(row[0], row[1])]
         control = library_map[(row[2], row[1])]
         yield TreatmentControlPair(treatment, control)
 
 
-def read_tsv(path):
+def read_tsv(path, columns: int):
     """
     Read a tab-separated value file from path, allowing "#"-prefixed comments
 
     Yield a list of fields for every row (ignoring comments and empty lines)
+
+    If the number of fields in a row does not match *columns*, a ParseError
+    is raised.
     """
     with open(path) as f:
         for line in f:
@@ -66,6 +81,9 @@ def read_tsv(path):
             if line.startswith("#") or not line:
                 continue
             fields = line.strip().split("\t")
+            if len(fields) != columns:
+                raise ParseError(
+                    f"Expected {columns} tab-separated fields in {path}, but found {len(fields)}")
             yield fields
 
 
@@ -214,3 +232,31 @@ def detect_bowtie_index_name(fasta_path):
 def get_replicates(libraries, sample):
     replicates = [lib.replicate for lib in libraries if lib.sample == sample]
     return replicates
+
+
+def print_metadata_overview(libraries, pools, normalization_pairs):
+    print("# Libraries")
+    for library in libraries:
+        print(" -", library)
+
+    print()
+    print("# Pools")
+    for pool in pools:
+        print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")")
+
+    print()
+    print("# Normalization Pairs (treatment -- control)")
+    for pair in normalization_pairs:
+        print(" -", pair.treatment.name, "--", pair.control.name)
+
+
+def is_snakemake_calling_itself():
+    return "snakemake/__main__.py" in sys.argv[0]
+
+
+def map_fastq_prefix_to_list_of_libraries(libraries: List[Library]):
+    return {
+        fastq_base: list(libs)
+        for fastq_base, libs in
+        groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=lambda lib: lib.fastqbase)
+    }
