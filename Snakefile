@@ -42,12 +42,12 @@ rule multiqc:
     output: "reports/multiqc_report.html"
     input:
         expand([
-            "bigwig/{library.name}.unscaled.bw",
-            "bigwig/{library.sample}_pooled.unscaled.bw",
+            "final/bigwig/{library.name}.unscaled.bw",
+            "final/bigwig/{library.sample}_pooled.unscaled.bw",
         ], library=libraries),
         expand("reports/fastqc/{fastq}_R{read}_fastqc.html",
             fastq=fastq_map.keys(), read=(1, 2)),
-        expand("bigwig/{library.name}.scaled.bw",
+        expand("final/bigwig/{library.name}.scaled.bw",
             library=[np.treatment for np in normalization_pairs]),
         "reports/stats_summary.txt",
     shell:
@@ -59,7 +59,6 @@ rule clean:
         "rm -rf"
         " tmp"
         " final"
-        " bigwig"
         " stats"
         " reports"
         " log"
@@ -87,7 +86,7 @@ rule move_umi_to_header:
     log:
         "log/1-noumi/{name}.log"
     shell:
-        "umi_tools "
+        "umi_tools"
         " extract"
         " --extract-method=string"
         " -p {params.umistring}"
@@ -273,7 +272,7 @@ rule mark_pe_duplicates:
 
 rule remove_exclude_regions:
     output:
-        bam="final/{library}.bam"
+        bam="final/bam/{library}.bam"
     input:
         bam="tmp/7-dedup/{library}.bam",
         bed=config["exclude_regions"]
@@ -288,10 +287,10 @@ rule remove_exclude_regions:
 
 rule insert_size_metrics:
     output:
-        txt="final/{library}.insertsizes.txt",
-        pdf="final/{library}.insertsizes.pdf",
+        txt="{base}.insertsizes.txt",
+        pdf="{base}.insertsizes.pdf",
     input:
-        bam="final/{library}.bam"
+        bam="{base}.bam"
     shell:
         "picard"
         " CollectInsertSizeMetrics"
@@ -304,10 +303,10 @@ rule insert_size_metrics:
 
 rule unscaled_bigwig:
     output:
-        bw="bigwig/{library}.unscaled.bw"
+        bw="final/bigwig/{library}.unscaled.bw"
     input:
-        bam="final/{library}.bam",
-        bai="final/{library}.bai",
+        bam="final/bam/{library}.bam",
+        bai="final/bam/{library}.bai",
         genome_size="tmp/genome_size.txt",
     log:
         "log/final/{library}.unscaled.bw.log"
@@ -325,8 +324,8 @@ rule unscaled_bigwig:
 
 rule compute_scaling_factors:
     input:
-        treatments=["final/{library.name}.flagstat.txt".format(library=np.treatment) for np in normalization_pairs],
-        controls=["final/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
+        treatments=["final/bam/{library.name}.flagstat.txt".format(library=np.treatment) for np in normalization_pairs],
+        controls=["final/bam/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
         genome_size="tmp/genome_size.txt",
     output:
         factors=temp(["tmp/factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs]),
@@ -345,11 +344,12 @@ rule compute_scaling_factors:
                 with open(factor_path, "w") as f:
                     print(factor, file=f)
 
+
 rule extract_fragment_size:
     input:
-        insertsizes="final/{library}.insertsizes.txt"
+        insertsizes="{base}.insertsizes.txt"
     output:
-        fragsize="final/{library}.fragsize.txt"
+        fragsize=temp("{base}.fragsize.txt")
     run:
         with open(output.fragsize, "w") as f:
             print(int(parse_insert_size_metrics(input.insertsizes)["median_insert_size"]),
@@ -358,12 +358,12 @@ rule extract_fragment_size:
 
 rule scaled_bigwig:
     output:
-        bw="bigwig/{library}.scaled.bw"
+        bw="final/bigwig/{library}.scaled.bw"
     input:
         factor="tmp/factors/{library}.factor.txt",
-        fragsize="final/{library}.fragsize.txt",
-        bam="final/{library}.bam",
-        bai="final/{library}.bai",
+        fragsize="final/bam/{library}.fragsize.txt",
+        bam="final/bam/{library}.bam",
+        bai="final/bam/{library}.bai",
     threads: 20
     shell:
         # TODO also run this
@@ -385,8 +385,8 @@ rule stats:
         mapped_flagstat="tmp/4-mapped/{library}.flagstat.txt",
         metrics="tmp/6-dupmarked/{library}.metrics",
         dedup_flagstat="tmp/7-dedup/{library}.flagstat.txt",
-        final_flagstat="final/{library}.flagstat.txt",
-        insertsizes="final/{library}.insertsizes.txt",
+        final_flagstat="final/bam/{library}.flagstat.txt",
+        insertsizes="final/bam/{library}.insertsizes.txt",
     run:
         row = []
         for flagstat, name in [
