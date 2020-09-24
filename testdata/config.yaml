@@ -3,7 +3,7 @@
 
 # Path to a reference FASTA file (may be gzip-compressed)
 # with a matching Bowtie2 index in the same location
-reference_fasta: "ref.fa.gz"
+reference_fasta: "ref/ref.fa.gz"
 
 # Path to a BED file listing the regions to be excluded
 exclude_regions: "exclude.bed"
