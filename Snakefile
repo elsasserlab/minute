@@ -310,6 +310,8 @@ rule unscaled_bigwig:
         bam="final/{library}.bam",
         bai="final/{library}.bai",
         genome_size="tmp/genome_size.txt",
+    log:
+        "log/final/{library}.unscaled.bw.log"
     threads: 20
     shell:
         "bamCoverage"
@@ -319,6 +321,7 @@ rule unscaled_bigwig:
         " -b {input.bam}"
         " -o {output.bw}"
         " --binSize 1"
+        " > {log}"
 
 
 rule compute_scaling_factors:
