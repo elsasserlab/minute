@@ -45,14 +45,12 @@ rule multiqc:
     output: "multiqc_report.html"
     input:
         expand([
-            "igv/{library.name}.bw",
-            "stats/{library.name}.txt",
-            "igv/{library.sample}_pooled.bw",
-            "stats/{library.sample}_pooled.txt",
+            "bigwig/{library.name}.unscaled.bw",
+            "bigwig/{library.sample}_pooled.unscaled.bw",
         ], library=libraries),
         expand("fastqc/{fastq}_R{read}_fastqc.html",
             fastq=fastq_map.keys(), read=(1, 2)),
-        expand("scaled/{library.name}.scaled.bw",
+        expand("bigwig/{library.name}.scaled.bw",
             library=[np.treatment for np in normalization_pairs]),
         "summaries/stats_summary.txt",
     shell:
@@ -62,21 +60,13 @@ rule multiqc:
 rule clean:
     shell:
         "rm -rf"
-        " barcodes"
-        " noumi"
-        " demultiplexed"
-        " mapped"
-        " mapped_se"
-        " dupmarked"
-        " dedup"
+        " tmp"
         " results"
-        " restricted"
-        " igv"
+        " final"
+        " bigwig"
         " fastqc"
-        " scaled"
         " stats"
         " summaries"
-        " factors"
         " log"
         " multiqc_report.html"
         " multiqc_data"
@@ -94,8 +84,8 @@ rule fastqc_input:
 
 rule move_umi_to_header:
     output:
-        r1="noumi/{name}.1.fastq.gz",
-        r2="noumi/{name}.2.fastq.gz",
+        r1=temp("tmp/1-noumi/{name}.1.fastq.gz"),
+        r2=temp("tmp/1-noumi/{name}.2.fastq.gz"),
     input:
         r1="fastq/{name}_R1.fastq.gz",
         r2="fastq/{name}_R2.fastq.gz",
@@ -116,13 +106,13 @@ rule remove_contamination:
     threads:
         8
     output:
-        r1="noadapters/{name}.1.fastq.gz",
-        r2="noadapters/{name}.2.fastq.gz",
+        r1=temp("tmp/2-noadapters/{name}.1.fastq.gz"),
+        r2=temp("tmp/2-noadapters/{name}.2.fastq.gz"),
     input:
-        r1="noumi/{name}.1.fastq.gz",
-        r2="noumi/{name}.2.fastq.gz",
+        r1="tmp/1-noumi/{name}.1.fastq.gz",
+        r2="tmp/1-noumi/{name}.2.fastq.gz",
     log:
-        "noadapters/{name}.trimmed.log"
+        "log/2-noadapters/{name}.trimmed.log"
     shell:
         "cutadapt"
         " -j {threads}"
@@ -139,7 +129,7 @@ rule remove_contamination:
 rule barcodes:
     """File with list of barcodes needed for demultiplexing"""
     output:
-        barcodes_fasta="barcodes/{fastqbase}.fasta"
+        barcodes_fasta=temp("tmp/3-barcodes/{fastqbase}.fasta")
     run:
         with open(output.barcodes_fasta, "w") as f:
             for library in libraries:
@@ -152,26 +142,27 @@ for fastq_base, libs in fastq_map.items():
 
     rule:
         output:
-            expand("demultiplexed/{library.name}_R{read}.fastq.gz",
-                library=libs, read=(1, 2))
+            temp(expand("tmp/3-demultiplexed/{library.name}_R{read}.fastq.gz", library=libs, read=(1, 2))),
+            unknown_r1=temp("tmp/3-demultiplexed/{fastqbase}-unknown_R1.fastq.gz".format(fastqbase=fastq_base)),
+            unknown_r2=temp("tmp/3-demultiplexed/{fastqbase}-unknown_R2.fastq.gz".format(fastqbase=fastq_base)),
         input:
-            r1="noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
-            r2="noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
-            barcodes_fasta="barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
+            r1="tmp/2-noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
+            r2="tmp/2-noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
+            barcodes_fasta="tmp/3-barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
         params:
-            r1=lambda wildcards: "demultiplexed/{name}_R1.fastq.gz",
-            r2=lambda wildcards: "demultiplexed/{name}_R2.fastq.gz",
+            r1=lambda wildcards: "tmp/3-demultiplexed/{name}_R1.fastq.gz",
+            r2=lambda wildcards: "tmp/3-demultiplexed/{name}_R2.fastq.gz",
             fastqbase=fastq_base,
         log:
-            "log/demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
+            "log/3-demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
         shell:
             "cutadapt"
             " -e 0.15"  # TODO determine from barcode length
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
             " -p {params.r2}"
-            " --untrimmed-output demultiplexed/{params.fastqbase}-unknown_R1.fastq.gz"
-            " --untrimmed-paired-output demultiplexed/{params.fastqbase}-unknown_R2.fastq.gz"
+            " --untrimmed-output tmp/3-demultiplexed/{params.fastqbase}-unknown_R1.fastq.gz"
+            " --untrimmed-paired-output tmp/3-demultiplexed/{params.fastqbase}-unknown_R2.fastq.gz"
             " {input.r1}"
             " {input.r2}"
             " > {log}"
@@ -182,14 +173,15 @@ def set_demultiplex_rule_names():
     This sets the names of the demultiplexing rules, which need to be
     defined anonymously because they are defined (above) in a loop.
     """
+    prefix = "tmp/2-noadapters/"
     for rul in workflow.rules:
         if not "barcodes_fasta" in rul.input.keys():
             # Ensure we get the demultiplexing rules only
             continue
         input = rul.input["r1"]
-        assert input.startswith("noadapters/")
-        # Remove the initial "noadapters/" and trailing ".1.fastq.gz" parts
-        rul.name = "demultiplex_" + rul.input["r1"][len("noadapters/"):-11]
+        assert input.startswith(prefix)
+        # Remove the prefix and the ".1.fastq.gz" suffix
+        rul.name = "demultiplex_" + rul.input["r1"][len(prefix):-11]
 
 
 set_demultiplex_rule_names()
@@ -199,12 +191,12 @@ rule bowtie2:
     threads:
         20
     output:
-        bam=temp("mapped/{sample}_replicate{replicate}.bam")
+        bam=temp("tmp/4-mapped/{sample}_replicate{replicate}.bam")
     input:
-        r1="demultiplexed/{sample}_replicate{replicate}_R1.fastq.gz",
-        r2="demultiplexed/{sample}_replicate{replicate}_R2.fastq.gz",
+        r1="tmp/3-demultiplexed/{sample}_replicate{replicate}_R1.fastq.gz",
+        r2="tmp/3-demultiplexed/{sample}_replicate{replicate}_R2.fastq.gz",
     log:
-        "log/bowtie2-{sample}_replicate{replicate}.log"
+        "log/4-mapped/{sample}_replicate{replicate}.bowtie2.log"
     # TODO
     # - --sensitive (instead of --fast) would be default
     # - write uncompressed BAM?
@@ -224,10 +216,10 @@ rule bowtie2:
 
 rule pool_replicates:
     output:
-        bam=temp("mapped/{sample}_pooled.bam")
+        bam=temp("tmp/4-mapped/{sample}_pooled.bam")
     input:
         bam_replicates=lambda wildcards: expand(
-            "mapped/{{sample}}_replicate{replicates}.bam",
+            "tmp/4-mapped/{{sample}}_replicate{replicates}.bam",
             replicates=get_replicates(libraries, wildcards.sample))
     run:
         if len(input.bam_replicates) == 1:
@@ -240,9 +232,9 @@ rule pool_replicates:
 rule convert_to_single_end:
     """Convert sam files to single-end for marking duplicates"""
     output:
-        bam=temp("mapped_se/{library}.bam")
+        bam=temp("tmp/5-mapped_se/{library}.bam")
     input:
-        bam="mapped/{library}.bam"
+        bam="tmp/4-mapped/{library}.bam"
     run:
         se_bam.convert_paired_end_to_single_end_bam(
             input.bam,
@@ -253,10 +245,10 @@ rule convert_to_single_end:
 rule mark_duplicates:
     """UMI-aware duplicate marking with je suite"""
     output:
-        bam=temp("dupmarked/{library}.bam"),
-        metrics="dupmarked/{library}.metrics"
+        bam=temp("tmp/6-dupmarked/{library}.bam"),
+        metrics="tmp/6-dupmarked/{library}.metrics"
     input:
-        bam="mapped_se/{library}.bam"
+        bam="tmp/5-mapped_se/{library}.bam"
     shell:
         "LC_ALL=C je"
         " markdupes"
@@ -272,10 +264,10 @@ rule mark_duplicates:
 rule mark_pe_duplicates:
     """Select duplicate-flagged alignments and mark them in the PE file"""
     output:
-        bam=temp("dedup/{library}.bam")
+        bam=temp("tmp/7-dedup/{library}.bam")
     input:
-        target_bam="mapped/{library}.bam",
-        proxy_bam="dupmarked/{library}.bam"
+        target_bam="tmp/4-mapped/{library}.bam",
+        proxy_bam="tmp/6-dupmarked/{library}.bam"
     run:
         se_bam.mark_duplicates_by_proxy_bam(
             input.target_bam,
@@ -285,9 +277,9 @@ rule mark_pe_duplicates:
 
 rule remove_exclude_regions:
     output:
-        bam="restricted/{library}.bam"
+        bam="final/{library}.bam"
     input:
-        bam="dedup/{library}.bam",
+        bam="tmp/7-dedup/{library}.bam",
         bed=config["exclude_regions"]
     shell:
         "bedtools"
@@ -300,10 +292,10 @@ rule remove_exclude_regions:
 
 rule insert_size_metrics:
     output:
-        txt="restricted/{library}.insertsizes.txt",
-        pdf="restricted/{library}.insertsizes.pdf",
+        txt="final/{library}.insertsizes.txt",
+        pdf="final/{library}.insertsizes.pdf",
     input:
-        bam="restricted/{library}.bam"
+        bam="final/{library}.bam"
     shell:
         "picard"
         " CollectInsertSizeMetrics"
@@ -314,13 +306,13 @@ rule insert_size_metrics:
         " STOP_AFTER=10000000"
 
 
-rule bigwig:
+rule unscaled_bigwig:
     output:
-        bw="igv/{library}.bw"
+        bw="bigwig/{library}.unscaled.bw"
     input:
-        bam="restricted/{library}.bam",
-        bai="restricted/{library}.bai",
-        genome_size="genome_size.txt",
+        bam="final/{library}.bam",
+        bai="final/{library}.bai",
+        genome_size="tmp/genome_size.txt",
     threads: 20
     shell:
         "bamCoverage"
@@ -334,11 +326,11 @@ rule bigwig:
 
 rule compute_scaling_factors:
     input:
-        treatments=["restricted/{library.name}.flagstat.txt".format(library=np.treatment) for np in normalization_pairs],
-        controls=["restricted/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
-        genome_size="genome_size.txt",
+        treatments=["final/{library.name}.flagstat.txt".format(library=np.treatment) for np in normalization_pairs],
+        controls=["final/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
+        genome_size="tmp/genome_size.txt",
     output:
-        factors=["factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs],
+        factors=temp(["tmp/factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs]),
         info="summaries/scalinginfo.txt"
     run:
         with open(output.info, "w") as outf:
@@ -356,9 +348,9 @@ rule compute_scaling_factors:
 
 rule extract_fragment_size:
     input:
-        insertsizes="restricted/{library}.insertsizes.txt"
+        insertsizes="final/{library}.insertsizes.txt"
     output:
-        fragsize="restricted/{library}.fragsize.txt"
+        fragsize="final/{library}.fragsize.txt"
     run:
         with open(output.fragsize, "w") as f:
             print(int(parse_insert_size_metrics(input.insertsizes)["median_insert_size"]),
@@ -367,12 +359,12 @@ rule extract_fragment_size:
 
 rule scaled_bigwig:
     output:
-        bw="scaled/{library}.scaled.bw"
+        bw="bigwig/{library}.scaled.bw"
     input:
-        factor="factors/{library}.factor.txt",
-        fragsize="restricted/{library}.fragsize.txt",
-        bam="restricted/{library}.bam",
-        bai="restricted/{library}.bai",
+        factor="tmp/factors/{library}.factor.txt",
+        fragsize="final/{library}.fragsize.txt",
+        bam="final/{library}.bam",
+        bai="final/{library}.bai",
     threads: 20
     shell:
         # TODO also run this
@@ -389,19 +381,19 @@ rule scaled_bigwig:
 
 rule stats:
     output:
-        txt="stats/{library}.txt"
+        txt="tmp/8-stats/{library}.txt"
     input:
-        mapped="mapped/{library}.flagstat.txt",
-        dedup="dedup/{library}.flagstat.txt",
-        restricted="restricted/{library}.flagstat.txt",
-        metrics="dupmarked/{library}.metrics",
-        insertsizes="restricted/{library}.insertsizes.txt",
+        mapped_flagstat="tmp/4-mapped/{library}.flagstat.txt",
+        metrics="tmp/6-dupmarked/{library}.metrics",
+        dedup_flagstat="tmp/7-dedup/{library}.flagstat.txt",
+        final_flagstat="final/{library}.flagstat.txt",
+        insertsizes="final/{library}.insertsizes.txt",
     run:
         row = []
         for flagstat, name in [
-            (input.mapped, "mapped"),
-            (input.dedup, "dedup"),
-            (input.restricted, "restricted"),
+            (input.mapped_flagstat, "mapped"),
+            (input.dedup_flagstat, "dedup"),
+            (input.final_flagstat, "final"),
         ]:
             mapped_reads = flagstat_mapped_reads(flagstat)
             row.append(mapped_reads)
@@ -410,7 +402,7 @@ rule stats:
         row.append(parse_duplication_metrics(input.metrics)["percent_duplication"])
         row.append(parse_insert_size_metrics(input.insertsizes)["median_insert_size"])
         with open(output.txt, "w") as f:
-            print("mapped", "dedup_mapped", "restricted_mapped", "library_size", "percent_duplication", "insert_size", sep="\t", file=f)
+            print("mapped", "dedup_mapped", "final_mapped", "library_size", "percent_duplication", "insert_size", sep="\t", file=f)
             print(*row, sep="\t", file=f)
 
 
@@ -418,7 +410,7 @@ rule stats_summary:
     output:
         txt="summaries/stats_summary.txt"
     input:
-        expand("stats/{library.name}.txt", library=libraries) + expand("stats/{pool.name}.txt", pool=pools)
+        expand("tmp/8-stats/{library.name}.txt", library=libraries) + expand("tmp/8-stats/{pool.name}.txt", pool=pools)
     run:
         stats_summaries = [parse_stats_fields(st_file) for st_file in input]
 
@@ -427,7 +419,7 @@ rule stats_summary:
             "library",
             "mapped",
             "dedup_mapped",
-            "restricted_mapped",
+            "final_mapped",
             "library_size",
             "percent_duplication",
             "insert_size",
@@ -443,7 +435,7 @@ rule stats_summary:
 
 rule compute_effective_genome_size:
     output:
-        txt="genome_size.txt"
+        txt="tmp/genome_size.txt"
     input:
         fasta=config["reference_fasta"]
     run:
