@@ -88,6 +88,8 @@ rule move_umi_to_header:
         r2="fastq/{name}_R2.fastq.gz",
     params:
         umistring="N" * config['umi_length']
+    log:
+        "log/1-noumi/{name}.log"
     shell:
         "umi_tools "
         " extract"
@@ -97,6 +99,7 @@ rule move_umi_to_header:
         " --read2-in={input.r2}"
         " -S {output.r1}"
         " --read2-out {output.r2}"
+        " > {log}"
 
 
 rule remove_contamination:
