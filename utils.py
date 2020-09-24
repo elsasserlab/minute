@@ -41,6 +41,7 @@ class PooledLibrary(Library):
 class TreatmentControlPair:
     treatment: Library
     control: Library
+    scaling_group: int
 
 
 def read_libraries():
@@ -60,10 +61,11 @@ def read_controls(libraries):
     library_map = {
         (library.sample, library.replicate): library for library in libraries}
 
-    for row in read_tsv("controls.tsv", columns=3):
+    for row in read_tsv("controls.tsv", columns=4):
         treatment = library_map[(row[0], row[1])]
         control = library_map[(row[2], row[1])]
-        yield TreatmentControlPair(treatment, control)
+        scaling_group = row[3]
+        yield TreatmentControlPair(treatment, control, scaling_group)
 
 
 def read_tsv(path, columns: int):
