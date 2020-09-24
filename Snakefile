@@ -45,7 +45,7 @@ rule multiqc:
             "bigwig/{library.name}.unscaled.bw",
             "bigwig/{library.sample}_pooled.unscaled.bw",
         ], library=libraries),
-        expand("fastqc/{fastq}_R{read}_fastqc.html",
+        expand("reports/fastqc/{fastq}_R{read}_fastqc.html",
             fastq=fastq_map.keys(), read=(1, 2)),
         expand("bigwig/{library.name}.scaled.bw",
             library=[np.treatment for np in normalization_pairs]),
@@ -61,7 +61,6 @@ rule clean:
         " results"
         " final"
         " bigwig"
-        " fastqc"
         " stats"
         " reports"
         " log"
@@ -69,12 +68,12 @@ rule clean:
 
 rule fastqc_input:
     output:
-        "fastqc/{name}_fastqc.html"
+        "reports/fastqc/{name}_fastqc.html"
     input:
         fastq="fastq/{name}.fastq.gz"
     shell:
-        "fastqc -o fastqc {input.fastq}"
-        " && rm fastqc/{wildcards.name}_fastqc.zip"
+        "fastqc -o reports/fastqc {input.fastq}"
+        " && rm reports/fastqc/{wildcards.name}_fastqc.zip"
 
 
 rule move_umi_to_header:
