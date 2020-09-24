@@ -49,7 +49,7 @@ rule multiqc:
             fastq=fastq_map.keys(), read=(1, 2)),
         expand("bigwig/{library.name}.scaled.bw",
             library=[np.treatment for np in normalization_pairs]),
-        "summaries/stats_summary.txt",
+        "reports/stats_summary.txt",
     shell:
         "multiqc ."
 
@@ -63,7 +63,7 @@ rule clean:
         " bigwig"
         " fastqc"
         " stats"
-        " summaries"
+        " reports"
         " log"
         " multiqc_report.html"
         " multiqc_data"
@@ -328,7 +328,7 @@ rule compute_scaling_factors:
         genome_size="tmp/genome_size.txt",
     output:
         factors=temp(["tmp/factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs]),
-        info="summaries/scalinginfo.txt"
+        info="reports/scalinginfo.txt"
     run:
         with open(output.info, "w") as outf:
             factors = compute_scaling(
@@ -405,7 +405,7 @@ rule stats:
 
 rule stats_summary:
     output:
-        txt="summaries/stats_summary.txt"
+        txt="reports/stats_summary.txt"
     input:
         expand("tmp/8-stats/{library.name}.txt", library=libraries) + expand("tmp/8-stats/{pool.name}.txt", pool=pools)
     run:
