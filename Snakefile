@@ -58,7 +58,6 @@ rule clean:
     shell:
         "rm -rf"
         " tmp"
-        " results"
         " final"
         " bigwig"
         " stats"
