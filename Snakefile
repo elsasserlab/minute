@@ -39,7 +39,7 @@ fastq_map = map_fastq_prefix_to_list_of_libraries(libraries)
 
 
 rule multiqc:
-    output: "multiqc_report.html"
+    output: "reports/multiqc_report.html"
     input:
         expand([
             "bigwig/{library.name}.unscaled.bw",
@@ -51,7 +51,7 @@ rule multiqc:
             library=[np.treatment for np in normalization_pairs]),
         "reports/stats_summary.txt",
     shell:
-        "multiqc ."
+        "multiqc -o reports/ ."
 
 
 rule clean:
@@ -65,8 +65,6 @@ rule clean:
         " stats"
         " reports"
         " log"
-        " multiqc_report.html"
-        " multiqc_data"
 
 
 rule fastqc_input:
