@@ -46,7 +46,7 @@ class TreatmentControlPair:
     control_reads: int = None
 
 def read_libraries():
-    for row in read_tsv("experiment.tsv", columns=4):
+    for row in read_tsv("libraries.tsv", columns=4):
         yield FastqLibrary(*row)
 
 
@@ -62,7 +62,7 @@ def read_controls(libraries):
     library_map = {
         (library.sample, library.replicate): library for library in libraries}
 
-    for row in read_tsv("controls.tsv", columns=4):
+    for row in read_tsv("groups.tsv", columns=4):
         treatment = library_map[(row[0], row[1])]
         control = library_map[(row[2], row[1])]
         scaling_group = row[3]
