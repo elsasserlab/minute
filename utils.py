@@ -42,8 +42,8 @@ class TreatmentControlPair:
     treatment: Library
     control: Library
     scaling_group: int
-    treatment_path: str = None
-    control_path: str = None
+    treatment_reads: int = None
+    control_reads: int = None
 
 def read_libraries():
     for row in read_tsv("experiment.tsv", columns=4):
@@ -145,33 +145,13 @@ def parse_picard_metrics(path, metrics_class: str):
     result = {key.lower(): float_or_int(value) for key, value in zip(header, values)}
     return result
 
-def compute_reference_pair_scaling_factors(normalization_pairs, genome_size, fragment_size):
-    scaling_factors = {}
-    library_scale_groups = map_scaling_group_to_list_of_normalization_pairs(normalization_pairs)
-
-    for scaling_group in library_scale_groups:
-        reference_pair = library_scale_groups[scaling_group][0]
-
-        treatment_reads = flagstat_mapped_reads(reference_pair.treatment_path)
-        control_reads = flagstat_mapped_reads(reference_pair.control_path)
-        scaling_factors[scaling_group] = (
-                genome_size / fragment_size / treatment_reads * control_reads
-            )
-
-    return scaling_factors
-
-def map_scaling_group_to_list_of_normalization_pairs(normalization_pairs):
-    scaling_group_to_normalization_pairs = defaultdict(list)
-    for pair in normalization_pairs:
-        scaling_group_to_normalization_pairs[pair.scaling_group].append(pair)
-    return scaling_group_to_normalization_pairs
 
 def compute_scaling(normalization_pairs, treatments, controls, infofile, genome_size, fragment_size):
     print("sample_name", "#reads", "n_scaled_reads", "input_name", "n_input_reads", "factor", sep="\t", file=infofile)
 
     for pair, treatment_path, control_path in zip(normalization_pairs, treatments, controls):
-        pair.treatment_path = treatment_path
-        pair.control_path = control_path
+        pair.treatment_reads = flagstat_mapped_reads(treatment_path)
+        pair.control_reads = flagstat_mapped_reads(control_path)
 
     reference_pair_scaling_factors = compute_reference_pair_scaling_factors(
         normalization_pairs,
@@ -179,19 +159,34 @@ def compute_scaling(normalization_pairs, treatments, controls, infofile, genome_
         fragment_size)
 
     for pair, treatment_path, control_path in zip(normalization_pairs, treatments, controls):
-        treatment_reads = flagstat_mapped_reads(treatment_path)
-        control_reads = flagstat_mapped_reads(control_path)
-
-        sample_scaling_factor = reference_pair_scaling_factors[pair.scaling_group] / control_reads
-        scaled_treatment_reads = sample_scaling_factor * treatment_reads
+        sample_scaling_factor = reference_pair_scaling_factors[pair.scaling_group] / pair.control_reads
+        scaled_treatment_reads = sample_scaling_factor * pair.treatment_reads
 
         # TODO factor this out
-        print(pair.treatment.name, treatment_reads, scaled_treatment_reads, pair.control.name, control_reads, sample_scaling_factor, sep="\t", file=infofile)
+        print(pair.treatment.name, pair.treatment_reads, scaled_treatment_reads, pair.control.name, pair.control_reads, sample_scaling_factor, sep="\t", file=infofile)
 
         # TODO scaled.idxstats.txt file
         yield sample_scaling_factor
 
 
+def compute_reference_pair_scaling_factors(normalization_pairs, genome_size, fragment_size):
+    scaling_factors = {}
+    library_scale_groups = map_scaling_group_to_list_of_normalization_pairs(normalization_pairs)
+
+    for scaling_group in library_scale_groups:
+        reference_pair = library_scale_groups[scaling_group][0]
+        scaling_factors[scaling_group] = (
+                genome_size / fragment_size / reference_pair.treatment_reads * reference_pair.control_reads
+            )
+
+    return scaling_factors
+
+
+def map_scaling_group_to_list_of_normalization_pairs(normalization_pairs):
+    scaling_group_to_normalization_pairs = defaultdict(list)
+    for pair in normalization_pairs:
+        scaling_group_to_normalization_pairs[pair.scaling_group].append(pair)
+    return scaling_group_to_normalization_pairs
 
 
 def parse_stats_fields(stats_file):
