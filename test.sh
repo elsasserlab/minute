@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-version="0.8"
+version="0.9"
 
 testdata_file=minute-testdata-${version}.tar.gz
 if ! [[ -f ${testdata_file} ]]; then
