@@ -15,6 +15,6 @@ tar --strip-components=1 -xf ../${testdata_file}
 cp ../testdata/*.{tsv,bed,sizes,yaml} .
 mkdir fastq && mv -- *.fastq.gz fastq/
 mkdir ref && mv ref.* ref/
-( cd ref && bowtie2-build ref.fa.gz ref )
+( cd ref && bowtie2-build -q ref.fa.gz ref )
 
 snakemake -p -j 1 -s ../Snakefile "$@"
