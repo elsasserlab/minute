@@ -37,21 +37,25 @@ if not is_snakemake_calling_itself():
 
 fastq_map = map_fastq_prefix_to_list_of_libraries(libraries)
 
-
-rule multiqc:
-    output: "reports/multiqc_report.html"
+rule final:
     input:
+        "reports/multiqc_report.html",
         expand([
             "final/bigwig/{library.name}.unscaled.bw",
             "final/bigwig/{library.sample}_pooled.unscaled.bw",
         ], library=libraries),
-        expand("reports/fastqc/{fastq}_R{read}_fastqc.html",
-            fastq=fastq_map.keys(), read=(1, 2)),
         expand("final/bigwig/{library.name}.scaled.bw",
             library=[np.treatment for np in normalization_pairs]),
         "reports/stats_summary.txt",
+
+
+rule multiqc:
+    output: "reports/multiqc_report.html"
+    input:
+        expand("reports/fastqc/{fastq}_R{read}_fastqc/fastqc_data.txt",
+            fastq=fastq_map.keys(), read=(1, 2)),
     shell:
-        "multiqc -o reports/ ."
+        "multiqc -o reports/ {input}"
 
 
 rule clean:
