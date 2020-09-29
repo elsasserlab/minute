@@ -67,11 +67,12 @@ rule clean:
 rule fastqc_input:
     output:
         html="reports/fastqc/{name}_fastqc.html",
-        zip=temp("reports/fastqc/{name}_fastqc.zip")
+        zip=temp("reports/fastqc/{name}_fastqc.zip"),
+        data="reports/fastqc/{name}_fastqc/fastqc_data.txt",
     input:
         fastq="fastq/{name}.fastq.gz"
     shell:
-        "fastqc -o reports/fastqc {input.fastq}"
+        "fastqc --extract -o reports/fastqc {input.fastq}"
 
 
 rule move_umi_to_header:
