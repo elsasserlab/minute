@@ -319,7 +319,7 @@ rule unscaled_bigwig:
         " -b {input.bam}"
         " -o {output.bw}"
         " --binSize 1"
-        " > {log}"
+        " 2> {log}"
 
 
 rule compute_scaling_factors:
@@ -365,6 +365,8 @@ rule scaled_bigwig:
         bam="final/bam/{library}.bam",
         bai="final/bam/{library}.bai",
     threads: 20
+    log:
+        "log/final/{library}.scaled.bw.log"
     shell:
         # TODO also run this
         # - with "--binSize 50 --smoothLength 150"
@@ -376,6 +378,7 @@ rule scaled_bigwig:
         " --scaleFactor $(< {input.factor})"
         " --bam {input.bam}"
         " -o {output.bw}"
+        " 2> {log}"
 
 
 rule stats:
