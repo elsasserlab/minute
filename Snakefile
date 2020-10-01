@@ -54,6 +54,7 @@ rule multiqc:
     input:
         expand("reports/fastqc/{fastq}_R{read}_fastqc/fastqc_data.txt",
             fastq=fastq_map.keys(), read=(1, 2)),
+        expand("log/4-mapped/{library.name}.log", library=libraries)
     shell:
         "multiqc -o reports/ {input}"
 
@@ -196,7 +197,7 @@ rule bowtie2:
         r1="tmp/3-demultiplexed/{sample}_replicate{replicate}_R1.fastq.gz",
         r2="tmp/3-demultiplexed/{sample}_replicate{replicate}_R2.fastq.gz",
     log:
-        "log/4-mapped/{sample}_replicate{replicate}.bowtie2.log"
+        "log/4-mapped/{sample}_replicate{replicate}.log"
     # TODO
     # - --sensitive (instead of --fast) would be default
     # - write uncompressed BAM?
