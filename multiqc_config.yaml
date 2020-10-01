@@ -1,0 +1,21 @@
+title: "Minute report"
+subtitle: ""
+intro_text: ""
+
+run_modules:
+  - fastqc
+  - cutadapt
+
+module_order:
+  - fastqc:
+      name: "FastQC on raw reads"
+      anchor: "fastqc-raw"
+      target: ""
+      info: "FastQC results on raw reads"
+  - cutadapt:
+      name: "Cutadapt"
+      anchor: "cutadapt"
+      target: ""
+      info: "This step removes adapters from reads that no longer have UMIs"
+      path_filters:
+        - "*.trimmed.log"

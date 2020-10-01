@@ -54,9 +54,11 @@ rule multiqc:
     input:
         expand("reports/fastqc/{fastq}_R{read}_fastqc/fastqc_data.txt",
             fastq=fastq_map.keys(), read=(1, 2)),
-        expand("log/4-mapped/{library.name}.log", library=libraries)
+        expand("log/2-noadapters/{fastq}.trimmed.log", fastq=fastq_map.keys()),
+        expand("log/4-mapped/{library.name}.log", library=libraries),
+        multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
     shell:
-        "multiqc -o reports/ {input}"
+        "multiqc -o reports/ -c {input.multiqc_config} {input}"
 
 
 rule clean:
