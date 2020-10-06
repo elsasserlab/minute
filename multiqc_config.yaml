@@ -7,6 +7,7 @@ run_modules:
   - cutadapt
   - custom_content
   - bowtie2
+  - picard
 
 module_order:
   - fastqc:
@@ -28,6 +29,9 @@ module_order:
       info: "Read mapping of demultiplexed reads with Bowtie2"
       path_filters:
         - "log/4-mapped/*.log"
+  - picard:
+      path_filters:
+        - "*.metrics"
 
 custom_data:
   scalinginfo:
