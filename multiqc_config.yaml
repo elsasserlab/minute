@@ -6,6 +6,7 @@ run_modules:
   - fastqc
   - cutadapt
   - custom_content
+  - bowtie2
 
 module_order:
   - fastqc:
@@ -20,6 +21,13 @@ module_order:
       info: "This step removes adapters from reads that no longer have UMIs"
       path_filters:
         - "*.trimmed.log"
+  - bowtie2:
+      name: "Bowtie 2 read mapping"
+      anchor: "bowtie2"
+      target: ""
+      info: "Read mapping of demultiplexed reads with Bowtie2"
+      path_filters:
+        - "log/4-mapped/*.log"
 
 custom_data:
   scalinginfo:
