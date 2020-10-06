@@ -1,6 +1,7 @@
 title: "Minute report"
 subtitle: ""
 intro_text: ""
+show_analysis_paths: False
 
 run_modules:
   - fastqc
