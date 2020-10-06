@@ -46,8 +46,6 @@ rule final:
         ], library=libraries),
         expand("final/bigwig/{library.name}.scaled.bw",
             library=[np.treatment for np in normalization_pairs]),
-        "reports/stats_summary.txt",
-
 
 rule multiqc:
     output: "reports/multiqc_report.html"
@@ -58,6 +56,7 @@ rule multiqc:
         expand("log/4-mapped/{library.name}.log", library=libraries),
         expand("tmp/6-dupmarked/{library.name}.metrics", library=libraries),
         "reports/scalinginfo.txt",
+        "reports/stats_summary.txt",
         multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
     shell:
         "multiqc -o reports/ -c {input.multiqc_config} {input}"
