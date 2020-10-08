@@ -23,7 +23,7 @@
    read 2 files must have names ending in `_R1.fastq.gz` and `_R2.fastq.gz`,
    respectively.
 4. Copy the `config.yaml` file into `myexperiment/` and edit it as required.
-5. Create `experiment.tsv` and `controls.tsv` files describing your libraries
+5. Create `libraries.tsv` and `groups.tsv` files describing your libraries
    (see below).
 6. Run `snakemake -p -s path/to/the/Snakefile`.
 
@@ -37,13 +37,13 @@ will only show which steps would be executed and not actually run them
 
 ## Configuration files
 
-The configuration files `experiment.tsv`, `controls.tsv` and `config.yaml`
+The configuration files `libraries.tsv`, `groups.tsv` and `config.yaml`
 need to be placed in the `myexperiment/` directory. Use the provided
 example files as templates and adjust as needed.
 
-### The experiment.tsv file
+### The libraries.tsv file
 
-`experiment.tsv` is a text file in tab-separated value format describing the
+`libraries.tsv` is a text file in tab-separated value format describing the
 sequenced libraries, one row per library.
 
 The columns are:
@@ -57,9 +57,9 @@ The FASTQ base name refers to files within the `fastq/` folder. The suffixes
 `_R1.fastq.gz` and `_R2.fastq.gz` will be added automatically.
 
 
-## The controls.tsv file
+## The groups.tsv file
 
-The `controls.tsv` file is a text file in tab-separated value format that
+The `groups.tsv` file is a text file in tab-separated value format that
 defines which of the libraries are the treatments and which are the
 controls (or “inputs”).
 
@@ -80,7 +80,7 @@ file in an editor, read through the comments and edit as required.
 
 Snakemake supports running on HPC environments. As such, it is possible to
 run minute on SLURM clusters, including the Swedish UPPMAX clusters. Handling
-of `config.yaml` and `experiment.tsv` files
+of `config.yaml` and `libraries.tsv` files
 will work the same. You just need to have conda available
 and an active minute environment that you can install as described in the
 **setup** section.
@@ -125,13 +125,9 @@ the scheduler does not run on a login node:
 - Make sure you call `conda activate minute` in the wrapper.
 
 
-# Result folders
+# Result folders and files
 
-* `fastqc/`: FastQC report for input reads
-* `noumi/`: Input reads without UMIs
-* `demultiplexed/`: Demultiplexed “noumi” reads
-* `mapped/`: Demultiplexed reads mapped to reference
-* `mapped_se/`: Mapped reads converted to single end
-* `dupmarked/`: Duplicate-marked (single-end) reads
-* `restricted/`: Mapped reads restricted to regions of interest. Currently this
-  folder is the one that contains the final BAMs.
+* `reports/multiqc_report.html`: MultiQC report
+* `final/bam`: Final BAM files
+* `final/bigwig`: Scaled and unscaled BigWig files
+* `tmp/`: Intermediate files.
