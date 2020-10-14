@@ -350,6 +350,20 @@ for group in scaling_groups:
                         print(factor, file=f)
 
 
+def set_compute_scaling_rule_names():
+    """
+    This sets the names of the compute scaling rules, which need to be
+    defined anonymously because they are defined (above) in a loop.
+    """
+    prefix = "tmp/8-scalinginfo/"
+    for rul in workflow.rules:
+        if "controls" in rul.input.keys():
+            rul.name = "compute_scaling_factors_group_" + rul.output["info"][len(prefix):-4]
+
+
+set_compute_scaling_rule_names()
+
+
 rule summarize_scaling_factors:
     output:
         info="reports/scalinginfo.txt"
