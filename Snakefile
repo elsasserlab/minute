@@ -3,7 +3,7 @@ import se_bam
 # - switch to interleaved files?
 from utils import (
     read_libraries,
-    read_controls,
+    read_scaling_groups,
     flagstat_mapped_reads,
     compute_scaling,
     parse_duplication_metrics,
@@ -17,6 +17,7 @@ from utils import (
     print_metadata_overview,
     is_snakemake_calling_itself,
     map_fastq_prefix_to_list_of_libraries,
+    get_normalization_pairs,
 )
 
 
@@ -30,10 +31,10 @@ if "bowtie_index_name" not in config:
 
 libraries = list(read_libraries())
 pools = list(group_libraries_by_sample(libraries))
-normalization_pairs = list(read_controls(libraries))
+scaling_groups = list(read_scaling_groups(libraries))
 
 if not is_snakemake_calling_itself():
-    print_metadata_overview(libraries, pools, normalization_pairs)
+    print_metadata_overview(libraries, pools, get_normalization_pairs(scaling_groups))
 
 fastq_map = map_fastq_prefix_to_list_of_libraries(libraries)
 
@@ -48,7 +49,7 @@ rule multiqc:
         expand("reports/fastqc/{fastq}_R{read}_fastqc.html",
             fastq=fastq_map.keys(), read=(1, 2)),
         expand("final/bigwig/{library.name}.scaled.bw",
-            library=[np.treatment for np in normalization_pairs]),
+            library=[np.treatment for np in get_normalization_pairs(scaling_groups)]),
         "reports/stats_summary.txt",
     shell:
         "multiqc -o reports/ ."
@@ -324,16 +325,16 @@ rule unscaled_bigwig:
 
 rule compute_scaling_factors:
     input:
-        treatments=["final/bam/{library.name}.flagstat.txt".format(library=np.treatment) for np in normalization_pairs],
-        controls=["final/bam/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
+        treatments=["final/bam/{library.name}.flagstat.txt".format(library=np.treatment) for np in get_normalization_pairs(scaling_groups)],
+        controls=["final/bam/{library.name}.flagstat.txt".format(library=np.control) for np in get_normalization_pairs(scaling_groups)],
         genome_size="tmp/genome_size.txt",
     output:
-        factors=temp(["tmp/factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs]),
+        factors=temp(["tmp/factors/{library.name}.factor.txt".format(library=np.treatment) for np in get_normalization_pairs(scaling_groups)]),
         info="reports/scalinginfo.txt"
     run:
         with open(output.info, "w") as outf:
             factors = compute_scaling(
-                normalization_pairs,
+                get_normalization_pairs(scaling_groups),
                 input.treatments,
                 input.controls,
                 outf,

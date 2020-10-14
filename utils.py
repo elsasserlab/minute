@@ -43,6 +43,12 @@ class TreatmentControlPair:
     control: Library
 
 
+@dataclass
+class ScalingGroup:
+    normalization_pairs: List[TreatmentControlPair]
+    name: str
+
+
 def read_libraries():
     for row in read_tsv("libraries.tsv", columns=4):
         yield FastqLibrary(*row)
@@ -56,14 +62,19 @@ def group_libraries_by_sample(libraries):
         yield PooledLibrary(sample=sample, replicates=replicates)
 
 
-def read_controls(libraries):
+def read_scaling_groups(libraries):
     library_map = {
         (library.sample, library.replicate): library for library in libraries}
 
-    for row in read_tsv("groups.tsv", columns=3):
+    scaling_map = defaultdict(list)
+
+    for row in read_tsv("groups.tsv", columns=4):
         treatment = library_map[(row[0], row[1])]
         control = library_map[(row[2], row[1])]
-        yield TreatmentControlPair(treatment, control)
+        scaling_map[row[3]].append(TreatmentControlPair(treatment, control))
+
+    for name in scaling_map:
+        yield ScalingGroup(scaling_map[name], name)
 
 
 def read_tsv(path, columns: int):
@@ -232,6 +243,11 @@ def detect_bowtie_index_name(fasta_path):
 def get_replicates(libraries, sample):
     replicates = [lib.replicate for lib in libraries if lib.sample == sample]
     return replicates
+
+
+def get_normalization_pairs(scaling_groups):
+    np = [pair for group in scaling_groups for pair in group.normalization_pairs]
+    return np
 
 
 def print_metadata_overview(libraries, pools, normalization_pairs):
