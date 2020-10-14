@@ -66,8 +66,11 @@ def read_scaling_groups(libraries):
     library_map = {
         (library.sample, library.replicate): library for library in libraries}
 
-    scaling_map = defaultdict(list)
+    pools = group_libraries_by_sample(libraries)
+    for pool in pools:
+        library_map[(pool.sample, "pooled")] = pool
 
+    scaling_map = defaultdict(list)
     for row in read_tsv("groups.tsv", columns=4):
         treatment = library_map[(row[0], row[1])]
         control = library_map[(row[2], row[1])]
