@@ -51,6 +51,7 @@ rule multiqc:
         expand("final/bigwig/{library.name}.scaled.bw",
             library=[np.treatment for np in get_normalization_pairs(scaling_groups)]),
         "reports/stats_summary.txt",
+        "reports/scalinginfo.txt",
     shell:
         "multiqc -o reports/ ."
 
@@ -323,27 +324,44 @@ rule unscaled_bigwig:
         " 2> {log}"
 
 
-rule compute_scaling_factors:
-    input:
-        treatments=["final/bam/{library.name}.flagstat.txt".format(library=np.treatment) for np in get_normalization_pairs(scaling_groups)],
-        controls=["final/bam/{library.name}.flagstat.txt".format(library=np.control) for np in get_normalization_pairs(scaling_groups)],
-        genome_size="tmp/genome_size.txt",
+for group in scaling_groups:
+    rule:
+        output:
+            factors=temp(["tmp/8-factors/{library.name}.factor.txt".format(library=np.treatment) for np in group.normalization_pairs]),
+            info="tmp/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name)
+        input:
+            treatments=["final/bam/{library.name}.flagstat.txt".format(library=np.treatment) for np in group.normalization_pairs],
+            controls=["final/bam/{library.name}.flagstat.txt".format(library=np.control) for np in group.normalization_pairs],
+            genome_size="tmp/genome_size.txt",
+        params:
+            scaling_group=group,
+        run:
+            with open(output.info, "w") as outf:
+                factors = compute_scaling(
+                    params.scaling_group,
+                    input.treatments,
+                    input.controls,
+                    outf,
+                    genome_size=read_int_from_file(input.genome_size),
+                    fragment_size=config["fragment_size"],
+                )
+                for factor, factor_path in zip(factors, output.factors):
+                    with open(factor_path, "w") as f:
+                        print(factor, file=f)
+
+
+rule summarize_scaling_factors:
     output:
-        factors=temp(["tmp/factors/{library.name}.factor.txt".format(library=np.treatment) for np in get_normalization_pairs(scaling_groups)]),
         info="reports/scalinginfo.txt"
+    input:
+        factors=["tmp/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name) for group in scaling_groups]
     run:
-        with open(output.info, "w") as outf:
-            factors = compute_scaling(
-                get_normalization_pairs(scaling_groups),
-                input.treatments,
-                input.controls,
-                outf,
-                genome_size=read_int_from_file(input.genome_size),
-                fragment_size=config["fragment_size"],
-            )
-            for factor, factor_path in zip(factors, output.factors):
-                with open(factor_path, "w") as f:
-                    print(factor, file=f)
+        with open(output.info, "w") as f:
+            print("sample_name", "#reads", "n_scaled_reads", "input_name", "n_input_reads", "factor", "scaling_group", sep="\t", file=f)
+            for factor in input.factors:
+                with open(factor) as factor_file:
+                    for line in factor_file:
+                        print(line.rstrip(), file=f)
 
 
 rule extract_fragment_size:
@@ -361,7 +379,7 @@ rule scaled_bigwig:
     output:
         bw="final/bigwig/{library}.scaled.bw"
     input:
-        factor="tmp/factors/{library}.factor.txt",
+        factor="tmp/8-factors/{library}.factor.txt",
         fragsize="final/bam/{library}.fragsize.txt",
         bam="final/bam/{library}.bam",
         bai="final/bam/{library}.bai",
@@ -384,7 +402,7 @@ rule scaled_bigwig:
 
 rule stats:
     output:
-        txt="tmp/8-stats/{library}.txt"
+        txt="tmp/9-stats/{library}.txt"
     input:
         mapped_flagstat="tmp/4-mapped/{library}.flagstat.txt",
         metrics="tmp/6-dupmarked/{library}.metrics",
@@ -413,7 +431,7 @@ rule stats_summary:
     output:
         txt="reports/stats_summary.txt"
     input:
-        expand("tmp/8-stats/{library.name}.txt", library=libraries) + expand("tmp/8-stats/{pool.name}.txt", pool=pools)
+        expand("tmp/9-stats/{library.name}.txt", library=libraries) + expand("tmp/9-stats/{pool.name}.txt", pool=pools)
     run:
         stats_summaries = [parse_stats_fields(st_file) for st_file in input]
 
