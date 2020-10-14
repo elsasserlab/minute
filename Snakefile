@@ -34,7 +34,7 @@ pools = list(group_libraries_by_sample(libraries))
 scaling_groups = list(read_scaling_groups(libraries))
 
 if not is_snakemake_calling_itself():
-    print_metadata_overview(libraries, pools, get_normalization_pairs(scaling_groups))
+    print_metadata_overview(libraries, pools, scaling_groups)
 
 fastq_map = map_fastq_prefix_to_list_of_libraries(libraries)
 

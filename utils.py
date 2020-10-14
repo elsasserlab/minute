@@ -250,7 +250,7 @@ def get_normalization_pairs(scaling_groups):
     return np
 
 
-def print_metadata_overview(libraries, pools, normalization_pairs):
+def print_metadata_overview(libraries, pools, scaling_groups):
     print("# Libraries")
     for library in libraries:
         print(" -", library)
@@ -261,9 +261,12 @@ def print_metadata_overview(libraries, pools, normalization_pairs):
         print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")")
 
     print()
-    print("# Normalization Pairs (treatment -- control)")
-    for pair in normalization_pairs:
-        print(" -", pair.treatment.name, "--", pair.control.name)
+    print("# Scaling groups")
+
+    for group in scaling_groups:
+        print("# Group", group.name, "- Normalization Pairs (treatment -- control)")
+        for pair in group.normalization_pairs:
+            print(" -", pair.treatment.name, "--", pair.control.name)
 
 
 def is_snakemake_calling_itself():
