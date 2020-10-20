@@ -120,6 +120,7 @@ rule remove_contamination:
     shell:
         "cutadapt"
         " -j {threads}"
+        " -Z"
         " -e 0.15"
         " -A TTTTTCTTTTCTTTTTTCTTTTCCTTCCTTCTAA"
         " --discard-trimmed"
