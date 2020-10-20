@@ -37,21 +37,29 @@ if not is_snakemake_calling_itself():
 
 fastq_map = map_fastq_prefix_to_list_of_libraries(libraries)
 
-
-rule multiqc:
-    output: "reports/multiqc_report.html"
+rule final:
     input:
+        "reports/multiqc_report.html",
         expand([
             "final/bigwig/{library.name}.unscaled.bw",
             "final/bigwig/{library.sample}_pooled.unscaled.bw",
         ], library=libraries),
-        expand("reports/fastqc/{fastq}_R{read}_fastqc.html",
-            fastq=fastq_map.keys(), read=(1, 2)),
         expand("final/bigwig/{library.name}.scaled.bw",
             library=[np.treatment for np in normalization_pairs]),
+
+rule multiqc:
+    output: "reports/multiqc_report.html"
+    input:
+        expand("reports/fastqc/{fastq}_R{read}_fastqc/fastqc_data.txt",
+            fastq=fastq_map.keys(), read=(1, 2)),
+        expand("log/2-noadapters/{fastq}.trimmed.log", fastq=fastq_map.keys()),
+        expand("log/4-mapped/{library.name}.log", library=libraries),
+        expand("tmp/6-dupmarked/{library.name}.metrics", library=libraries),
+        "reports/scalinginfo.txt",
         "reports/stats_summary.txt",
+        multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
     shell:
-        "multiqc -o reports/ ."
+        "multiqc -o reports/ -c {input.multiqc_config} {input}"
 
 
 rule clean:
@@ -67,11 +75,12 @@ rule clean:
 rule fastqc_input:
     output:
         html="reports/fastqc/{name}_fastqc.html",
-        zip=temp("reports/fastqc/{name}_fastqc.zip")
+        zip=temp("reports/fastqc/{name}_fastqc.zip"),
+        data="reports/fastqc/{name}_fastqc/fastqc_data.txt",
     input:
         fastq="fastq/{name}.fastq.gz"
     shell:
-        "fastqc -o reports/fastqc {input.fastq}"
+        "fastqc --extract -o reports/fastqc {input.fastq}"
 
 
 rule move_umi_to_header:
@@ -191,7 +200,7 @@ rule bowtie2:
         r1="tmp/3-demultiplexed/{sample}_replicate{replicate}_R1.fastq.gz",
         r2="tmp/3-demultiplexed/{sample}_replicate{replicate}_R2.fastq.gz",
     log:
-        "log/4-mapped/{sample}_replicate{replicate}.bowtie2.log"
+        "log/4-mapped/{sample}_replicate{replicate}.log"
     # TODO
     # - --sensitive (instead of --fast) would be default
     # - write uncompressed BAM?
