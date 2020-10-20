@@ -2,6 +2,7 @@ title: "Minute report"
 subtitle: ""
 intro_text: ""
 show_analysis_paths: False
+skip_generalstats: true
 
 run_modules:
   - fastqc
