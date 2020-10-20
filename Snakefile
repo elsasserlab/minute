@@ -120,6 +120,7 @@ rule remove_contamination:
     shell:
         "cutadapt"
         " -j {threads}"
+        " -Z"
         " -e 0.15"
         " -A TTTTTCTTTTCTTTTTTCTTTTCCTTCCTTCTAA"
         " --discard-trimmed"
@@ -162,6 +163,7 @@ for fastq_base, libs in fastq_map.items():
         shell:
             "cutadapt"
             " -e 0.15"  # TODO determine from barcode length
+            " --compression-level=4"
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
             " -p {params.r2}"
