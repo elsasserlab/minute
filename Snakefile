@@ -148,8 +148,6 @@ for fastq_base, libs in fastq_map.items():
     rule:
         output:
             expand("final/fastq/{library.name}_R{read}.fastq.gz", library=libs, read=(1, 2)),
-            unknown_r1=temp("final/fastq/{fastqbase}-unknown_R1.fastq.gz".format(fastqbase=fastq_base)),
-            unknown_r2=temp("final/fastq/{fastqbase}-unknown_R2.fastq.gz".format(fastqbase=fastq_base)),
         input:
             r1="tmp/2-noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
             r2="tmp/2-noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
@@ -167,8 +165,7 @@ for fastq_base, libs in fastq_map.items():
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
             " -p {params.r2}"
-            " --untrimmed-output final/fastq/{params.fastqbase}-unknown_R1.fastq.gz"
-            " --untrimmed-paired-output final/fastq/{params.fastqbase}-unknown_R2.fastq.gz"
+            " --discard-untrimmed"
             " {input.r1}"
             " {input.r2}"
             " > {log}"
