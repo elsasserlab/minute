@@ -70,7 +70,6 @@ rule clean:
         " stats"
         " reports"
         " log"
-        " demultiplexed"
 
 
 rule fastqc_input:
