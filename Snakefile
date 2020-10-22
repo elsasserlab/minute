@@ -70,6 +70,7 @@ rule clean:
         " stats"
         " reports"
         " log"
+        " demultiplexed"
 
 
 rule fastqc_input:
@@ -147,16 +148,16 @@ for fastq_base, libs in fastq_map.items():
 
     rule:
         output:
-            temp(expand("tmp/3-demultiplexed/{library.name}_R{read}.fastq.gz", library=libs, read=(1, 2))),
-            unknown_r1=temp("tmp/3-demultiplexed/{fastqbase}-unknown_R1.fastq.gz".format(fastqbase=fastq_base)),
-            unknown_r2=temp("tmp/3-demultiplexed/{fastqbase}-unknown_R2.fastq.gz".format(fastqbase=fastq_base)),
+            expand("final/fastq/{library.name}_R{read}.fastq.gz", library=libs, read=(1, 2)),
+            unknown_r1=temp("final/fastq/{fastqbase}-unknown_R1.fastq.gz".format(fastqbase=fastq_base)),
+            unknown_r2=temp("final/fastq/{fastqbase}-unknown_R2.fastq.gz".format(fastqbase=fastq_base)),
         input:
             r1="tmp/2-noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
             r2="tmp/2-noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
             barcodes_fasta="tmp/3-barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
         params:
-            r1=lambda wildcards: "tmp/3-demultiplexed/{name}_R1.fastq.gz",
-            r2=lambda wildcards: "tmp/3-demultiplexed/{name}_R2.fastq.gz",
+            r1=lambda wildcards: "final/fastq/{name}_R1.fastq.gz",
+            r2=lambda wildcards: "final/fastq/{name}_R2.fastq.gz",
             fastqbase=fastq_base,
         log:
             "log/3-demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
@@ -167,8 +168,8 @@ for fastq_base, libs in fastq_map.items():
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
             " -p {params.r2}"
-            " --untrimmed-output tmp/3-demultiplexed/{params.fastqbase}-unknown_R1.fastq.gz"
-            " --untrimmed-paired-output tmp/3-demultiplexed/{params.fastqbase}-unknown_R2.fastq.gz"
+            " --untrimmed-output final/fastq/{params.fastqbase}-unknown_R1.fastq.gz"
+            " --untrimmed-paired-output final/fastq/{params.fastqbase}-unknown_R2.fastq.gz"
             " {input.r1}"
             " {input.r2}"
             " > {log}"
@@ -199,8 +200,8 @@ rule bowtie2:
     output:
         bam=temp("tmp/4-mapped/{sample}_replicate{replicate}.bam")
     input:
-        r1="tmp/3-demultiplexed/{sample}_replicate{replicate}_R1.fastq.gz",
-        r2="tmp/3-demultiplexed/{sample}_replicate{replicate}_R2.fastq.gz",
+        r1="final/fastq/{sample}_replicate{replicate}_R1.fastq.gz",
+        r2="final/fastq/{sample}_replicate{replicate}_R2.fastq.gz",
     log:
         "log/4-mapped/{sample}_replicate{replicate}.log"
     # TODO
