@@ -25,7 +25,7 @@ class FastqLibrary(Library):
 
     @property
     def name(self):
-        return f"{self.sample}_replicate{self.replicate}"
+        return f"{self.sample}_rep{self.replicate}"
 
 
 @dataclass
