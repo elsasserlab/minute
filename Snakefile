@@ -197,12 +197,12 @@ rule bowtie2:
     threads:
         20
     output:
-        bam=temp("tmp/4-mapped/{sample}_replicate{replicate}.bam")
+        bam=temp("tmp/4-mapped/{sample}_rep{replicate}.bam")
     input:
-        r1="final/fastq/{sample}_replicate{replicate}_R1.fastq.gz",
-        r2="final/fastq/{sample}_replicate{replicate}_R2.fastq.gz",
+        r1="final/fastq/{sample}_rep{replicate}_R1.fastq.gz",
+        r2="final/fastq/{sample}_rep{replicate}_R2.fastq.gz",
     log:
-        "log/4-mapped/{sample}_replicate{replicate}.log"
+        "log/4-mapped/{sample}_rep{replicate}.log"
     # TODO
     # - --sensitive (instead of --fast) would be default
     # - write uncompressed BAM?
@@ -225,7 +225,7 @@ rule pool_replicates:
         bam=temp("tmp/4-mapped/{sample}_pooled.bam")
     input:
         bam_replicates=lambda wildcards: expand(
-            "tmp/4-mapped/{{sample}}_replicate{replicates}.bam",
+            "tmp/4-mapped/{{sample}}_rep{replicates}.bam",
             replicates=get_replicates(libraries, wildcards.sample))
     run:
         if len(input.bam_replicates) == 1:
