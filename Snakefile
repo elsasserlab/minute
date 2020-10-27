@@ -175,22 +175,26 @@ for fastq_base, libs in fastq_map.items():
             r2="tmp/2-noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
             barcodes_fasta="tmp/3-barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
         params:
-            r1=lambda wildcards: "final/fastq/{name}_R1.fastq.gz",
-            r2=lambda wildcards: "final/fastq/{name}_R2.fastq.gz",
+            r1=lambda wildcards: "{name}_R1.fastq.gz",
+            r2=lambda wildcards: "{name}_R2.fastq.gz",
             fastqbase=fastq_base,
         log:
             "log/3-demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
         shell:
+            "d=$(mktemp -d)"
+            " ; "
             "cutadapt"
             " -e 0.15"  # TODO determine from barcode length
             " --compression-level=4"
             " -g file:{input.barcodes_fasta}"
-            " -o {params.r1}"
-            " -p {params.r2}"
+            " -o $d/{params.r1}"
+            " -p $d/{params.r2}"
             " --discard-untrimmed"
             " {input.r1}"
             " {input.r2}"
             " > {log}"
+            " ; "
+            "mv -v $d/* final/fastq/ ; rm -r $d"
 
 
 def set_demultiplex_rule_names():
