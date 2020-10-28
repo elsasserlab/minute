@@ -22,6 +22,25 @@ from utils import (
 
 configfile: "config.yaml"
 
+
+localrules: 
+    final,
+    multiqc,
+    clean,
+    barcodes,
+    remove_exclude_regions,
+    compute_scaling_factors,
+    extract_fragment_size,
+    stats,
+    stats_summary,
+    convert_to_single_end,
+    mark_duplicates,
+    mark_pe_duplicates,
+    samtools_index,
+    samtools_flagstat,
+    insert_size_metrics,
+
+
 if "bowtie_index_name" not in config:
     try:
         config["bowtie_index_name"] = detect_bowtie_index_name(config["reference_fasta"])
