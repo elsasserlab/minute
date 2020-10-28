@@ -76,8 +76,8 @@ def read_scaling_groups(libraries):
         control = library_map[(row[2], row[1])]
         scaling_map[row[3]].append(TreatmentControlPair(treatment, control))
 
-    for name in scaling_map:
-        yield ScalingGroup(scaling_map[name], name)
+    for name, normalization_pairs in scaling_map.items():
+        yield ScalingGroup(normalization_pairs, name)
 
 
 def read_tsv(path, columns: int):
@@ -247,9 +247,8 @@ def get_replicates(libraries, sample):
     return replicates
 
 
-def get_normalization_pairs(scaling_groups):
-    np = [pair for group in scaling_groups for pair in group.normalization_pairs]
-    return np
+def get_normalization_pairs(scaling_groups) -> List[TreatmentControlPair]:
+    return [pair for group in scaling_groups for pair in group.normalization_pairs]
 
 
 def print_metadata_overview(libraries, pools, scaling_groups):
