@@ -38,22 +38,30 @@ if not is_snakemake_calling_itself():
 
 fastq_map = map_fastq_prefix_to_list_of_libraries(libraries)
 
-
-rule multiqc:
-    output: "reports/multiqc_report.html"
+rule final:
     input:
+        "reports/multiqc_report.html",
         expand([
             "final/bigwig/{library.name}.unscaled.bw",
             "final/bigwig/{library.sample}_pooled.unscaled.bw",
         ], library=libraries),
-        expand("reports/fastqc/{fastq}_R{read}_fastqc.html",
-            fastq=fastq_map.keys(), read=(1, 2)),
         expand("final/bigwig/{library.name}.scaled.bw",
             library=[np.treatment for np in get_normalization_pairs(scaling_groups)]),
-        "reports/stats_summary.txt",
+
+
+rule multiqc:
+    output: "reports/multiqc_report.html"
+    input:
+        expand("reports/fastqc/{fastq}_R{read}_fastqc/fastqc_data.txt",
+            fastq=fastq_map.keys(), read=(1, 2)),
+        expand("log/2-noadapters/{fastq}.trimmed.log", fastq=fastq_map.keys()),
+        expand("log/4-mapped/{library.name}.log", library=libraries),
+        expand("tmp/6-dupmarked/{library.name}.metrics", library=libraries),
         "reports/scalinginfo.txt",
+        "reports/stats_summary.txt",
+        multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
     shell:
-        "multiqc -o reports/ ."
+        "multiqc -o reports/ -c {input.multiqc_config} {input}"
 
 
 rule clean:
@@ -69,11 +77,12 @@ rule clean:
 rule fastqc_input:
     output:
         html="reports/fastqc/{name}_fastqc.html",
-        zip=temp("reports/fastqc/{name}_fastqc.zip")
+        zip=temp("reports/fastqc/{name}_fastqc.zip"),
+        data="reports/fastqc/{name}_fastqc/fastqc_data.txt",
     input:
         fastq="fastq/{name}.fastq.gz"
     shell:
-        "fastqc -o reports/fastqc {input.fastq}"
+        "fastqc --extract -o reports/fastqc {input.fastq}"
 
 
 rule move_umi_to_header:
@@ -113,6 +122,7 @@ rule remove_contamination:
     shell:
         "cutadapt"
         " -j {threads}"
+        " -Z"
         " -e 0.15"
         " -A TTTTTCTTTTCTTTTTTCTTTTCCTTCCTTCTAA"
         " --discard-trimmed"
@@ -139,27 +149,28 @@ for fastq_base, libs in fastq_map.items():
 
     rule:
         output:
-            temp(expand("tmp/3-demultiplexed/{library.name}_R{read}.fastq.gz", library=libs, read=(1, 2))),
-            unknown_r1=temp("tmp/3-demultiplexed/{fastqbase}-unknown_R1.fastq.gz".format(fastqbase=fastq_base)),
-            unknown_r2=temp("tmp/3-demultiplexed/{fastqbase}-unknown_R2.fastq.gz".format(fastqbase=fastq_base)),
+            expand("final/fastq/{library.name}_R{read}.fastq.gz", library=libs, read=(1, 2)),
+            unknown_r1=temp("final/fastq/{fastqbase}-unknown_R1.fastq.gz".format(fastqbase=fastq_base)),
+            unknown_r2=temp("final/fastq/{fastqbase}-unknown_R2.fastq.gz".format(fastqbase=fastq_base)),
         input:
             r1="tmp/2-noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
             r2="tmp/2-noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
             barcodes_fasta="tmp/3-barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
         params:
-            r1=lambda wildcards: "tmp/3-demultiplexed/{name}_R1.fastq.gz",
-            r2=lambda wildcards: "tmp/3-demultiplexed/{name}_R2.fastq.gz",
+            r1=lambda wildcards: "final/fastq/{name}_R1.fastq.gz",
+            r2=lambda wildcards: "final/fastq/{name}_R2.fastq.gz",
             fastqbase=fastq_base,
         log:
             "log/3-demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
         shell:
             "cutadapt"
             " -e 0.15"  # TODO determine from barcode length
+            " --compression-level=4"
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
             " -p {params.r2}"
-            " --untrimmed-output tmp/3-demultiplexed/{params.fastqbase}-unknown_R1.fastq.gz"
-            " --untrimmed-paired-output tmp/3-demultiplexed/{params.fastqbase}-unknown_R2.fastq.gz"
+            " --untrimmed-output final/fastq/{params.fastqbase}-unknown_R1.fastq.gz"
+            " --untrimmed-paired-output final/fastq/{params.fastqbase}-unknown_R2.fastq.gz"
             " {input.r1}"
             " {input.r2}"
             " > {log}"
@@ -188,12 +199,12 @@ rule bowtie2:
     threads:
         20
     output:
-        bam=temp("tmp/4-mapped/{sample}_replicate{replicate}.bam")
+        bam=temp("tmp/4-mapped/{sample}_rep{replicate}.bam")
     input:
-        r1="tmp/3-demultiplexed/{sample}_replicate{replicate}_R1.fastq.gz",
-        r2="tmp/3-demultiplexed/{sample}_replicate{replicate}_R2.fastq.gz",
+        r1="final/fastq/{sample}_rep{replicate}_R1.fastq.gz",
+        r2="final/fastq/{sample}_rep{replicate}_R2.fastq.gz",
     log:
-        "log/4-mapped/{sample}_replicate{replicate}.bowtie2.log"
+        "log/4-mapped/{sample}_rep{replicate}.log"
     # TODO
     # - --sensitive (instead of --fast) would be default
     # - write uncompressed BAM?
@@ -216,7 +227,7 @@ rule pool_replicates:
         bam=temp("tmp/4-mapped/{sample}_pooled.bam")
     input:
         bam_replicates=lambda wildcards: expand(
-            "tmp/4-mapped/{{sample}}_replicate{replicates}.bam",
+            "tmp/4-mapped/{{sample}}_rep{replicates}.bam",
             replicates=get_replicates(libraries, wildcards.sample))
     run:
         if len(input.bam_replicates) == 1:

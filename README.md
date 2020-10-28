@@ -136,4 +136,5 @@ the scheduler does not run on a login node:
 * `reports/multiqc_report.html`: MultiQC report
 * `final/bam`: Final BAM files
 * `final/bigwig`: Scaled and unscaled BigWig files
+* `final/fastq`: Demultiplexed FASTQ files.
 * `tmp/`: Intermediate files.
