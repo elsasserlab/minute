@@ -3,7 +3,7 @@ import se_bam
 # - switch to interleaved files?
 from utils import (
     read_libraries,
-    read_controls,
+    read_scaling_groups,
     flagstat_mapped_reads,
     compute_scaling,
     parse_duplication_metrics,
@@ -17,6 +17,7 @@ from utils import (
     print_metadata_overview,
     is_snakemake_calling_itself,
     map_fastq_prefix_to_list_of_libraries,
+    get_normalization_pairs,
 )
 
 
@@ -49,10 +50,10 @@ if "bowtie_index_name" not in config:
 
 libraries = list(read_libraries())
 pools = list(group_libraries_by_sample(libraries))
-normalization_pairs = list(read_controls(libraries))
+scaling_groups = list(read_scaling_groups(libraries))
 
 if not is_snakemake_calling_itself():
-    print_metadata_overview(libraries, pools, normalization_pairs)
+    print_metadata_overview(libraries, pools, scaling_groups)
 
 fastq_map = map_fastq_prefix_to_list_of_libraries(libraries)
 
@@ -64,7 +65,8 @@ rule final:
             "final/bigwig/{library.sample}_pooled.unscaled.bw",
         ], library=libraries),
         expand("final/bigwig/{library.name}.scaled.bw",
-            library=[np.treatment for np in normalization_pairs]),
+            library=[np.treatment for np in get_normalization_pairs(scaling_groups)]),
+
 
 rule multiqc:
     output: "reports/multiqc_report.html"
@@ -349,27 +351,58 @@ rule unscaled_bigwig:
         " 2> {log}"
 
 
-rule compute_scaling_factors:
-    input:
-        treatments=["final/bam/{library.name}.flagstat.txt".format(library=np.treatment) for np in normalization_pairs],
-        controls=["final/bam/{library.name}.flagstat.txt".format(library=np.control) for np in normalization_pairs],
-        genome_size="tmp/genome_size.txt",
+for group in scaling_groups:
+    rule:
+        output:
+            factors=temp(["tmp/8-factors/{library.name}.factor.txt".format(library=np.treatment) for np in group.normalization_pairs]),
+            info="tmp/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name)
+        input:
+            treatments=["final/bam/{library.name}.flagstat.txt".format(library=np.treatment) for np in group.normalization_pairs],
+            controls=["final/bam/{library.name}.flagstat.txt".format(library=np.control) for np in group.normalization_pairs],
+            genome_size="tmp/genome_size.txt",
+        params:
+            scaling_group=group,
+        run:
+            with open(output.info, "w") as outf:
+                factors = compute_scaling(
+                    params.scaling_group,
+                    input.treatments,
+                    input.controls,
+                    outf,
+                    genome_size=read_int_from_file(input.genome_size),
+                    fragment_size=config["fragment_size"],
+                )
+                for factor, factor_path in zip(factors, output.factors):
+                    with open(factor_path, "w") as f:
+                        print(factor, file=f)
+
+
+def set_compute_scaling_rule_names():
+    """
+    This sets the names of the compute scaling rules, which need to be
+    defined anonymously because they are defined (above) in a loop.
+    """
+    prefix = "tmp/8-scalinginfo/"
+    for rul in workflow.rules:
+        if "controls" in rul.input.keys():
+            rul.name = "compute_scaling_factors_group_" + rul.output["info"][len(prefix):-4]
+
+
+set_compute_scaling_rule_names()
+
+
+rule summarize_scaling_factors:
     output:
-        factors=temp(["tmp/factors/{library.name}.factor.txt".format(library=np.treatment) for np in normalization_pairs]),
         info="reports/scalinginfo.txt"
+    input:
+        factors=["tmp/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name) for group in scaling_groups]
     run:
-        with open(output.info, "w") as outf:
-            factors = compute_scaling(
-                normalization_pairs,
-                input.treatments,
-                input.controls,
-                outf,
-                genome_size=read_int_from_file(input.genome_size),
-                fragment_size=config["fragment_size"],
-            )
-            for factor, factor_path in zip(factors, output.factors):
-                with open(factor_path, "w") as f:
-                    print(factor, file=f)
+        with open(output.info, "w") as f:
+            print("sample_name", "#reads", "n_scaled_reads", "input_name", "n_input_reads", "factor", "scaling_group", sep="\t", file=f)
+            for factor in input.factors:
+                with open(factor) as factor_file:
+                    for line in factor_file:
+                        print(line.rstrip(), file=f)
 
 
 rule extract_fragment_size:
@@ -387,7 +420,7 @@ rule scaled_bigwig:
     output:
         bw="final/bigwig/{library}.scaled.bw"
     input:
-        factor="tmp/factors/{library}.factor.txt",
+        factor="tmp/8-factors/{library}.factor.txt",
         fragsize="final/bam/{library}.fragsize.txt",
         bam="final/bam/{library}.bam",
         bai="final/bam/{library}.bai",
@@ -410,7 +443,7 @@ rule scaled_bigwig:
 
 rule stats:
     output:
-        txt="tmp/8-stats/{library}.txt"
+        txt="tmp/9-stats/{library}.txt"
     input:
         mapped_flagstat="tmp/4-mapped/{library}.flagstat.txt",
         metrics="tmp/6-dupmarked/{library}.metrics",
@@ -439,7 +472,7 @@ rule stats_summary:
     output:
         txt="reports/stats_summary.txt"
     input:
-        expand("tmp/8-stats/{library.name}.txt", library=libraries) + expand("tmp/8-stats/{pool.name}.txt", pool=pools)
+        expand("tmp/9-stats/{library.name}.txt", library=libraries) + expand("tmp/9-stats/{pool.name}.txt", pool=pools)
     run:
         stats_summaries = [parse_stats_fields(st_file) for st_file in input]
 

@@ -43,6 +43,12 @@ class TreatmentControlPair:
     control: Library
 
 
+@dataclass
+class ScalingGroup:
+    normalization_pairs: List[TreatmentControlPair]
+    name: str
+
+
 def read_libraries():
     for row in read_tsv("libraries.tsv", columns=4):
         yield FastqLibrary(*row)
@@ -56,14 +62,22 @@ def group_libraries_by_sample(libraries):
         yield PooledLibrary(sample=sample, replicates=replicates)
 
 
-def read_controls(libraries):
+def read_scaling_groups(libraries):
     library_map = {
         (library.sample, library.replicate): library for library in libraries}
 
-    for row in read_tsv("groups.tsv", columns=3):
+    pools = group_libraries_by_sample(libraries)
+    for pool in pools:
+        library_map[(pool.sample, "pooled")] = pool
+
+    scaling_map = defaultdict(list)
+    for row in read_tsv("groups.tsv", columns=4):
         treatment = library_map[(row[0], row[1])]
         control = library_map[(row[2], row[1])]
-        yield TreatmentControlPair(treatment, control)
+        scaling_map[row[3]].append(TreatmentControlPair(treatment, control))
+
+    for name, normalization_pairs in scaling_map.items():
+        yield ScalingGroup(normalization_pairs, name)
 
 
 def read_tsv(path, columns: int):
@@ -143,11 +157,10 @@ def parse_picard_metrics(path, metrics_class: str):
     return result
 
 
-def compute_scaling(normalization_pairs, treatments, controls, infofile, genome_size, fragment_size):
-    print("sample_name", "#reads", "n_scaled_reads", "input_name", "n_input_reads", "factor", sep="\t", file=infofile)
+def compute_scaling(scaling_group, treatments, controls, infofile, genome_size, fragment_size):
     first = True
     scaling_factor = -1
-    for pair, treatment_path, control_path in zip(normalization_pairs, treatments, controls):
+    for pair, treatment_path, control_path in zip(scaling_group.normalization_pairs, treatments, controls):
         treatment_reads = flagstat_mapped_reads(treatment_path)
         control_reads = flagstat_mapped_reads(control_path)
         if first:
@@ -162,7 +175,7 @@ def compute_scaling(normalization_pairs, treatments, controls, infofile, genome_
         scaled_treatment_reads = sample_scaling_factor * treatment_reads
 
         # TODO factor this out
-        print(pair.treatment.name, treatment_reads, scaled_treatment_reads, pair.control.name, control_reads, sample_scaling_factor, sep="\t", file=infofile)
+        print(pair.treatment.name, treatment_reads, scaled_treatment_reads, pair.control.name, control_reads, sample_scaling_factor, scaling_group.name, sep="\t", file=infofile)
 
         # TODO scaled.idxstats.txt file
 
@@ -234,7 +247,11 @@ def get_replicates(libraries, sample):
     return replicates
 
 
-def print_metadata_overview(libraries, pools, normalization_pairs):
+def get_normalization_pairs(scaling_groups) -> List[TreatmentControlPair]:
+    return [pair for group in scaling_groups for pair in group.normalization_pairs]
+
+
+def print_metadata_overview(libraries, pools, scaling_groups):
     print("# Libraries")
     for library in libraries:
         print(" -", library)
@@ -245,9 +262,12 @@ def print_metadata_overview(libraries, pools, normalization_pairs):
         print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")")
 
     print()
-    print("# Normalization Pairs (treatment -- control)")
-    for pair in normalization_pairs:
-        print(" -", pair.treatment.name, "--", pair.control.name)
+    print("# Scaling groups")
+
+    for group in scaling_groups:
+        print("# Group", group.name, "- Normalization Pairs (treatment -- control)")
+        for pair in group.normalization_pairs:
+            print(" -", pair.treatment.name, "--", pair.control.name)
 
 
 def is_snakemake_calling_itself():

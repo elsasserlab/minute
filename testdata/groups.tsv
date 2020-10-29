@@ -1,10 +1,10 @@
 # List of treatment libraries paired with their controls (inputs)
 #
-# Columns: treatment sample name, replicate id, control sample name
+# Columns: treatment sample name, replicate id, control sample name, scaling group
 #
-H3K4m3_SL_CTR	1	IN_SL_CTR
-H3K4m3_SL_CTR	2	IN_SL_CTR
-# H3K4m3_SL_CTR	3	IN_SL_CTR
-H3K4m3_2i_CTR	1	IN_2i_CTR
-H3K4m3_2i_CTR	2	IN_2i_CTR
-# H3K4m3_2i_CTR	3	IN_2i_CTR
+H3K4m3_SL_CTR	pooled	IN_SL_CTR	group1
+H3K4m3_SL_CTR	2	IN_SL_CTR	group1
+# H3K4m3_SL_CTR	3	IN_SL_CTR	group1
+H3K4m3_2i_CTR	1	IN_2i_CTR	group2
+H3K4m3_2i_CTR	2	IN_2i_CTR	group2
+# H3K4m3_2i_CTR	3	IN_2i_CTR	group2

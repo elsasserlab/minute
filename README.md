@@ -60,14 +60,20 @@ The FASTQ base name refers to files within the `fastq/` folder. The suffixes
 ## The groups.tsv file
 
 The `groups.tsv` file is a text file in tab-separated value format that
-defines which of the libraries are the treatments and which are the
-controls (or “inputs”).
+defines which of the libraries are the treatments, which are the
+controls (or “inputs”) and to which reference they need to be scaled to.
+It is possible to specify different scaling groups, each one with its
+own reference library. For each scaling group, the first library will
+be taken as reference. Note that a given library cannot be specified in
+multiple scaling groups at the same time. 
 
-The columns are are:
+The columns are:
 
-1. Treatment sample name
-2. Replicate id
-3. Control sample name
+1. Treatment sample name.
+2. Replicate id - This column can also contain the reserved word `pooled`
+to indicate that the replicates are to be pooled before scaling. 
+3. Control sample name.
+4. Scaling group.
 
 
 ## The config.yaml file
