@@ -30,7 +30,7 @@ localrules:
     clean,
     barcodes,
     remove_exclude_regions,
-    compute_scaling_factors,
+    summarize_scaling_factors,
     extract_fragment_size,
     stats,
     stats_summary,
@@ -39,6 +39,7 @@ localrules:
     mark_pe_duplicates,
     samtools_index,
     samtools_flagstat,
+    samtools_flagstat_final,
     insert_size_metrics,
 
 
