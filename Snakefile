@@ -30,7 +30,7 @@ localrules:
     clean,
     barcodes,
     remove_exclude_regions,
-    compute_scaling_factors,
+    summarize_scaling_factors,
     extract_fragment_size,
     stats,
     stats_summary,
@@ -39,6 +39,7 @@ localrules:
     mark_pe_duplicates,
     samtools_index,
     samtools_flagstat,
+    samtools_flagstat_final,
     insert_size_metrics,
 
 
@@ -75,7 +76,7 @@ rule multiqc:
             fastq=fastq_map.keys(), read=(1, 2)),
         expand("log/2-noadapters/{fastq}.trimmed.log", fastq=fastq_map.keys()),
         expand("log/4-mapped/{library.name}.log", library=libraries),
-        expand("tmp/6-dupmarked/{library.name}.metrics", library=libraries),
+        expand("stats/6-dupmarked/{library.name}.metrics", library=libraries),
         "reports/scalinginfo.txt",
         "reports/stats_summary.txt",
         multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
@@ -270,7 +271,7 @@ rule mark_duplicates:
     """UMI-aware duplicate marking with je suite"""
     output:
         bam=temp("tmp/6-dupmarked/{library}.bam"),
-        metrics="tmp/6-dupmarked/{library}.metrics"
+        metrics="stats/6-dupmarked/{library}.metrics"
     input:
         bam="tmp/5-mapped_se/{library}.bam"
     shell:
@@ -316,10 +317,10 @@ rule remove_exclude_regions:
 
 rule insert_size_metrics:
     output:
-        txt="{base}.insertsizes.txt",
-        pdf="{base}.insertsizes.pdf",
+        txt="stats/final/{name}.insertsizes.txt",
+        pdf="stats/final/{name}.insertsizes.pdf",
     input:
-        bam="{base}.bam"
+        bam="final/bam/{name}.bam"
     shell:
         "picard"
         " CollectInsertSizeMetrics"
@@ -336,7 +337,7 @@ rule unscaled_bigwig:
     input:
         bam="final/bam/{library}.bam",
         bai="final/bam/{library}.bai",
-        genome_size="tmp/genome_size.txt",
+        genome_size="stats/genome_size.txt",
     log:
         "log/final/{library}.unscaled.bw.log"
     threads: 20
@@ -354,12 +355,12 @@ rule unscaled_bigwig:
 for group in scaling_groups:
     rule:
         output:
-            factors=temp(["tmp/8-factors/{library.name}.factor.txt".format(library=np.treatment) for np in group.normalization_pairs]),
-            info="tmp/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name)
+            factors=temp(["stats/8-factors/{library.name}.factor.txt".format(library=np.treatment) for np in group.normalization_pairs]),
+            info="stats/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name)
         input:
-            treatments=["final/bam/{library.name}.flagstat.txt".format(library=np.treatment) for np in group.normalization_pairs],
-            controls=["final/bam/{library.name}.flagstat.txt".format(library=np.control) for np in group.normalization_pairs],
-            genome_size="tmp/genome_size.txt",
+            treatments=["stats/final/{library.name}.flagstat.txt".format(library=np.treatment) for np in group.normalization_pairs],
+            controls=["stats/final/{library.name}.flagstat.txt".format(library=np.control) for np in group.normalization_pairs],
+            genome_size="stats/genome_size.txt",
         params:
             scaling_group=group,
         run:
@@ -382,7 +383,7 @@ def set_compute_scaling_rule_names():
     This sets the names of the compute scaling rules, which need to be
     defined anonymously because they are defined (above) in a loop.
     """
-    prefix = "tmp/8-scalinginfo/"
+    prefix = "stats/8-scalinginfo/"
     for rul in workflow.rules:
         if "controls" in rul.input.keys():
             rul.name = "compute_scaling_factors_group_" + rul.output["info"][len(prefix):-4]
@@ -395,7 +396,7 @@ rule summarize_scaling_factors:
     output:
         info="reports/scalinginfo.txt"
     input:
-        factors=["tmp/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name) for group in scaling_groups]
+        factors=["stats/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name) for group in scaling_groups]
     run:
         with open(output.info, "w") as f:
             print("sample_name", "#reads", "n_scaled_reads", "input_name", "n_input_reads", "factor", "scaling_group", sep="\t", file=f)
@@ -420,8 +421,8 @@ rule scaled_bigwig:
     output:
         bw="final/bigwig/{library}.scaled.bw"
     input:
-        factor="tmp/8-factors/{library}.factor.txt",
-        fragsize="final/bam/{library}.fragsize.txt",
+        factor="stats/8-factors/{library}.factor.txt",
+        fragsize="stats/final/{library}.fragsize.txt",
         bam="final/bam/{library}.bam",
         bai="final/bam/{library}.bai",
     threads: 20
@@ -443,13 +444,13 @@ rule scaled_bigwig:
 
 rule stats:
     output:
-        txt="tmp/9-stats/{library}.txt"
+        txt="stats/9-stats/{library}.txt"
     input:
-        mapped_flagstat="tmp/4-mapped/{library}.flagstat.txt",
-        metrics="tmp/6-dupmarked/{library}.metrics",
-        dedup_flagstat="tmp/7-dedup/{library}.flagstat.txt",
-        final_flagstat="final/bam/{library}.flagstat.txt",
-        insertsizes="final/bam/{library}.insertsizes.txt",
+        mapped_flagstat="stats/4-mapped/{library}.flagstat.txt",
+        metrics="stats/6-dupmarked/{library}.metrics",
+        dedup_flagstat="stats/7-dedup/{library}.flagstat.txt",
+        final_flagstat="stats/final/{library}.flagstat.txt",
+        insertsizes="stats/final/{library}.insertsizes.txt",
     run:
         row = []
         for flagstat, name in [
@@ -472,7 +473,7 @@ rule stats_summary:
     output:
         txt="reports/stats_summary.txt"
     input:
-        expand("tmp/9-stats/{library.name}.txt", library=libraries) + expand("tmp/9-stats/{pool.name}.txt", pool=pools)
+        expand("stats/9-stats/{library.name}.txt", library=libraries) + expand("stats/9-stats/{pool.name}.txt", pool=pools)
     run:
         stats_summaries = [parse_stats_fields(st_file) for st_file in input]
 
@@ -497,7 +498,7 @@ rule stats_summary:
 
 rule compute_effective_genome_size:
     output:
-        txt="tmp/genome_size.txt"
+        txt="stats/genome_size.txt"
     input:
         fasta=config["reference_fasta"]
     run:
@@ -516,18 +517,27 @@ rule samtools_index:
 
 rule samtools_idxstats:
     output:
-        txt="{name}.idxstats.txt"
+        txt="stats/{name}.idxstats.txt"
     input:
-        bam="{name}.bam",
-        bai="{name}.bai",
+        bam="tmp/{name}.bam",
+        bai="tmp/{name}.bai",
     shell:
         "samtools idxstats {input.bam} > {output.txt}"
 
 
 rule samtools_flagstat:
     output:
-        txt="{name}.flagstat.txt"
+        txt="stats/{name}.flagstat.txt"
     input:
-        bam="{name}.bam"
+        bam="tmp/{name}.bam"
+    shell:
+        "samtools flagstat {input.bam} > {output.txt}"
+
+
+rule samtools_flagstat_final:
+    output:
+        txt="stats/final/{name}.flagstat.txt"
+    input:
+        bam="final/bam/{name}.bam"
     shell:
         "samtools flagstat {input.bam} > {output.txt}"
