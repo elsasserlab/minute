@@ -257,16 +257,18 @@ rule pool_replicates:
 
 
 rule convert_to_single_end:
-    """Convert sam files to single-end for marking duplicates"""
+    """Convert SAM files to single-end for marking duplicates"""
     output:
         bam=temp("tmp/5-mapped_se/{library}.bam")
     input:
         bam="tmp/4-mapped/{library}.bam"
+    group: "duplicate_marking"
     run:
         se_bam.convert_paired_end_to_single_end_bam(
             input.bam,
             output.bam,
             keep_unmapped=False)
+
 
 # TODO have a look at UMI-tools also
 rule mark_duplicates:
@@ -276,6 +278,7 @@ rule mark_duplicates:
         metrics="stats/6-dupmarked/{library}.metrics"
     input:
         bam="tmp/5-mapped_se/{library}.bam"
+    group: "duplicate_marking"
     shell:
         "LC_ALL=C je"
         " markdupes"
@@ -295,6 +298,7 @@ rule mark_pe_duplicates:
     input:
         target_bam="tmp/4-mapped/{library}.bam",
         proxy_bam="tmp/6-dupmarked/{library}.bam"
+    group: "duplicate_marking"
     run:
         se_bam.mark_duplicates_by_proxy_bam(
             input.target_bam,
