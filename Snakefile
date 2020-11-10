@@ -178,11 +178,13 @@ for fastq_base, libs in fastq_map.items():
             r1=lambda wildcards: "final/fastq/{name}_R1.fastq.gz",
             r2=lambda wildcards: "final/fastq/{name}_R2.fastq.gz",
             fastqbase=fastq_base,
+        threads: 4
         log:
             "log/3-demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
         shell:
             "cutadapt"
-            " -e 0.15"  # TODO determine from barcode length
+            " -j {threads}"
+            " -e 1"
             " --compression-level=4"
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
