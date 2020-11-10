@@ -17,4 +17,4 @@ mkdir fastq && mv -- *.fastq.gz fastq/
 mkdir ref && mv ref.* ref/
 ( cd ref && bowtie2-build -q ref.fa.gz ref )
 
-snakemake -p -j 1 -s ../Snakefile "$@"
+snakemake -p -j 2 -s ../Snakefile "$@"
