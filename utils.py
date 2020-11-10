@@ -1,7 +1,8 @@
+import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-import sys
+from io import StringIO
 from itertools import groupby
 from typing import List
 
@@ -251,23 +252,25 @@ def get_normalization_pairs(scaling_groups) -> List[TreatmentControlPair]:
     return [pair for group in scaling_groups for pair in group.normalization_pairs]
 
 
-def print_metadata_overview(libraries, pools, scaling_groups):
-    print("# Libraries")
+def format_metadata_overview(libraries, pools, scaling_groups) -> str:
+    f = StringIO()
+    print("# Libraries", file=f)
     for library in libraries:
-        print(" -", library)
+        print(" -", library, file=f)
 
-    print()
-    print("# Pools")
+    print(file=f)
+    print("# Pools", file=f)
     for pool in pools:
-        print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")")
+        print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")", file=f)
 
-    print()
-    print("# Scaling groups")
+    print(file=f)
+    print("# Scaling groups", file=f)
 
     for group in scaling_groups:
-        print("# Group", group.name, "- Normalization Pairs (treatment -- control)")
+        print("# Group", group.name, "- Normalization Pairs (treatment -- control)", file=f)
         for pair in group.normalization_pairs:
-            print(" -", pair.treatment.name, "--", pair.control.name)
+            print(" -", pair.treatment.name, "--", pair.control.name, file=f)
+    return f.getvalue()
 
 
 def is_snakemake_calling_itself():

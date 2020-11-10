@@ -14,7 +14,7 @@ from utils import (
     detect_bowtie_index_name,
     get_replicates,
     group_libraries_by_sample,
-    print_metadata_overview,
+    format_metadata_overview,
     is_snakemake_calling_itself,
     map_fastq_prefix_to_list_of_libraries,
     get_normalization_pairs,
@@ -54,7 +54,7 @@ pools = list(group_libraries_by_sample(libraries))
 scaling_groups = list(read_scaling_groups(libraries))
 
 if not is_snakemake_calling_itself():
-    print_metadata_overview(libraries, pools, scaling_groups)
+    print(format_metadata_overview(libraries, pools, scaling_groups), file=sys.stderr)
 
 fastq_map = map_fastq_prefix_to_list_of_libraries(libraries)
 
