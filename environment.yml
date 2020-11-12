@@ -6,7 +6,7 @@ dependencies:
   - nomkl
   - snakemake-minimal
   - samtools
-  - cutadapt
+  - cutadapt >=3.0
   # The package for Bowtie2 2.4.1 creates VN: tag without value in SAM header
   - bowtie2 =2.3.5.1
   - je-suite
