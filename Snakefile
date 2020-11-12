@@ -116,6 +116,7 @@ rule move_umi_to_header:
         umistring="N" * config['umi_length']
     log:
         "log/1-noumi/{name}.log"
+    group: "clean_reads"
     shell:
         "umi_tools"
         " extract"
@@ -139,6 +140,7 @@ rule remove_contamination:
         r2="tmp/1-noumi/{name}.2.fastq.gz",
     log:
         "log/2-noadapters/{name}.trimmed.log"
+    group: "clean_reads"
     shell:
         "cutadapt"
         " -j {threads}"
