@@ -238,7 +238,7 @@ rule bowtie2:
         " --fast"
         " 2> {log}"
         " "
-        "| samtools sort -o {output.bam} -"
+        "| samtools sort -@ {threads} -o {output.bam} -"
 
 
 rule pool_replicates:
