@@ -42,6 +42,7 @@ class PooledLibrary(Library):
 class TreatmentControlPair:
     treatment: Library
     control: Library
+    reference: str
 
 
 @dataclass
@@ -72,10 +73,11 @@ def read_scaling_groups(libraries):
         library_map[(pool.sample, "pooled")] = pool
 
     scaling_map = defaultdict(list)
-    for row in read_tsv("groups.tsv", columns=4):
+    for row in read_tsv("groups.tsv", columns=5):
         treatment = library_map[(row[0], row[1])]
         control = library_map[(row[2], row[1])]
-        scaling_map[row[3]].append(TreatmentControlPair(treatment, control))
+        reference = row[4]
+        scaling_map[row[3]].append(TreatmentControlPair(treatment, control, reference))
 
     for name, normalization_pairs in scaling_map.items():
         yield ScalingGroup(normalization_pairs, name)
@@ -269,7 +271,8 @@ def format_metadata_overview(libraries, pools, scaling_groups) -> str:
     for group in scaling_groups:
         print("# Group", group.name, "- Normalization Pairs (treatment -- control)", file=f)
         for pair in group.normalization_pairs:
-            print(" -", pair.treatment.name, "--", pair.control.name, file=f)
+            print(" -", pair.treatment.name, "--", pair.control.name,
+                "(reference {})".format(pair.reference), file=f)
     return f.getvalue()
 
 
