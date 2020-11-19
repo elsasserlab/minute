@@ -180,7 +180,7 @@ for fastq_base, libs in fastq_map.items():
             r1=lambda wildcards: "final/fastq/{name}_R1.fastq.gz",
             r2=lambda wildcards: "final/fastq/{name}_R2.fastq.gz",
             fastqbase=fastq_base,
-        threads: 4
+        threads: 8
         log:
             "log/3-demultiplexed/{fastqbase}.log".format(fastqbase=fastq_base)
         shell:
@@ -218,7 +218,7 @@ set_demultiplex_rule_names()
 
 rule bowtie2:
     threads:
-        20
+        19  # One fewer than available to allow other jobs to run in parallel
     output:
         bam=temp("tmp/4-mapped/{sample}_rep{replicate}.bam")
     input:
@@ -348,7 +348,7 @@ rule unscaled_bigwig:
         genome_size="stats/genome_size.txt",
     log:
         "log/final/{library}.unscaled.bw.log"
-    threads: 20
+    threads: 19
     shell:
         "bamCoverage"
         " -p {threads}"
@@ -433,7 +433,7 @@ rule scaled_bigwig:
         fragsize="stats/final/{library}.fragsize.txt",
         bam="final/bam/{library}.bam",
         bai="final/bam/{library}.bai",
-    threads: 20
+    threads: 19
     log:
         "log/final/{library}.scaled.bw.log"
     shell:
