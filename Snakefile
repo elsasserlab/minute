@@ -231,6 +231,7 @@ rule bowtie2:
     # - add RG header
     shell:
         "bowtie2"
+        " --reorder"
         " -p {threads}"
         " -x {config[bowtie_index_name]}"
         " -1 {input.r1}"
