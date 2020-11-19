@@ -58,13 +58,12 @@ if not is_snakemake_calling_itself():
 
 fastq_map = map_fastq_prefix_to_list_of_libraries(libraries)
 
+
 rule final:
     input:
         "reports/multiqc_report.html",
-        expand([
-            "final/bigwig/{library.name}.unscaled.bw",
-            "final/bigwig/{library.sample}_pooled.unscaled.bw",
-        ], library=libraries),
+        expand("final/bigwig/{library.name}.unscaled.bw", library=libraries),
+        expand("final/bigwig/{pool.name}.unscaled.bw", pool=pools),
         expand("final/bigwig/{library.name}.scaled.bw",
             library=[np.treatment for np in get_normalization_pairs(scaling_groups)]),
 
