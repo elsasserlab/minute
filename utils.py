@@ -37,7 +37,7 @@ class Replicate(Library):
 
 
 @dataclass
-class PooledLibrary(Library):
+class Pool(Library):
     replicates: List[Replicate]
 
     @property
@@ -63,12 +63,12 @@ def read_libraries() -> Iterable[Replicate]:
         yield Replicate(*row)
 
 
-def group_replicates(libraries) -> Iterable[PooledLibrary]:
+def group_replicates(libraries) -> Iterable[Pool]:
     samples = defaultdict(list)
     for library in libraries:
         samples[library.sample].append(library)
     for sample, replicates in samples.items():
-        yield PooledLibrary(sample=sample, replicates=replicates)
+        yield Pool(sample=sample, replicates=replicates)
 
 
 def read_scaling_groups(replicates: List[Replicate]) -> Iterable[ScalingGroup]:
