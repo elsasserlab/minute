@@ -18,6 +18,7 @@ from utils import (
     map_fastq_prefix_to_list_of_libraries,
     make_references,
     flatten_scaling_groups,
+    Pool,
 )
 
 
@@ -46,18 +47,19 @@ localrules:
 references = make_references(config["references"])
 replicates = list(read_libraries())
 scaling_groups = list(read_scaling_groups(replicates))
-libraries = list(flatten_scaling_groups(scaling_groups))
+maplibs = list(flatten_scaling_groups(scaling_groups))
+
 
 if not is_snakemake_calling_itself():
-    print(format_metadata_overview(replicates, libraries, scaling_groups), file=sys.stderr)
+    print(format_metadata_overview(replicates, maplibs, scaling_groups), file=sys.stderr)
 
 
 rule final:
     input:
         "reports/multiqc_report.html",
-        expand("final/bigwig/{library.name}.unscaled.bw", library=libraries),
-        expand("final/bigwig/{library.name}.scaled.bw",
-            library=flatten_scaling_groups(scaling_groups, controls=False)),
+        expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=maplibs),
+        expand("final/bigwig/{maplib.name}.scaled.bw",
+            maplib=flatten_scaling_groups(scaling_groups, controls=False)),
 
 
 rule multiqc:
@@ -66,8 +68,8 @@ rule multiqc:
         expand("reports/fastqc/{replicate.fastqbase}_R{read}_fastqc/fastqc_data.txt",
             replicate=replicates, read=(1, 2)),
         expand("log/2-noadapters/{replicate.fastqbase}.trimmed.log", replicate=replicates),
-        expand("log/4-mapped/{library.name}.log", library=replicates),
-        expand("stats/6-dupmarked/{library.name}.metrics", library=replicates),
+        expand("log/4-mapped/{maplib.name}.log", maplib=[m for m in maplibs if not isinstance(m.library, Pool)]),
+        expand("stats/6-dupmarked/{maplib.name}.metrics", maplib=maplibs),
         "reports/scalinginfo.txt",
         "reports/stats_summary.txt",
         multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
@@ -211,14 +213,14 @@ rule bowtie2:
     threads:
         19  # One fewer than available to allow other jobs to run in parallel
     output:
-        bam=temp("tmp/4-mapped/{sample}_rep{replicate}.bam")
+        bam=temp("tmp/4-mapped/{sample}_rep{replicate}.{reference}.bam")
     input:
         r1="final/fastq/{sample}_rep{replicate}_R1.fastq.gz",
         r2="final/fastq/{sample}_rep{replicate}_R2.fastq.gz",
     params:
-        index=lambda wildcards: references["mini"].bowtie_index
+        index=lambda wildcards: references[wildcards.reference].bowtie_index
     log:
-        "log/4-mapped/{sample}_rep{replicate}.log"
+        "log/4-mapped/{sample}_rep{replicate}.{reference}.log"
     # TODO
     # - --sensitive (instead of --fast) would be default
     # - write uncompressed BAM?
@@ -238,10 +240,10 @@ rule bowtie2:
 
 rule pool_replicates:
     output:
-        bam=temp("tmp/4-mapped/{sample}_pooled.bam")
+        bam=temp("tmp/4-mapped/{sample}_pooled.{reference}.bam")
     input:
         bam_replicates=lambda wildcards: expand(
-            "tmp/4-mapped/{{sample}}_rep{replicates}.bam",
+            "tmp/4-mapped/{{sample}}_rep{replicates}.{{reference}}.bam",
             replicates=get_replicates(replicates, wildcards.sample))
     run:
         if len(input.bam_replicates) == 1:
@@ -306,7 +308,7 @@ rule remove_exclude_regions:
         bam="final/bam/{library}.bam"
     input:
         bam="tmp/7-dedup/{library}.bam",
-        bed=config["exclude_regions"]
+        bed=config["exclude_regions"]  # FIXME
     shell:
         "bedtools"
         " intersect"
@@ -334,13 +336,13 @@ rule insert_size_metrics:
 
 rule unscaled_bigwig:
     output:
-        bw="final/bigwig/{library}.unscaled.bw"
+        bw="final/bigwig/{library}.{reference}.unscaled.bw"
     input:
-        bam="final/bam/{library}.bam",
-        bai="final/bam/{library}.bai",
-        genome_size="stats/genome.mini.size.txt",
+        bam="final/bam/{library}.{reference}.bam",
+        bai="final/bam/{library}.{reference}.bai",
+        genome_size="stats/genome.{reference}.size.txt",
     log:
-        "log/final/{library}.unscaled.bw.log"
+        "log/final/{library}.{reference}.unscaled.bw.log"
     threads: 19
     shell:
         "bamCoverage"
@@ -359,9 +361,9 @@ for group in scaling_groups:
             factors=temp(["stats/8-factors/{library.name}.factor.txt".format(library=np.treatment) for np in group.normalization_pairs]),
             info="stats/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name)
         input:
-            treatments=["stats/final/{library.name}.flagstat.txt".format(library=np.treatment) for np in group.normalization_pairs],
-            controls=["stats/final/{library.name}.flagstat.txt".format(library=np.control) for np in group.normalization_pairs],
-            genome_size="stats/genome.mini.size.txt",
+            treatments=["stats/final/{maplib.name}.flagstat.txt".format(maplib=np.treatment) for np in group.normalization_pairs],
+            controls=["stats/final/{maplib.name}.flagstat.txt".format(maplib=np.control) for np in group.normalization_pairs],
+            genome_sizes=["stats/genome.{maplib.reference}.size.txt".format(maplib=np.treatment) for np in group.normalization_pairs],
         params:
             scaling_group=group,
         run:
@@ -371,7 +373,7 @@ for group in scaling_groups:
                     input.treatments,
                     input.controls,
                     outf,
-                    genome_size=read_int_from_file(input.genome_size),
+                    genome_sizes=[read_int_from_file(gs) for gs in input.genome_sizes],
                     fragment_size=config["fragment_size"],
                 )
                 for factor, factor_path in zip(factors, output.factors):
@@ -472,7 +474,7 @@ rule stats_summary:
     output:
         txt="reports/stats_summary.txt"
     input:
-        expand("stats/9-stats/{library.name}.txt", library=libraries)
+        expand("stats/9-stats/{maplib.name}.txt", maplib=maplibs)
     run:
         stats_summaries = [parse_stats_fields(st_file) for st_file in input]
 

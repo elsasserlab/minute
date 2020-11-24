@@ -46,10 +46,24 @@ class Pool(Library):
 
 
 @dataclass
-class TreatmentControlPair:
-    treatment: Library
-    control: Library
+class LibraryWithReference:
+    library: Library
     reference: str
+
+    @property
+    def name(self):
+        return f"{self.library.name}.{self.reference}"
+
+
+@dataclass
+class TreatmentControlPair:
+    treatment: LibraryWithReference
+    control: LibraryWithReference
+
+    @property
+    def reference(self) -> str:
+        assert self.treatment.reference == self.control.reference
+        return self.treatment.reference
 
 
 @dataclass
@@ -63,7 +77,7 @@ def read_libraries() -> Iterable[Replicate]:
         yield Replicate(*row)
 
 
-def group_replicates(libraries) -> Iterable[Pool]:
+def grouped_replicates(libraries) -> Iterable[Pool]:
     samples = defaultdict(list)
     for library in libraries:
         samples[library.sample].append(library)
@@ -72,23 +86,26 @@ def group_replicates(libraries) -> Iterable[Pool]:
 
 
 def read_scaling_groups(replicates: List[Replicate]) -> Iterable[ScalingGroup]:
-    replicate_map: Dict[Tuple[str, str], Library] = {(rep.sample, rep.replicate): rep for rep in replicates}
-
-    for pool in group_replicates(replicates):
-        replicate_map[(pool.sample, "pooled")] = pool
+    library_map: Dict[Tuple[str, str], Library] = {
+        (rep.sample, rep.replicate): rep for rep in replicates
+    }
+    for pool in grouped_replicates(replicates):
+        library_map[(pool.sample, "pooled")] = pool
 
     scaling_map = defaultdict(list)
     for row in read_tsv("groups.tsv", columns=5):
-        treatment = replicate_map[(row[0], row[1])]
-        control = replicate_map[(row[2], row[1])]
-        reference = row[4]
-        scaling_map[row[3]].append(TreatmentControlPair(treatment, control, reference))
+        treatment_name, replicate_id, control_name, scaling_group, reference = row
+        treatment_lib = library_map[(treatment_name, replicate_id)]
+        control_lib = library_map[(control_name, replicate_id)]
+        treatment = LibraryWithReference(treatment_lib, reference)
+        control = LibraryWithReference(control_lib, reference)
+        scaling_map[scaling_group].append(TreatmentControlPair(treatment, control))
 
     for name, normalization_pairs in scaling_map.items():
         yield ScalingGroup(normalization_pairs, name)
 
 
-def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True) -> Iterable[Library]:
+def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True) -> Iterable[LibraryWithReference]:
     for group in groups:
         for pair in group.normalization_pairs:
             yield pair.treatment
@@ -189,10 +206,10 @@ def parse_picard_metrics(path, metrics_class: str):
     return result
 
 
-def compute_scaling(scaling_group, treatments, controls, infofile, genome_size, fragment_size):
+def compute_scaling(scaling_group, treatments, controls, infofile, genome_sizes, fragment_size):
     first = True
     scaling_factor = -1
-    for pair, treatment_path, control_path in zip(scaling_group.normalization_pairs, treatments, controls):
+    for pair, treatment_path, control_path, genome_size in zip(scaling_group.normalization_pairs, treatments, controls, genome_sizes):
         treatment_reads = flagstat_mapped_reads(treatment_path)
         control_reads = flagstat_mapped_reads(control_path)
         if first:
