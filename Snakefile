@@ -1,3 +1,6 @@
+import os
+import sys
+
 import se_bam
 # TODO
 # - switch to interleaved files?
