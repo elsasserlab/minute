@@ -51,8 +51,6 @@ libraries = list(flatten_scaling_groups(scaling_groups))
 if not is_snakemake_calling_itself():
     print(format_metadata_overview(replicates, libraries, scaling_groups), file=sys.stderr)
 
-fastq_map = map_fastq_prefix_to_list_of_libraries(replicates)
-
 
 rule final:
     input:
@@ -65,9 +63,9 @@ rule final:
 rule multiqc:
     output: "reports/multiqc_report.html"
     input:
-        expand("reports/fastqc/{fastq}_R{read}_fastqc/fastqc_data.txt",
-            fastq=fastq_map.keys(), read=(1, 2)),
-        expand("log/2-noadapters/{fastq}.trimmed.log", fastq=fastq_map.keys()),
+        expand("reports/fastqc/{replicate.fastqbase}_R{read}_fastqc/fastqc_data.txt",
+            replicate=replicates, read=(1, 2)),
+        expand("log/2-noadapters/{replicate.fastqbase}.trimmed.log", replicate=replicates),
         expand("log/4-mapped/{library.name}.log", library=replicates),
         expand("stats/6-dupmarked/{library.name}.metrics", library=replicates),
         "reports/scalinginfo.txt",
@@ -160,7 +158,7 @@ rule barcodes:
                 f.write(f">{library.name}\n^{library.barcode}\n")
 
 
-for fastq_base, libs in fastq_map.items():
+for fastq_base, libs in map_fastq_prefix_to_list_of_libraries(replicates).items():
 
     rule:
         output:
