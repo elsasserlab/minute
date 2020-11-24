@@ -13,12 +13,11 @@ from utils import (
     read_int_from_file,
     compute_genome_size,
     get_replicates,
-    group_replicates,
     format_metadata_overview,
     is_snakemake_calling_itself,
     map_fastq_prefix_to_list_of_libraries,
-    get_normalization_pairs,
     make_references,
+    flatten_scaling_groups,
 )
 
 
@@ -46,11 +45,11 @@ localrules:
 
 references = make_references(config["references"])
 replicates = list(read_libraries())
-pools = list(group_replicates(replicates))
 scaling_groups = list(read_scaling_groups(replicates))
+libraries = list(flatten_scaling_groups(scaling_groups))
 
 if not is_snakemake_calling_itself():
-    print(format_metadata_overview(replicates, pools, scaling_groups), file=sys.stderr)
+    print(format_metadata_overview(replicates, libraries, scaling_groups), file=sys.stderr)
 
 fastq_map = map_fastq_prefix_to_list_of_libraries(replicates)
 
@@ -58,10 +57,9 @@ fastq_map = map_fastq_prefix_to_list_of_libraries(replicates)
 rule final:
     input:
         "reports/multiqc_report.html",
-        expand("final/bigwig/{library.name}.unscaled.bw", library=replicates),
-        expand("final/bigwig/{pool.name}.unscaled.bw", pool=pools),
+        expand("final/bigwig/{library.name}.unscaled.bw", library=libraries),
         expand("final/bigwig/{library.name}.scaled.bw",
-            library=[np.treatment for np in get_normalization_pairs(scaling_groups)]),
+            library=flatten_scaling_groups(scaling_groups, controls=False)),
 
 
 rule multiqc:
@@ -476,7 +474,7 @@ rule stats_summary:
     output:
         txt="reports/stats_summary.txt"
     input:
-        expand("stats/9-stats/{library.name}.txt", library=replicates) + expand("stats/9-stats/{pool.name}.txt", pool=pools)
+        expand("stats/9-stats/{library.name}.txt", library=libraries)
     run:
         stats_summaries = [parse_stats_fields(st_file) for st_file in input]
 

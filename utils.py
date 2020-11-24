@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from io import StringIO
 from itertools import groupby
-from typing import List
+from typing import List, Iterable
 
 from xopen import xopen
 
@@ -87,6 +87,14 @@ def read_scaling_groups(replicates: List[Replicate]):
 
     for name, normalization_pairs in scaling_map.items():
         yield ScalingGroup(normalization_pairs, name)
+
+
+def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True) -> Iterable[Library]:
+    for group in groups:
+        for pair in group.normalization_pairs:
+            yield pair.treatment
+            if controls:
+                yield pair.control
 
 
 def make_references(config):
@@ -274,16 +282,17 @@ def get_normalization_pairs(scaling_groups) -> List[TreatmentControlPair]:
     return [pair for group in scaling_groups for pair in group.normalization_pairs]
 
 
-def format_metadata_overview(replicates, pools, scaling_groups) -> str:
+def format_metadata_overview(replicates, libraries, scaling_groups) -> str:
     f = StringIO()
     print("# Replicates", file=f)
     for replicate in replicates:
         print(" -", replicate, file=f)
 
     print(file=f)
-    print("# Pools", file=f)
-    for pool in pools:
-        print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")", file=f)
+    print("# Libraries", file=f)
+    for library in libraries:
+        # print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")", file=f)
+        print(" -", library.name, file=f)#pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")", file=f)
 
     print(file=f)
     print("# Scaling groups", file=f)
