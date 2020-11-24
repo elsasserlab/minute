@@ -13,7 +13,7 @@ from utils import (
     read_int_from_file,
     compute_genome_size,
     get_replicates,
-    group_libraries_by_sample,
+    group_replicates,
     format_metadata_overview,
     is_snakemake_calling_itself,
     map_fastq_prefix_to_list_of_libraries,
@@ -45,20 +45,20 @@ localrules:
 
 
 references = make_references(config["references"])
-libraries = list(read_libraries())
-pools = list(group_libraries_by_sample(libraries))
-scaling_groups = list(read_scaling_groups(libraries))
+replicates = list(read_libraries())
+pools = list(group_replicates(replicates))
+scaling_groups = list(read_scaling_groups(replicates))
 
 if not is_snakemake_calling_itself():
-    print(format_metadata_overview(libraries, pools, scaling_groups), file=sys.stderr)
+    print(format_metadata_overview(replicates, pools, scaling_groups), file=sys.stderr)
 
-fastq_map = map_fastq_prefix_to_list_of_libraries(libraries)
+fastq_map = map_fastq_prefix_to_list_of_libraries(replicates)
 
 
 rule final:
     input:
         "reports/multiqc_report.html",
-        expand("final/bigwig/{library.name}.unscaled.bw", library=libraries),
+        expand("final/bigwig/{library.name}.unscaled.bw", library=replicates),
         expand("final/bigwig/{pool.name}.unscaled.bw", pool=pools),
         expand("final/bigwig/{library.name}.scaled.bw",
             library=[np.treatment for np in get_normalization_pairs(scaling_groups)]),
@@ -70,8 +70,8 @@ rule multiqc:
         expand("reports/fastqc/{fastq}_R{read}_fastqc/fastqc_data.txt",
             fastq=fastq_map.keys(), read=(1, 2)),
         expand("log/2-noadapters/{fastq}.trimmed.log", fastq=fastq_map.keys()),
-        expand("log/4-mapped/{library.name}.log", library=libraries),
-        expand("stats/6-dupmarked/{library.name}.metrics", library=libraries),
+        expand("log/4-mapped/{library.name}.log", library=replicates),
+        expand("stats/6-dupmarked/{library.name}.metrics", library=replicates),
         "reports/scalinginfo.txt",
         "reports/stats_summary.txt",
         multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
@@ -156,7 +156,7 @@ rule barcodes:
         barcodes_fasta=temp("tmp/3-barcodes/{fastqbase}.fasta")
     run:
         with open(output.barcodes_fasta, "w") as f:
-            for library in libraries:
+            for library in replicates:
                 if library.fastqbase != wildcards.fastqbase:
                     continue
                 f.write(f">{library.name}\n^{library.barcode}\n")
@@ -246,7 +246,7 @@ rule pool_replicates:
     input:
         bam_replicates=lambda wildcards: expand(
             "tmp/4-mapped/{{sample}}_rep{replicates}.bam",
-            replicates=get_replicates(libraries, wildcards.sample))
+            replicates=get_replicates(replicates, wildcards.sample))
     run:
         if len(input.bam_replicates) == 1:
             os.link(input.bam_replicates[0], output.bam)
@@ -476,7 +476,7 @@ rule stats_summary:
     output:
         txt="reports/stats_summary.txt"
     input:
-        expand("stats/9-stats/{library.name}.txt", library=libraries) + expand("stats/9-stats/{pool.name}.txt", pool=pools)
+        expand("stats/9-stats/{library.name}.txt", library=replicates) + expand("stats/9-stats/{pool.name}.txt", pool=pools)
     run:
         stats_summaries = [parse_stats_fields(st_file) for st_file in input]
 

@@ -26,7 +26,7 @@ class Library:
 
 
 @dataclass
-class FastqLibrary(Library):
+class Replicate(Library):
     replicate: str
     barcode: str
     fastqbase: str
@@ -38,7 +38,7 @@ class FastqLibrary(Library):
 
 @dataclass
 class PooledLibrary(Library):
-    replicates: List[FastqLibrary]
+    replicates: List[Replicate]
 
     @property
     def name(self):
@@ -60,10 +60,10 @@ class ScalingGroup:
 
 def read_libraries():
     for row in read_tsv("libraries.tsv", columns=4):
-        yield FastqLibrary(*row)
+        yield Replicate(*row)
 
 
-def group_libraries_by_sample(libraries):
+def group_replicates(libraries):
     samples = defaultdict(list)
     for library in libraries:
         samples[library.sample].append(library)
@@ -71,18 +71,17 @@ def group_libraries_by_sample(libraries):
         yield PooledLibrary(sample=sample, replicates=replicates)
 
 
-def read_scaling_groups(libraries):
-    library_map = {
-        (library.sample, library.replicate): library for library in libraries}
+def read_scaling_groups(replicates: List[Replicate]):
+    replicate_map = {(rep.sample, rep.replicate): rep for rep in replicates}
 
-    pools = group_libraries_by_sample(libraries)
+    pools = group_replicates(replicates)
     for pool in pools:
-        library_map[(pool.sample, "pooled")] = pool
+        replicate_map[(pool.sample, "pooled")] = pool
 
     scaling_map = defaultdict(list)
     for row in read_tsv("groups.tsv", columns=5):
-        treatment = library_map[(row[0], row[1])]
-        control = library_map[(row[2], row[1])]
+        treatment = replicate_map[(row[0], row[1])]
+        control = replicate_map[(row[2], row[1])]
         reference = row[4]
         scaling_map[row[3]].append(TreatmentControlPair(treatment, control, reference))
 
@@ -275,11 +274,11 @@ def get_normalization_pairs(scaling_groups) -> List[TreatmentControlPair]:
     return [pair for group in scaling_groups for pair in group.normalization_pairs]
 
 
-def format_metadata_overview(libraries, pools, scaling_groups) -> str:
+def format_metadata_overview(replicates, pools, scaling_groups) -> str:
     f = StringIO()
-    print("# Libraries", file=f)
-    for library in libraries:
-        print(" -", library, file=f)
+    print("# Replicates", file=f)
+    for replicate in replicates:
+        print(" -", replicate, file=f)
 
     print(file=f)
     print("# Pools", file=f)
