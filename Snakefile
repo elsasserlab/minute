@@ -12,13 +12,13 @@ from utils import (
     parse_stats_fields,
     read_int_from_file,
     compute_genome_size,
-    detect_bowtie_index_name,
     get_replicates,
     group_libraries_by_sample,
     format_metadata_overview,
     is_snakemake_calling_itself,
     map_fastq_prefix_to_list_of_libraries,
     get_normalization_pairs,
+    make_references,
 )
 
 
@@ -44,12 +44,7 @@ localrules:
     insert_size_metrics,
 
 
-if "bowtie_index_name" not in config:
-    try:
-        config["bowtie_index_name"] = detect_bowtie_index_name(config["reference_fasta"])
-    except FileNotFoundError as e:
-        sys.exit(str(e))
-
+references = make_references(config["references"])
 libraries = list(read_libraries())
 pools = list(group_libraries_by_sample(libraries))
 scaling_groups = list(read_scaling_groups(libraries))
@@ -224,6 +219,8 @@ rule bowtie2:
     input:
         r1="final/fastq/{sample}_rep{replicate}_R1.fastq.gz",
         r2="final/fastq/{sample}_rep{replicate}_R2.fastq.gz",
+    params:
+        index=lambda wildcards: references["mini"].bowtie_index
     log:
         "log/4-mapped/{sample}_rep{replicate}.log"
     # TODO
@@ -234,7 +231,7 @@ rule bowtie2:
     shell:
         "bowtie2"
         " -p {threads}"
-        " -x {config[bowtie_index_name]}"
+        " -x {params.index}"
         " -1 {input.r1}"
         " -2 {input.r2}"
         " --fast"
@@ -508,7 +505,7 @@ rule compute_effective_genome_size:
     output:
         txt="stats/genome_size.txt"
     input:
-        fasta=config["reference_fasta"]
+        fasta=references["mini"].fasta
     run:
         with open(output.txt, "w") as f:
             print(compute_genome_size(input.fasta), file=f)

@@ -14,6 +14,13 @@ class ParseError(Exception):
 
 
 @dataclass
+class Reference:
+    name: str
+    fasta: str
+    bowtie_index: str
+
+
+@dataclass
 class Library:
     sample: str
 
@@ -81,6 +88,21 @@ def read_scaling_groups(libraries):
 
     for name, normalization_pairs in scaling_map.items():
         yield ScalingGroup(normalization_pairs, name)
+
+
+def make_references(config):
+    references = dict()
+    for ref in config:
+        try:
+            bowtie_index = detect_bowtie_index_name(ref["fasta"])
+        except FileNotFoundError as e:
+            sys.exit(str(e))
+        references[ref["name"]] = Reference(
+            name=ref["name"],
+            fasta=ref["fasta"],
+            bowtie_index=bowtie_index,
+        )
+    return references
 
 
 def read_tsv(path, columns: int):
@@ -240,7 +262,7 @@ def detect_bowtie_index_name(fasta_path):
         if base.with_name(base.name + bowtie_index_extension).exists():
             return base
     raise FileNotFoundError(
-        "No Bowtie2 index found, expected one of\n- "
+        f"No Bowtie2 index found for '{fasta_path}', expected one of\n- "
         + "\n- ".join(str(b) + bowtie_index_extension for b in bases)
     )
 
@@ -272,7 +294,7 @@ def format_metadata_overview(libraries, pools, scaling_groups) -> str:
         print("# Group", group.name, "- Normalization Pairs (treatment -- control)", file=f)
         for pair in group.normalization_pairs:
             print(" -", pair.treatment.name, "--", pair.control.name,
-                "(reference {})".format(pair.reference), file=f)
+                "(reference: {})".format(pair.reference), file=f)
     return f.getvalue()
 
 

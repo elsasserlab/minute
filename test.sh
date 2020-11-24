@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-version="0.8"
+version="0.9"
 
 testdata_file=minute-testdata-${version}.tar.gz
 if ! [[ -f ${testdata_file} ]]; then
@@ -14,7 +14,7 @@ cd testrun
 tar --strip-components=1 -xf ../${testdata_file}
 cp ../testdata/*.{tsv,bed,sizes,yaml} .
 mkdir fastq && mv -- *.fastq.gz fastq/
-mkdir ref && mv ref.* ref/
-( cd ref && bowtie2-build -q ref.fa.gz ref )
+mkdir ref && mv ref*.fa.gz ref/
+( cd ref && bowtie2-build -q ref1.fa.gz ref1 && bowtie2-build -q ref2.fa.gz ref2 )
 
 snakemake -p -j 2 -s ../Snakefile "$@"
