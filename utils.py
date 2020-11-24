@@ -227,7 +227,7 @@ def read_int_from_file(path):
     return int(data.strip())
 
 
-def compute_genome_size(fasta):
+def compute_genome_size(fasta: str) -> int:
     n = 0
     with xopen(fasta) as f:
         for line in f:

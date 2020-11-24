@@ -342,7 +342,7 @@ rule unscaled_bigwig:
     input:
         bam="final/bam/{library}.bam",
         bai="final/bam/{library}.bai",
-        genome_size="stats/genome_size.txt",
+        genome_size="stats/genome.mini.size.txt",
     log:
         "log/final/{library}.unscaled.bw.log"
     threads: 19
@@ -365,7 +365,7 @@ for group in scaling_groups:
         input:
             treatments=["stats/final/{library.name}.flagstat.txt".format(library=np.treatment) for np in group.normalization_pairs],
             controls=["stats/final/{library.name}.flagstat.txt".format(library=np.control) for np in group.normalization_pairs],
-            genome_size="stats/genome_size.txt",
+            genome_size="stats/genome.mini.size.txt",
         params:
             scaling_group=group,
         run:
@@ -501,9 +501,9 @@ rule stats_summary:
 
 rule compute_effective_genome_size:
     output:
-        txt="stats/genome_size.txt"
+        txt="stats/genome.{reference}.size.txt"
     input:
-        fasta=references["mini"].fasta
+        fasta=lambda wildcards: references[wildcards.reference].fasta
     run:
         with open(output.txt, "w") as f:
             print(compute_genome_size(input.fasta), file=f)
