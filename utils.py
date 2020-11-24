@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from io import StringIO
 from itertools import groupby
-from typing import List, Iterable
+from typing import List, Iterable, Dict, Optional, Tuple
 
 from xopen import xopen
 
@@ -17,7 +17,7 @@ class ParseError(Exception):
 class Reference:
     name: str
     fasta: str
-    bowtie_index: str
+    bowtie_index: Path
 
 
 @dataclass
@@ -58,12 +58,12 @@ class ScalingGroup:
     name: str
 
 
-def read_libraries():
+def read_libraries() -> Iterable[Replicate]:
     for row in read_tsv("libraries.tsv", columns=4):
         yield Replicate(*row)
 
 
-def group_replicates(libraries):
+def group_replicates(libraries) -> Iterable[PooledLibrary]:
     samples = defaultdict(list)
     for library in libraries:
         samples[library.sample].append(library)
@@ -71,11 +71,10 @@ def group_replicates(libraries):
         yield PooledLibrary(sample=sample, replicates=replicates)
 
 
-def read_scaling_groups(replicates: List[Replicate]):
-    replicate_map = {(rep.sample, rep.replicate): rep for rep in replicates}
+def read_scaling_groups(replicates: List[Replicate]) -> Iterable[ScalingGroup]:
+    replicate_map: Dict[Tuple[str, str], Library] = {(rep.sample, rep.replicate): rep for rep in replicates}
 
-    pools = group_replicates(replicates)
-    for pool in pools:
+    for pool in group_replicates(replicates):
         replicate_map[(pool.sample, "pooled")] = pool
 
     scaling_map = defaultdict(list)
@@ -97,7 +96,7 @@ def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True
                 yield pair.control
 
 
-def make_references(config):
+def make_references(config) -> Dict[str, Reference]:
     references = dict()
     for ref in config:
         try:
@@ -112,7 +111,7 @@ def make_references(config):
     return references
 
 
-def read_tsv(path, columns: int):
+def read_tsv(path, columns: int) -> Iterable[List[str]]:
     """
     Read a tab-separated value file from path, allowing "#"-prefixed comments
 
@@ -133,12 +132,13 @@ def read_tsv(path, columns: int):
             yield fields
 
 
-def flagstat_mapped_reads(path):
+def flagstat_mapped_reads(path) -> Optional[int]:
     """Read "samtools flagstat" output and return the number of mapped reads"""
     with open(path) as f:
         for line in f:
             if " mapped (" in line:
                 return int(line.split(maxsplit=1)[0])
+    return None
 
 
 def parse_insert_size_metrics(path):
@@ -228,7 +228,7 @@ def parse_stats_fields(stats_file):
     return result
 
 
-def read_int_from_file(path):
+def read_int_from_file(path) -> int:
     with open(path) as f:
         data = f.read()
     return int(data.strip())
@@ -244,7 +244,7 @@ def compute_genome_size(fasta: str) -> int:
     return n
 
 
-def detect_bowtie_index_name(fasta_path):
+def detect_bowtie_index_name(fasta_path: str) -> Path:
     """
     Given the path to a reference FASTA (which may optionally be compressed),
     detect the base name of the Bowtie2 index assumed to be in the same
@@ -291,6 +291,7 @@ def format_metadata_overview(replicates, libraries, scaling_groups) -> str:
     print(file=f)
     print("# Libraries", file=f)
     for library in libraries:
+        # TODO
         # print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")", file=f)
         print(" -", library.name, file=f)#pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")", file=f)
 
@@ -305,13 +306,13 @@ def format_metadata_overview(replicates, libraries, scaling_groups) -> str:
     return f.getvalue()
 
 
-def is_snakemake_calling_itself():
+def is_snakemake_calling_itself() -> bool:
     return "snakemake/__main__.py" in sys.argv[0]
 
 
-def map_fastq_prefix_to_list_of_libraries(libraries: List[Library]):
+def map_fastq_prefix_to_list_of_libraries(replicates: List[Replicate]) -> Dict[str, List[Replicate]]:
     return {
-        fastq_base: list(libs)
-        for fastq_base, libs in
-        groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=lambda lib: lib.fastqbase)
+        fastq_base: list(reps)
+        for fastq_base, reps in
+        groupby(sorted(replicates, key=lambda rep: rep.fastqbase), key=lambda rep: rep.fastqbase)
     }
