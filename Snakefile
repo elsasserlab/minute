@@ -2,8 +2,6 @@ import os
 import sys
 
 import se_bam
-# TODO
-# - switch to interleaved files?
 from utils import (
     read_libraries,
     read_scaling_groups,
