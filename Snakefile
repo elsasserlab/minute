@@ -457,21 +457,19 @@ rule stats:
         final_flagstat="stats/final/{library}.flagstat.txt",
         insertsizes="stats/final/{library}.insertsizes.txt",
     run:
-        row = []
+        d = {"library": wildcards.library}
         for flagstat, name in [
             (input.mapped_flagstat, "mapped"),
-            (input.dedup_flagstat, "dedup"),
-            (input.final_flagstat, "final"),
+            (input.dedup_flagstat, "dedup_mapped"),
+            (input.final_flagstat, "final_mapped"),
         ]:
-            mapped_reads = flagstat_mapped_reads(flagstat)
-            row.append(mapped_reads)
-
-        row.append(parse_duplication_metrics(input.metrics)["estimated_library_size"])
-        row.append(parse_duplication_metrics(input.metrics)["percent_duplication"])
-        row.append(parse_insert_size_metrics(input.insertsizes)["median_insert_size"])
+            d[name] = flagstat_mapped_reads(flagstat)
+        d["library_size"] = parse_duplication_metrics(input.metrics)["estimated_library_size"]
+        d["percent_duplication"] = parse_duplication_metrics(input.metrics)["percent_duplication"]
+        d["insert_size"] = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
         with open(output.txt, "w") as f:
-            print("mapped", "dedup_mapped", "final_mapped", "library_size", "percent_duplication", "insert_size", sep="\t", file=f)
-            print(*row, sep="\t", file=f)
+            print(*d.keys(), sep="\t", file=f)
+            print(*d.values(), sep="\t", file=f)
 
 
 rule stats_summary:

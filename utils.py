@@ -217,9 +217,8 @@ def parse_stats_fields(stats_file):
     with open(stats_file) as f:
         header = f.readline().strip().split("\t")
         values = f.readline().strip().split("\t")
-        result = {key.lower(): value for key, value in zip(header, values)}
-        result["library"] = Path(stats_file).stem
-        return result
+    result = {key.lower(): value for key, value in zip(header, values)}
+    return result
 
 
 def read_int_from_file(path):
