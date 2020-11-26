@@ -303,8 +303,14 @@ def get_normalization_pairs(scaling_groups) -> List[TreatmentControlPair]:
     return [pair for group in scaling_groups for pair in group.normalization_pairs]
 
 
-def format_metadata_overview(replicates, libraries, scaling_groups) -> str:
+def format_metadata_overview(references, replicates, libraries, scaling_groups) -> str:
     f = StringIO()
+
+    print("# References", file=f)
+    for name, reference in references.items():
+        print(" -", reference, file=f)
+    print(file=f)
+
     print("# Replicates", file=f)
     for replicate in replicates:
         print(" -", replicate, file=f)

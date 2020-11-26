@@ -51,7 +51,7 @@ maplibs = list(flatten_scaling_groups(scaling_groups))
 
 
 if not is_snakemake_calling_itself():
-    print(format_metadata_overview(replicates, maplibs, scaling_groups), file=sys.stderr)
+    print(format_metadata_overview(references, replicates, maplibs, scaling_groups), file=sys.stderr)
 
 
 rule final:
