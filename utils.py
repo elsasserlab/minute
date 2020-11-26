@@ -306,11 +306,11 @@ def format_metadata_overview(replicates, libraries, scaling_groups) -> str:
         print(" -", replicate, file=f)
 
     print(file=f)
-    print("# Libraries", file=f)
-    for library in libraries:
-        # TODO
-        # print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")", file=f)
-        print(" -", library.name, file=f)#pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")", file=f)
+    print("# Pools", file=f)
+    for maplib in libraries:
+        if isinstance(maplib.library, Pool):
+            pool = maplib.library
+            print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")", file=f)
 
     print(file=f)
     print("# Scaling groups", file=f)
@@ -318,7 +318,7 @@ def format_metadata_overview(replicates, libraries, scaling_groups) -> str:
     for group in scaling_groups:
         print("# Group", group.name, "- Normalization Pairs (treatment -- control)", file=f)
         for pair in group.normalization_pairs:
-            print(" -", pair.treatment.name, "--", pair.control.name,
+            print(" -", pair.treatment.library.name, "--", pair.control.library.name,
                 "(reference: {})".format(pair.reference), file=f)
     return f.getvalue()
 
