@@ -305,10 +305,10 @@ rule mark_pe_duplicates:
 
 rule remove_exclude_regions:
     output:
-        bam="final/bam/{library}.bam"
+        bam="final/bam/{library}.{reference}.bam"
     input:
-        bam="tmp/7-dedup/{library}.bam",
-        bed=config["exclude_regions"]  # FIXME
+        bam="tmp/7-dedup/{library}.{reference}.bam",
+        bed=lambda wildcards: str(references[wildcards.reference].exclude_bed)
     shell:
         "bedtools"
         " intersect"
@@ -501,7 +501,7 @@ rule compute_effective_genome_size:
     output:
         txt="stats/genome.{reference}.size.txt"
     input:
-        fasta=lambda wildcards: references[wildcards.reference].fasta
+        fasta=lambda wildcards: str(references[wildcards.reference].fasta)
     run:
         with open(output.txt, "w") as f:
             print(compute_genome_size(input.fasta), file=f)

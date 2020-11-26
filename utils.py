@@ -16,8 +16,9 @@ class ParseError(Exception):
 @dataclass
 class Reference:
     name: str
-    fasta: str
+    fasta: Path
     bowtie_index: Path
+    exclude_bed: Path
 
 
 @dataclass
@@ -116,14 +117,18 @@ def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True
 def make_references(config) -> Dict[str, Reference]:
     references = dict()
     for ref in config:
+        name = ref["name"]
+        fasta = Path(ref["fasta"])
+        exclude_bed = Path(ref["exclude"])
         try:
             bowtie_index = detect_bowtie_index_name(ref["fasta"])
         except FileNotFoundError as e:
             sys.exit(str(e))
-        references[ref["name"]] = Reference(
-            name=ref["name"],
-            fasta=ref["fasta"],
+        references[name] = Reference(
+            name=name,
+            fasta=fasta,
             bowtie_index=bowtie_index,
+            exclude_bed=exclude_bed,
         )
     return references
 

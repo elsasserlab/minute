@@ -1,17 +1,20 @@
 # Configuration settings for the minute pipeline
 # Paths (unless absolute) are relative to the directory in which snakemake is run.
 
-# Path to a reference FASTA file (may be gzip-compressed)
-# with a matching Bowtie2 index in the same location
+# References
+# name: An arbitrary name, used within output file names
+# fasta: Path to a reference FASTA file (may be gzip-compressed),
+#        with a matching Bowtie2 index in the same location
+# exclude: Path to a BED file with regions to exclude
 references:
   - name: mini
     fasta: "ref/ref1.fa.gz"
+    exclude: "exclude1.bed"
+
   - name: small
     fasta: "ref/ref2.fa.gz"
+    exclude: "exclude2.bed"
 
-
-# Path to a BED file listing the regions to be excluded
-exclude_regions: "exclude.bed"
 
 # Length of the 5' UMI
 umi_length: 6
