@@ -1,17 +1,17 @@
 # Configuration settings for the minute pipeline
 # Paths (unless absolute) are relative to the directory in which snakemake is run.
 
-# References
-# name: An arbitrary name, used within output file names
-# fasta: Path to a reference FASTA file (may be gzip-compressed),
-#        with a matching Bowtie2 index in the same location
-# exclude: Path to a BED file with regions to exclude
 references:
-  - name: mini
+  mini:  # Arbitrary name for this reference, also used in output file names
+
+    # Path to a reference FASTA file (may be gzip-compressed),
+    # with a matching Bowtie2 index in the same location
     fasta: "ref/ref1.fa.gz"
+
+    # Path to a BED file with regions to exclude
     exclude: "exclude1.bed"
 
-  - name: small
+  small:
     fasta: "ref/ref2.fa.gz"
     exclude: "exclude2.bed"
 

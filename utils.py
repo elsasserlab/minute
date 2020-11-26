@@ -116,8 +116,7 @@ def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True
 
 def make_references(config) -> Dict[str, Reference]:
     references = dict()
-    for ref in config:
-        name = ref["name"]
+    for name, ref in config.items():
         fasta = Path(ref["fasta"])
         exclude_bed = Path(ref["exclude"])
         try:
