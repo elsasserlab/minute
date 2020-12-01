@@ -2,10 +2,10 @@
 # Paths (unless absolute) are relative to the directory in which snakemake is run.
 
 references:
-  mini:  # Arbitrary name for this reference, also used in output file names
+  mini:  # Arbitrary name for this reference. This is also used in output file names.
 
-    # Path to a reference FASTA file (may be gzip-compressed),
-    # with a matching Bowtie2 index in the same location
+    # Path to a reference FASTA file (may be gzip-compressed).
+    # A matching Bowtie2 index must exist in the same location.
     fasta: "ref/ref1.fa.gz"
 
     # Path to a BED file with regions to exclude
@@ -21,15 +21,3 @@ umi_length: 6
 
 # Fragment length (insert size)
 fragment_size: 150
-
-
-#
-# Optional settings
-#
-# These usually don’t need to be changed
-#
-
-# The base name of the Bowtie2 index. This is normally found automatically
-# in the same folder as the reference_fasta.
-#
-# - bowtie_index_name: "ref/mm9"

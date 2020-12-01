@@ -2,6 +2,12 @@
 #
 # Columns: treatment sample name, replicate id, control sample name, scaling group, reference name
 #
+# - The replicate id can also be set to "pooled", in which case all libraries for that sample
+#   that are listed in libraries.tsv are pooled together
+# - The scaling group is an arbitrary name. Treatment/control pairs that have the same name are
+#   put into the same scaling group.
+# - The reference name is a reference defined in config.yaml
+#
 H3K4m3_SL_CTR	pooled	IN_SL_CTR	group1	mini
 H3K4m3_SL_CTR	2	IN_SL_CTR	group1	mini
 
