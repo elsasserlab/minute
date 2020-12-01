@@ -457,7 +457,7 @@ rule stats:
     run:
         d = {"library": wildcards.library}
         for flagstat, name in [
-            (input.mapped_flagstat, "mapped"),
+            (input.mapped_flagstat, "raw_mapped"),
             (input.dedup_flagstat, "dedup_mapped"),
             (input.final_flagstat, "final_mapped"),
         ]:
@@ -481,7 +481,7 @@ rule stats_summary:
         # I am considering we want the keys to be in a specific order
         header = [
             "library",
-            "mapped",
+            "raw_mapped",
             "dedup_mapped",
             "final_mapped",
             "library_size",
