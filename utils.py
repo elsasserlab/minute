@@ -79,7 +79,7 @@ def read_libraries() -> Iterable[Replicate]:
         yield Replicate(*row)
 
 
-def grouped_replicates(libraries) -> Iterable[Pool]:
+def make_pools(libraries) -> Iterable[Pool]:
     samples = defaultdict(list)
     for library in libraries:
         samples[library.sample].append(library)
@@ -91,7 +91,7 @@ def read_scaling_groups(replicates: List[Replicate]) -> Iterable[ScalingGroup]:
     library_map: Dict[Tuple[str, str], Library] = {
         (rep.sample, rep.replicate): rep for rep in replicates
     }
-    for pool in grouped_replicates(replicates):
+    for pool in make_pools(replicates):
         library_map[(pool.sample, "pooled")] = pool
 
     scaling_map = defaultdict(list)
