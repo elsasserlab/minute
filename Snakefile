@@ -447,15 +447,15 @@ rule scaled_bigwig:
 
 rule stats:
     output:
-        txt="stats/9-stats/{library}.txt"
+        txt="stats/9-stats/{library}.{reference}.txt"
     input:
-        mapped_flagstat="stats/4-mapped/{library}.flagstat.txt",
-        metrics="stats/6-dupmarked/{library}.metrics",
-        dedup_flagstat="stats/7-dedup/{library}.flagstat.txt",
-        final_flagstat="stats/final/{library}.flagstat.txt",
-        insertsizes="stats/final/{library}.insertsizes.txt",
+        mapped_flagstat="stats/4-mapped/{library}.{reference}.flagstat.txt",
+        metrics="stats/6-dupmarked/{library}.{reference}.metrics",
+        dedup_flagstat="stats/7-dedup/{library}.{reference}.flagstat.txt",
+        final_flagstat="stats/final/{library}.{reference}.flagstat.txt",
+        insertsizes="stats/final/{library}.{reference}.insertsizes.txt",
     run:
-        d = {"library": wildcards.library}
+        d = dict(library=wildcards.library, reference=wildcards.reference)
         for flagstat, name in [
             (input.mapped_flagstat, "raw_mapped"),
             (input.dedup_flagstat, "dedup_mapped"),
@@ -478,9 +478,9 @@ rule stats_summary:
     run:
         stats_summaries = [parse_stats_fields(st_file) for st_file in input]
 
-        # I am considering we want the keys to be in a specific order
         header = [
             "library",
+            "reference",
             "raw_mapped",
             "dedup_mapped",
             "final_mapped",
