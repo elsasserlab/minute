@@ -45,13 +45,13 @@ localrules:
 
 
 references = make_references(config["references"])
-replicates = list(read_libraries())
-scaling_groups = list(read_scaling_groups(replicates))
+libraries = list(read_libraries())
+scaling_groups = list(read_scaling_groups(libraries))
 maplibs = list(flatten_scaling_groups(scaling_groups))
 
 
 if not is_snakemake_calling_itself():
-    print(format_metadata_overview(references, replicates, maplibs, scaling_groups), file=sys.stderr)
+    print(format_metadata_overview(references, libraries, maplibs, scaling_groups), file=sys.stderr)
 
 
 rule final:
@@ -65,9 +65,9 @@ rule final:
 rule multiqc:
     output: "reports/multiqc_report.html"
     input:
-        expand("reports/fastqc/{replicate.fastqbase}_R{read}_fastqc/fastqc_data.txt",
-            replicate=replicates, read=(1, 2)),
-        expand("log/2-noadapters/{replicate.fastqbase}.trimmed.log", replicate=replicates),
+        expand("reports/fastqc/{library.fastqbase}_R{read}_fastqc/fastqc_data.txt",
+            library=libraries, read=(1, 2)),
+        expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=libraries),
         expand("log/4-mapped/{maplib.name}.log", maplib=[m for m in maplibs if not isinstance(m.library, Pool)]),
         expand("stats/6-dupmarked/{maplib.name}.metrics", maplib=maplibs),
         "reports/scalinginfo.txt",
@@ -154,13 +154,13 @@ rule barcodes:
         barcodes_fasta=temp("tmp/3-barcodes/{fastqbase}.fasta")
     run:
         with open(output.barcodes_fasta, "w") as f:
-            for library in replicates:
+            for library in libraries:
                 if library.fastqbase != wildcards.fastqbase:
                     continue
                 f.write(f">{library.name}\n^{library.barcode}\n")
 
 
-for fastq_base, libs in map_fastq_prefix_to_list_of_libraries(replicates).items():
+for fastq_base, libs in map_fastq_prefix_to_list_of_libraries(libraries).items():
 
     rule:
         output:
@@ -243,8 +243,8 @@ rule pool_replicates:
         bam=temp("tmp/4-mapped/{sample}_pooled.{reference}.bam")
     input:
         bam_replicates=lambda wildcards: expand(
-            "tmp/4-mapped/{{sample}}_rep{replicates}.{{reference}}.bam",
-            replicates=get_replicates(replicates, wildcards.sample))
+            "tmp/4-mapped/{{sample}}_rep{replicate}.{{reference}}.bam",
+            replicate=get_replicates(libraries, wildcards.sample))
     run:
         if len(input.bam_replicates) == 1:
             os.link(input.bam_replicates[0], output.bam)

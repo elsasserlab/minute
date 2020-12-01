@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from io import StringIO
 from itertools import groupby
-from types import SimpleNamespace
 from typing import List, Iterable, Dict, Optional, Tuple
 
 from xopen import xopen
@@ -311,7 +310,7 @@ def get_normalization_pairs(scaling_groups) -> List[TreatmentControlPair]:
     return [pair for group in scaling_groups for pair in group.normalization_pairs]
 
 
-def format_metadata_overview(references, replicates, libraries, scaling_groups) -> str:
+def format_metadata_overview(references, libraries, maplibs, scaling_groups) -> str:
     f = StringIO()
 
     print("# References", file=f)
@@ -319,13 +318,13 @@ def format_metadata_overview(references, replicates, libraries, scaling_groups) 
         print(" -", reference, file=f)
     print(file=f)
 
-    print("# Replicates", file=f)
-    for replicate in replicates:
-        print(" -", replicate, file=f)
+    print("# Libraries", file=f)
+    for library in libraries:
+        print(" -", library, file=f)
 
     print(file=f)
     print("# Pools", file=f)
-    for maplib in libraries:
+    for maplib in maplibs:
         if isinstance(maplib.library, Pool):
             pool = maplib.library
             print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")", file=f)
