@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from io import StringIO
 from itertools import groupby
+from types import SimpleNamespace
 from typing import List, Iterable, Dict, Optional, Tuple
 
 from xopen import xopen
@@ -153,13 +154,20 @@ def read_tsv(path, columns: int) -> Iterable[List[str]]:
             yield fields
 
 
-def flagstat_mapped_reads(path) -> Optional[int]:
+@dataclass
+class Flagstat:
+    mapped_reads: int
+
+
+def parse_flagstat(path) -> Flagstat:
     """Read "samtools flagstat" output and return the number of mapped reads"""
+    count = None
     with open(path) as f:
         for line in f:
             if " mapped (" in line:
-                return int(line.split(maxsplit=1)[0])
-    return None
+                count = int(line.split(maxsplit=1)[0])
+                break
+    return Flagstat(mapped_reads=count)
 
 
 def parse_insert_size_metrics(path):
@@ -214,8 +222,8 @@ def compute_scaling(scaling_group, treatments, controls, infofile, genome_sizes,
     first = True
     scaling_factor = -1
     for pair, treatment_path, control_path, genome_size in zip(scaling_group.normalization_pairs, treatments, controls, genome_sizes):
-        treatment_reads = flagstat_mapped_reads(treatment_path)
-        control_reads = flagstat_mapped_reads(control_path)
+        treatment_reads = parse_flagstat(treatment_path).mapped_reads
+        control_reads = parse_flagstat(control_path).mapped_reads
         if first:
             scaling_factor = (
                 genome_size / fragment_size / treatment_reads * control_reads

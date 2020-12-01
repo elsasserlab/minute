@@ -5,7 +5,7 @@ import se_bam
 from utils import (
     read_libraries,
     read_scaling_groups,
-    flagstat_mapped_reads,
+    parse_flagstat,
     compute_scaling,
     parse_duplication_metrics,
     parse_insert_size_metrics,
@@ -461,7 +461,7 @@ rule stats:
             (input.dedup_flagstat, "dedup_mapped"),
             (input.final_flagstat, "final_mapped"),
         ]:
-            d[name] = flagstat_mapped_reads(flagstat)
+            d[name] = parse_flagstat(flagstat).mapped_reads
         d["library_size"] = parse_duplication_metrics(input.metrics)["estimated_library_size"]
         d["percent_duplication"] = parse_duplication_metrics(input.metrics)["percent_duplication"]
         d["insert_size"] = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
