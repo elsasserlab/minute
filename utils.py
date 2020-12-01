@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from io import StringIO
 from itertools import groupby
-from typing import List
+from typing import List, Iterable, Dict, Optional, Tuple
 
 from xopen import xopen
 
@@ -14,12 +14,20 @@ class ParseError(Exception):
 
 
 @dataclass
+class Reference:
+    name: str
+    fasta: Path
+    bowtie_index: Path
+    exclude_bed: Path
+
+
+@dataclass
 class Library:
     sample: str
 
 
 @dataclass
-class FastqLibrary(Library):
+class Replicate(Library):
     replicate: str
     barcode: str
     fastqbase: str
@@ -30,8 +38,8 @@ class FastqLibrary(Library):
 
 
 @dataclass
-class PooledLibrary(Library):
-    replicates: List[FastqLibrary]
+class Pool(Library):
+    replicates: List[Replicate]
 
     @property
     def name(self):
@@ -39,9 +47,24 @@ class PooledLibrary(Library):
 
 
 @dataclass
+class LibraryWithReference:
+    library: Library
+    reference: str
+
+    @property
+    def name(self):
+        return f"{self.library.name}.{self.reference}"
+
+
+@dataclass
 class TreatmentControlPair:
-    treatment: Library
-    control: Library
+    treatment: LibraryWithReference
+    control: LibraryWithReference
+
+    @property
+    def reference(self) -> str:
+        assert self.treatment.reference == self.control.reference
+        return self.treatment.reference
 
 
 @dataclass
@@ -50,38 +73,66 @@ class ScalingGroup:
     name: str
 
 
-def read_libraries():
+def read_libraries() -> Iterable[Replicate]:
     for row in read_tsv("libraries.tsv", columns=4):
-        yield FastqLibrary(*row)
+        yield Replicate(*row)
 
 
-def group_libraries_by_sample(libraries):
+def make_pools(libraries) -> Iterable[Pool]:
     samples = defaultdict(list)
     for library in libraries:
         samples[library.sample].append(library)
     for sample, replicates in samples.items():
-        yield PooledLibrary(sample=sample, replicates=replicates)
+        yield Pool(sample=sample, replicates=replicates)
 
 
-def read_scaling_groups(libraries):
-    library_map = {
-        (library.sample, library.replicate): library for library in libraries}
-
-    pools = group_libraries_by_sample(libraries)
-    for pool in pools:
+def read_scaling_groups(replicates: List[Replicate]) -> Iterable[ScalingGroup]:
+    library_map: Dict[Tuple[str, str], Library] = {
+        (rep.sample, rep.replicate): rep for rep in replicates
+    }
+    for pool in make_pools(replicates):
         library_map[(pool.sample, "pooled")] = pool
 
     scaling_map = defaultdict(list)
-    for row in read_tsv("groups.tsv", columns=4):
-        treatment = library_map[(row[0], row[1])]
-        control = library_map[(row[2], row[1])]
-        scaling_map[row[3]].append(TreatmentControlPair(treatment, control))
+    for row in read_tsv("groups.tsv", columns=5):
+        treatment_name, replicate_id, control_name, scaling_group, reference = row
+        treatment_lib = library_map[(treatment_name, replicate_id)]
+        control_lib = library_map[(control_name, replicate_id)]
+        treatment = LibraryWithReference(treatment_lib, reference)
+        control = LibraryWithReference(control_lib, reference)
+        scaling_map[scaling_group].append(TreatmentControlPair(treatment, control))
 
     for name, normalization_pairs in scaling_map.items():
         yield ScalingGroup(normalization_pairs, name)
 
 
-def read_tsv(path, columns: int):
+def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True) -> Iterable[LibraryWithReference]:
+    for group in groups:
+        for pair in group.normalization_pairs:
+            yield pair.treatment
+            if controls:
+                yield pair.control
+
+
+def make_references(config) -> Dict[str, Reference]:
+    references = dict()
+    for name, ref in config.items():
+        fasta = Path(ref["fasta"])
+        exclude_bed = Path(ref["exclude"])
+        try:
+            bowtie_index = detect_bowtie_index_name(ref["fasta"])
+        except FileNotFoundError as e:
+            sys.exit(str(e))
+        references[name] = Reference(
+            name=name,
+            fasta=fasta,
+            bowtie_index=bowtie_index,
+            exclude_bed=exclude_bed,
+        )
+    return references
+
+
+def read_tsv(path, columns: int) -> Iterable[List[str]]:
     """
     Read a tab-separated value file from path, allowing "#"-prefixed comments
 
@@ -102,12 +153,20 @@ def read_tsv(path, columns: int):
             yield fields
 
 
-def flagstat_mapped_reads(path):
+@dataclass
+class Flagstat:
+    mapped_reads: int
+
+
+def parse_flagstat(path) -> Flagstat:
     """Read "samtools flagstat" output and return the number of mapped reads"""
+    count = None
     with open(path) as f:
         for line in f:
             if " mapped (" in line:
-                return int(line.split(maxsplit=1)[0])
+                count = int(line.split(maxsplit=1)[0])
+                break
+    return Flagstat(mapped_reads=count)
 
 
 def parse_insert_size_metrics(path):
@@ -158,12 +217,12 @@ def parse_picard_metrics(path, metrics_class: str):
     return result
 
 
-def compute_scaling(scaling_group, treatments, controls, infofile, genome_size, fragment_size):
+def compute_scaling(scaling_group, treatments, controls, infofile, genome_sizes, fragment_size):
     first = True
     scaling_factor = -1
-    for pair, treatment_path, control_path in zip(scaling_group.normalization_pairs, treatments, controls):
-        treatment_reads = flagstat_mapped_reads(treatment_path)
-        control_reads = flagstat_mapped_reads(control_path)
+    for pair, treatment_path, control_path, genome_size in zip(scaling_group.normalization_pairs, treatments, controls, genome_sizes):
+        treatment_reads = parse_flagstat(treatment_path).mapped_reads
+        control_reads = parse_flagstat(control_path).mapped_reads
         if first:
             scaling_factor = (
                 genome_size / fragment_size / treatment_reads * control_reads
@@ -193,18 +252,17 @@ def parse_stats_fields(stats_file):
     with open(stats_file) as f:
         header = f.readline().strip().split("\t")
         values = f.readline().strip().split("\t")
-        result = {key.lower(): value for key, value in zip(header, values)}
-        result["library"] = Path(stats_file).stem
-        return result
+    result = {key.lower(): value for key, value in zip(header, values)}
+    return result
 
 
-def read_int_from_file(path):
+def read_int_from_file(path) -> int:
     with open(path) as f:
         data = f.read()
     return int(data.strip())
 
 
-def compute_genome_size(fasta):
+def compute_genome_size(fasta: str) -> int:
     n = 0
     with xopen(fasta) as f:
         for line in f:
@@ -214,7 +272,7 @@ def compute_genome_size(fasta):
     return n
 
 
-def detect_bowtie_index_name(fasta_path):
+def detect_bowtie_index_name(fasta_path: str) -> Path:
     """
     Given the path to a reference FASTA (which may optionally be compressed),
     detect the base name of the Bowtie2 index assumed to be in the same
@@ -238,7 +296,7 @@ def detect_bowtie_index_name(fasta_path):
         if base.with_name(base.name + bowtie_index_extension).exists():
             return base
     raise FileNotFoundError(
-        "No Bowtie2 index found, expected one of\n- "
+        f"No Bowtie2 index found for '{fasta_path}', expected one of\n- "
         + "\n- ".join(str(b) + bowtie_index_extension for b in bases)
     )
 
@@ -252,16 +310,24 @@ def get_normalization_pairs(scaling_groups) -> List[TreatmentControlPair]:
     return [pair for group in scaling_groups for pair in group.normalization_pairs]
 
 
-def format_metadata_overview(libraries, pools, scaling_groups) -> str:
+def format_metadata_overview(references, libraries, maplibs, scaling_groups) -> str:
     f = StringIO()
+
+    print("# References", file=f)
+    for name, reference in references.items():
+        print(" -", reference, file=f)
+    print(file=f)
+
     print("# Libraries", file=f)
     for library in libraries:
         print(" -", library, file=f)
 
     print(file=f)
     print("# Pools", file=f)
-    for pool in pools:
-        print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")", file=f)
+    for maplib in maplibs:
+        if isinstance(maplib.library, Pool):
+            pool = maplib.library
+            print(" -", pool.name, "(replicates:", ", ".join(r.replicate for r in pool.replicates) + ")", file=f)
 
     print(file=f)
     print("# Scaling groups", file=f)
@@ -269,17 +335,18 @@ def format_metadata_overview(libraries, pools, scaling_groups) -> str:
     for group in scaling_groups:
         print("# Group", group.name, "- Normalization Pairs (treatment -- control)", file=f)
         for pair in group.normalization_pairs:
-            print(" -", pair.treatment.name, "--", pair.control.name, file=f)
+            print(" -", pair.treatment.library.name, "--", pair.control.library.name,
+                "(reference: {})".format(pair.reference), file=f)
     return f.getvalue()
 
 
-def is_snakemake_calling_itself():
+def is_snakemake_calling_itself() -> bool:
     return "snakemake/__main__.py" in sys.argv[0]
 
 
-def map_fastq_prefix_to_list_of_libraries(libraries: List[Library]):
+def map_fastq_prefix_to_list_of_libraries(replicates: List[Replicate]) -> Dict[str, List[Replicate]]:
     return {
-        fastq_base: list(libs)
-        for fastq_base, libs in
-        groupby(sorted(libraries, key=lambda lib: lib.fastqbase), key=lambda lib: lib.fastqbase)
+        fastq_base: list(reps)
+        for fastq_base, reps in
+        groupby(sorted(replicates, key=lambda rep: rep.fastqbase), key=lambda rep: rep.fastqbase)
     }

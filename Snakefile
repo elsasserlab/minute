@@ -1,23 +1,24 @@
+import os
+import sys
+
 import se_bam
-# TODO
-# - switch to interleaved files?
 from utils import (
     read_libraries,
     read_scaling_groups,
-    flagstat_mapped_reads,
+    parse_flagstat,
     compute_scaling,
     parse_duplication_metrics,
     parse_insert_size_metrics,
     parse_stats_fields,
     read_int_from_file,
     compute_genome_size,
-    detect_bowtie_index_name,
     get_replicates,
-    group_libraries_by_sample,
     format_metadata_overview,
     is_snakemake_calling_itself,
     map_fastq_prefix_to_list_of_libraries,
-    get_normalization_pairs,
+    make_references,
+    flatten_scaling_groups,
+    Pool,
 )
 
 
@@ -43,40 +44,32 @@ localrules:
     insert_size_metrics,
 
 
-if "bowtie_index_name" not in config:
-    try:
-        config["bowtie_index_name"] = detect_bowtie_index_name(config["reference_fasta"])
-    except FileNotFoundError as e:
-        sys.exit(str(e))
-
+references = make_references(config["references"])
 libraries = list(read_libraries())
-pools = list(group_libraries_by_sample(libraries))
 scaling_groups = list(read_scaling_groups(libraries))
+maplibs = list(flatten_scaling_groups(scaling_groups))
+
 
 if not is_snakemake_calling_itself():
-    print(format_metadata_overview(libraries, pools, scaling_groups), file=sys.stderr)
+    print(format_metadata_overview(references, libraries, maplibs, scaling_groups), file=sys.stderr)
 
-fastq_map = map_fastq_prefix_to_list_of_libraries(libraries)
 
 rule final:
     input:
         "reports/multiqc_report.html",
-        expand([
-            "final/bigwig/{library.name}.unscaled.bw",
-            "final/bigwig/{library.sample}_pooled.unscaled.bw",
-        ], library=libraries),
-        expand("final/bigwig/{library.name}.scaled.bw",
-            library=[np.treatment for np in get_normalization_pairs(scaling_groups)]),
+        expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=maplibs),
+        expand("final/bigwig/{maplib.name}.scaled.bw",
+            maplib=flatten_scaling_groups(scaling_groups, controls=False)),
 
 
 rule multiqc:
     output: "reports/multiqc_report.html"
     input:
-        expand("reports/fastqc/{fastq}_R{read}_fastqc/fastqc_data.txt",
-            fastq=fastq_map.keys(), read=(1, 2)),
-        expand("log/2-noadapters/{fastq}.trimmed.log", fastq=fastq_map.keys()),
-        expand("log/4-mapped/{library.name}.log", library=libraries),
-        expand("stats/6-dupmarked/{library.name}.metrics", library=libraries),
+        expand("reports/fastqc/{library.fastqbase}_R{read}_fastqc/fastqc_data.txt",
+            library=libraries, read=(1, 2)),
+        expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=libraries),
+        expand("log/4-mapped/{maplib.name}.log", maplib=[m for m in maplibs if not isinstance(m.library, Pool)]),
+        expand("stats/6-dupmarked/{maplib.name}.metrics", maplib=maplibs),
         "reports/scalinginfo.txt",
         "reports/stats_summary.txt",
         multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
@@ -167,7 +160,7 @@ rule barcodes:
                 f.write(f">{library.name}\n^{library.barcode}\n")
 
 
-for fastq_base, libs in fastq_map.items():
+for fastq_base, libs in map_fastq_prefix_to_list_of_libraries(libraries).items():
 
     rule:
         output:
@@ -220,12 +213,14 @@ rule bowtie2:
     threads:
         19  # One fewer than available to allow other jobs to run in parallel
     output:
-        bam=temp("tmp/4-mapped/{sample}_rep{replicate}.bam")
+        bam=temp("tmp/4-mapped/{sample}_rep{replicate}.{reference}.bam")
     input:
         r1="final/fastq/{sample}_rep{replicate}_R1.fastq.gz",
         r2="final/fastq/{sample}_rep{replicate}_R2.fastq.gz",
+    params:
+        index=lambda wildcards: references[wildcards.reference].bowtie_index
     log:
-        "log/4-mapped/{sample}_rep{replicate}.log"
+        "log/4-mapped/{sample}_rep{replicate}.{reference}.log"
     # TODO
     # - --sensitive (instead of --fast) would be default
     # - write uncompressed BAM?
@@ -235,7 +230,7 @@ rule bowtie2:
         "bowtie2"
         " --reorder"
         " -p {threads}"
-        " -x {config[bowtie_index_name]}"
+        " -x {params.index}"
         " -1 {input.r1}"
         " -2 {input.r2}"
         " --fast"
@@ -246,11 +241,11 @@ rule bowtie2:
 
 rule pool_replicates:
     output:
-        bam=temp("tmp/4-mapped/{sample}_pooled.bam")
+        bam=temp("tmp/4-mapped/{sample}_pooled.{reference}.bam")
     input:
         bam_replicates=lambda wildcards: expand(
-            "tmp/4-mapped/{{sample}}_rep{replicates}.bam",
-            replicates=get_replicates(libraries, wildcards.sample))
+            "tmp/4-mapped/{{sample}}_rep{replicate}.{{reference}}.bam",
+            replicate=get_replicates(libraries, wildcards.sample))
     run:
         if len(input.bam_replicates) == 1:
             os.link(input.bam_replicates[0], output.bam)
@@ -311,10 +306,10 @@ rule mark_pe_duplicates:
 
 rule remove_exclude_regions:
     output:
-        bam="final/bam/{library}.bam"
+        bam="final/bam/{library}.{reference}.bam"
     input:
-        bam="tmp/7-dedup/{library}.bam",
-        bed=config["exclude_regions"]
+        bam="tmp/7-dedup/{library}.{reference}.bam",
+        bed=lambda wildcards: str(references[wildcards.reference].exclude_bed)
     shell:
         "bedtools"
         " intersect"
@@ -342,13 +337,13 @@ rule insert_size_metrics:
 
 rule unscaled_bigwig:
     output:
-        bw="final/bigwig/{library}.unscaled.bw"
+        bw="final/bigwig/{library}.{reference}.unscaled.bw"
     input:
-        bam="final/bam/{library}.bam",
-        bai="final/bam/{library}.bai",
-        genome_size="stats/genome_size.txt",
+        bam="final/bam/{library}.{reference}.bam",
+        bai="final/bam/{library}.{reference}.bai",
+        genome_size="stats/genome.{reference}.size.txt",
     log:
-        "log/final/{library}.unscaled.bw.log"
+        "log/final/{library}.{reference}.unscaled.bw.log"
     threads: 19
     shell:
         "bamCoverage"
@@ -367,9 +362,9 @@ for group in scaling_groups:
             factors=temp(["stats/8-factors/{library.name}.factor.txt".format(library=np.treatment) for np in group.normalization_pairs]),
             info="stats/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name)
         input:
-            treatments=["stats/final/{library.name}.flagstat.txt".format(library=np.treatment) for np in group.normalization_pairs],
-            controls=["stats/final/{library.name}.flagstat.txt".format(library=np.control) for np in group.normalization_pairs],
-            genome_size="stats/genome_size.txt",
+            treatments=["stats/final/{maplib.name}.flagstat.txt".format(maplib=np.treatment) for np in group.normalization_pairs],
+            controls=["stats/final/{maplib.name}.flagstat.txt".format(maplib=np.control) for np in group.normalization_pairs],
+            genome_sizes=["stats/genome.{maplib.reference}.size.txt".format(maplib=np.treatment) for np in group.normalization_pairs],
         params:
             scaling_group=group,
         run:
@@ -379,7 +374,7 @@ for group in scaling_groups:
                     input.treatments,
                     input.controls,
                     outf,
-                    genome_size=read_int_from_file(input.genome_size),
+                    genome_sizes=[read_int_from_file(gs) for gs in input.genome_sizes],
                     fragment_size=config["fragment_size"],
                 )
                 for factor, factor_path in zip(factors, output.factors):
@@ -453,43 +448,41 @@ rule scaled_bigwig:
 
 rule stats:
     output:
-        txt="stats/9-stats/{library}.txt"
+        txt="stats/9-stats/{library}.{reference}.txt"
     input:
-        mapped_flagstat="stats/4-mapped/{library}.flagstat.txt",
-        metrics="stats/6-dupmarked/{library}.metrics",
-        dedup_flagstat="stats/7-dedup/{library}.flagstat.txt",
-        final_flagstat="stats/final/{library}.flagstat.txt",
-        insertsizes="stats/final/{library}.insertsizes.txt",
+        mapped_flagstat="stats/4-mapped/{library}.{reference}.flagstat.txt",
+        metrics="stats/6-dupmarked/{library}.{reference}.metrics",
+        dedup_flagstat="stats/7-dedup/{library}.{reference}.flagstat.txt",
+        final_flagstat="stats/final/{library}.{reference}.flagstat.txt",
+        insertsizes="stats/final/{library}.{reference}.insertsizes.txt",
     run:
-        row = []
+        d = dict(library=wildcards.library, reference=wildcards.reference)
         for flagstat, name in [
-            (input.mapped_flagstat, "mapped"),
-            (input.dedup_flagstat, "dedup"),
-            (input.final_flagstat, "final"),
+            (input.mapped_flagstat, "raw_mapped"),
+            (input.dedup_flagstat, "dedup_mapped"),
+            (input.final_flagstat, "final_mapped"),
         ]:
-            mapped_reads = flagstat_mapped_reads(flagstat)
-            row.append(mapped_reads)
-
-        row.append(parse_duplication_metrics(input.metrics)["estimated_library_size"])
-        row.append(parse_duplication_metrics(input.metrics)["percent_duplication"])
-        row.append(parse_insert_size_metrics(input.insertsizes)["median_insert_size"])
+            d[name] = parse_flagstat(flagstat).mapped_reads
+        d["library_size"] = parse_duplication_metrics(input.metrics)["estimated_library_size"]
+        d["percent_duplication"] = parse_duplication_metrics(input.metrics)["percent_duplication"]
+        d["insert_size"] = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
         with open(output.txt, "w") as f:
-            print("mapped", "dedup_mapped", "final_mapped", "library_size", "percent_duplication", "insert_size", sep="\t", file=f)
-            print(*row, sep="\t", file=f)
+            print(*d.keys(), sep="\t", file=f)
+            print(*d.values(), sep="\t", file=f)
 
 
 rule stats_summary:
     output:
         txt="reports/stats_summary.txt"
     input:
-        expand("stats/9-stats/{library.name}.txt", library=libraries) + expand("stats/9-stats/{pool.name}.txt", pool=pools)
+        expand("stats/9-stats/{maplib.name}.txt", maplib=maplibs)
     run:
         stats_summaries = [parse_stats_fields(st_file) for st_file in input]
 
-        # I am considering we want the keys to be in a specific order
         header = [
             "library",
-            "mapped",
+            "reference",
+            "raw_mapped",
             "dedup_mapped",
             "final_mapped",
             "library_size",
@@ -507,9 +500,9 @@ rule stats_summary:
 
 rule compute_effective_genome_size:
     output:
-        txt="stats/genome_size.txt"
+        txt="stats/genome.{reference}.size.txt"
     input:
-        fasta=config["reference_fasta"]
+        fasta=lambda wildcards: str(references[wildcards.reference].fasta)
     run:
         with open(output.txt, "w") as f:
             print(compute_genome_size(input.fasta), file=f)
