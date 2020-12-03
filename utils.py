@@ -73,8 +73,8 @@ class ScalingGroup:
     name: str
 
 
-def read_libraries() -> Iterable[Replicate]:
-    for row in read_tsv("libraries.tsv", columns=4):
+def read_libraries(path: str) -> Iterable[Replicate]:
+    for row in read_tsv(path, columns=4):
         yield Replicate(*row)
 
 
@@ -86,7 +86,7 @@ def make_pools(libraries) -> Iterable[Pool]:
         yield Pool(sample=sample, replicates=replicates)
 
 
-def read_scaling_groups(replicates: List[Replicate]) -> Iterable[ScalingGroup]:
+def read_scaling_groups(path: str, replicates: List[Replicate]) -> Iterable[ScalingGroup]:
     library_map: Dict[Tuple[str, str], Library] = {
         (rep.sample, rep.replicate): rep for rep in replicates
     }
@@ -94,7 +94,7 @@ def read_scaling_groups(replicates: List[Replicate]) -> Iterable[ScalingGroup]:
         library_map[(pool.sample, "pooled")] = pool
 
     scaling_map = defaultdict(list)
-    for row in read_tsv("groups.tsv", columns=5):
+    for row in read_tsv(path, columns=5):
         treatment_name, replicate_id, control_name, scaling_group, reference = row
         treatment_lib = library_map[(treatment_name, replicate_id)]
         control_lib = library_map[(control_name, replicate_id)]

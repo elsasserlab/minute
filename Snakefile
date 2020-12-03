@@ -45,8 +45,8 @@ localrules:
 
 
 references = make_references(config["references"])
-libraries = list(read_libraries())
-scaling_groups = list(read_scaling_groups(libraries))
+libraries = list(read_libraries("libraries.tsv"))
+scaling_groups = list(read_scaling_groups("groups.tsv", libraries))
 maplibs = list(flatten_scaling_groups(scaling_groups))
 
 
