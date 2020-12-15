@@ -94,8 +94,11 @@ rule fastqc_input:
         data="reports/fastqc/{name}_fastqc/fastqc_data.txt",
     input:
         fastq="fastq/{name}.fastq.gz"
+    log:
+        out="log/0-fastqc/{name}_fastqc.html.log",
+        err="log/0-fastqc/{name}_fastqc.html.err",
     shell:
-        "fastqc --extract -o reports/fastqc {input.fastq}"
+        "fastqc --extract -o reports/fastqc {input.fastq} > {log.out} 2> {log.err}"
 
 
 rule move_umi_to_header:
