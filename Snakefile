@@ -331,6 +331,8 @@ rule insert_size_metrics:
         pdf="stats/final/{name}.insertsizes.pdf",
     input:
         bam="final/bam/{name}.bam"
+    log:
+        "log/final/{name}.insertsizes.txt.log"
     shell:
         "picard"
         " CollectInsertSizeMetrics"
@@ -339,6 +341,7 @@ rule insert_size_metrics:
         " HISTOGRAM_FILE={output.pdf}"
         " MINIMUM_PCT=0.5"
         " STOP_AFTER=10000000"
+        " 2> {log}"
 
 
 rule unscaled_bigwig:
