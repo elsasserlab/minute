@@ -73,8 +73,10 @@ rule multiqc:
         "reports/scalinginfo.txt",
         "reports/stats_summary.txt",
         multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
+    log:
+        "log/multiqc_reports.log"
     shell:
-        "multiqc -o reports/ -c {input.multiqc_config} {input}"
+        "multiqc -o reports/ -c {input.multiqc_config} {input} 2> {log}"
 
 
 rule clean:
