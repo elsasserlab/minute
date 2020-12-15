@@ -279,6 +279,8 @@ rule mark_duplicates:
         metrics="stats/6-dupmarked/{library}.metrics"
     input:
         bam="tmp/5-mapped_se/{library}.bam"
+    log:
+        "log/6-dupmarked/{library}.bam.log"
     group: "duplicate_marking"
     shell:
         "LC_ALL=C je"
@@ -290,6 +292,7 @@ rule mark_duplicates:
         " I={input.bam}"
         " O={output.bam}"
         " M={output.metrics}"
+        " 2> {log}"
 
 
 rule mark_pe_duplicates:
