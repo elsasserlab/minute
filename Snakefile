@@ -97,10 +97,9 @@ rule fastqc_input:
     input:
         fastq="fastq/{name}.fastq.gz"
     log:
-        out="log/0-fastqc/{name}_fastqc.html.log",
-        err="log/0-fastqc/{name}_fastqc.html.err",
+        "log/0-fastqc/{name}_fastqc.html.log"
     shell:
-        "fastqc --extract -o reports/fastqc {input.fastq} > {log.out} 2> {log.err}"
+        "fastqc --extract -o reports/fastqc {input.fastq} > {log} 2>&1 "
 
 
 rule move_umi_to_header:
