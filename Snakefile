@@ -97,7 +97,7 @@ rule fastqc_input:
     input:
         fastq="fastq/{name}.fastq.gz"
     log:
-        "log/0-fastqc/{name}_fastqc.html.log"
+        "log/1-fastqc/{name}_fastqc.html.log"
     shell:
         "fastqc --extract -o reports/fastqc {input.fastq} > {log} 2>&1 "
 
