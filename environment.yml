@@ -13,7 +13,6 @@ dependencies:
   - igvtools
   - deeptools
   - picard
-  - umi_tools
   - fastqc
   - bedtools
   - multiqc
