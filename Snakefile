@@ -97,33 +97,9 @@ rule fastqc_input:
     input:
         fastq="fastq/{name}.fastq.gz"
     log:
-        "log/0-fastqc/{name}_fastqc.html.log"
+        "log/1-fastqc/{name}_fastqc.html.log"
     shell:
         "fastqc --extract -o reports/fastqc {input.fastq} > {log} 2>&1 "
-
-
-rule move_umi_to_header:
-    output:
-        r1=temp("tmp/1-noumi/{name}.1.fastq.gz"),
-        r2=temp("tmp/1-noumi/{name}.2.fastq.gz"),
-    input:
-        r1="fastq/{name}_R1.fastq.gz",
-        r2="fastq/{name}_R2.fastq.gz",
-    params:
-        umistring="N" * config['umi_length']
-    log:
-        "log/1-noumi/{name}.log"
-    group: "clean_reads"
-    shell:
-        "umi_tools"
-        " extract"
-        " --extract-method=string"
-        " -p {params.umistring}"
-        " -I {input.r1}"
-        " --read2-in={input.r2}"
-        " -S {output.r1}"
-        " --read2-out {output.r2}"
-        " > {log}"
 
 
 rule remove_contamination:
@@ -133,15 +109,16 @@ rule remove_contamination:
         r1=temp("tmp/2-noadapters/{name}.1.fastq.gz"),
         r2=temp("tmp/2-noadapters/{name}.2.fastq.gz"),
     input:
-        r1="tmp/1-noumi/{name}.1.fastq.gz",
-        r2="tmp/1-noumi/{name}.2.fastq.gz",
+        r1="fastq/{name}_R1.fastq.gz",
+        r2="fastq/{name}_R2.fastq.gz",
     log:
         "log/2-noadapters/{name}.trimmed.log"
-    group: "clean_reads"
     shell:
         "cutadapt"
         " -j {threads}"
         " -Z"
+        " -u {config[umi_length]}"
+        " --rename '{{id}}_{{r1.cut_prefix}} {{comment}}'"
         " -e 0.15"
         " -A TTTTTCTTTTCTTTTTTCTTTTCCTTCCTTCTAA"
         " --discard-trimmed"
