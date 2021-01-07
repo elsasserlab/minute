@@ -73,8 +73,10 @@ rule multiqc:
         "reports/scalinginfo.txt",
         "reports/stats_summary.txt",
         multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
+    log:
+        "log/multiqc_reports.log"
     shell:
-        "multiqc -o reports/ -c {input.multiqc_config} {input}"
+        "multiqc -o reports/ -c {input.multiqc_config} {input} 2> {log}"
 
 
 rule clean:
@@ -94,8 +96,10 @@ rule fastqc_input:
         data="reports/fastqc/{name}_fastqc/fastqc_data.txt",
     input:
         fastq="fastq/{name}.fastq.gz"
+    log:
+        "log/0-fastqc/{name}_fastqc.html.log"
     shell:
-        "fastqc --extract -o reports/fastqc {input.fastq}"
+        "fastqc --extract -o reports/fastqc {input.fastq} > {log} 2>&1 "
 
 
 rule move_umi_to_header:
@@ -276,6 +280,8 @@ rule mark_duplicates:
         metrics="stats/6-dupmarked/{library}.metrics"
     input:
         bam="tmp/5-mapped_se/{library}.bam"
+    log:
+        "log/6-dupmarked/{library}.bam.log"
     group: "duplicate_marking"
     shell:
         "LC_ALL=C je"
@@ -287,6 +293,7 @@ rule mark_duplicates:
         " I={input.bam}"
         " O={output.bam}"
         " M={output.metrics}"
+        " 2> {log}"
 
 
 rule mark_pe_duplicates:
@@ -325,6 +332,8 @@ rule insert_size_metrics:
         pdf="stats/final/{name}.insertsizes.pdf",
     input:
         bam="final/bam/{name}.bam"
+    log:
+        "log/final/{name}.insertsizes.txt.log"
     shell:
         "picard"
         " CollectInsertSizeMetrics"
@@ -333,6 +342,7 @@ rule insert_size_metrics:
         " HISTOGRAM_FILE={output.pdf}"
         " MINIMUM_PCT=0.5"
         " STOP_AFTER=10000000"
+        " 2> {log}"
 
 
 rule unscaled_bigwig:
