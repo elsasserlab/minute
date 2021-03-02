@@ -37,7 +37,6 @@ localrules:
     stats_summary,
     convert_to_single_end,
     mark_duplicates,
-    mark_pe_duplicates,
     samtools_index,
     samtools_flagstat,
     samtools_flagstat_final,
@@ -275,12 +274,13 @@ rule mark_duplicates:
 
 rule mark_pe_duplicates:
     """Select duplicate-flagged alignments and mark them in the PE file"""
+    resources:
+        mem_mb = lambda wildcards, attempt: attempt * 6400
     output:
         bam=temp("tmp/7-dedup/{library}.bam")
     input:
         target_bam="tmp/4-mapped/{library}.bam",
         proxy_bam="tmp/6-dupmarked/{library}.bam"
-    group: "duplicate_marking"
     run:
         se_bam.mark_duplicates_by_proxy_bam(
             input.target_bam,
