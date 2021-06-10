@@ -120,6 +120,7 @@ rule remove_contamination:
         " --rename '{{id}}_{{r1.cut_prefix}} {{comment}}'"
         " -e 0.15"
         " -A TTTTTCTTTTCTTTTTTCTTTTCCTTCCTTCTAA"
+        " --nextseq-trim=20"
         " --discard-trimmed"
         " -o {output.r1}"
         " -p {output.r2}"
