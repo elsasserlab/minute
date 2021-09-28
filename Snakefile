@@ -465,8 +465,6 @@ rule stats_summary:
     input:
         expand("stats/9-stats/{maplib.name}.txt", maplib=maplibs)
     run:
-        stats_summaries = [parse_stats_fields(st_file) for st_file in input]
-
         header = [
             "library",
             "reference",
