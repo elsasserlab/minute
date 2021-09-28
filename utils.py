@@ -107,11 +107,18 @@ def read_scaling_groups(path: str, replicates: List[Replicate]) -> Iterable[Scal
 
 
 def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True) -> Iterable[LibraryWithReference]:
+    seen = set()
+
     for group in groups:
         for pair in group.normalization_pairs:
-            yield pair.treatment
+            if pair.treatment.name not in seen:
+                seen.add(pair.treatment.name)
+                yield pair.treatment
+
             if controls:
-                yield pair.control
+                if pair.control.name not in seen:
+                    seen.add(pair.control.name)
+                    yield pair.control
 
 
 def make_references(config) -> Dict[str, Reference]:

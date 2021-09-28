@@ -465,8 +465,6 @@ rule stats_summary:
     input:
         expand("stats/9-stats/{maplib.name}.txt", maplib=maplibs)
     run:
-        stats_summaries = [parse_stats_fields(st_file) for st_file in input]
-
         header = [
             "library",
             "reference",
@@ -480,7 +478,7 @@ rule stats_summary:
 
         with open(output.txt, "w") as f:
             print(*header, sep="\t", file=f)
-            for stats_file in input:
+            for stats_file in sorted(input):
                 summary = parse_stats_fields(stats_file)
                 row = [summary[k] for k in header]
                 print(*row, sep="\t", file=f)
