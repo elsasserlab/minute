@@ -478,7 +478,7 @@ rule stats_summary:
 
         with open(output.txt, "w") as f:
             print(*header, sep="\t", file=f)
-            for stats_file in input:
+            for stats_file in sorted(input):
                 summary = parse_stats_fields(stats_file)
                 row = [summary[k] for k in header]
                 print(*row, sep="\t", file=f)
