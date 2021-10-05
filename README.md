@@ -50,11 +50,18 @@ The columns are:
 
 1. Sample name
 2. Replicate id
-3. Barcode
+3. Barcode if applicable, a dot (".") otherwise
 4. FASTQ base name
 
 The FASTQ base name refers to files within the `fastq/` folder. The suffixes
 `_R1.fastq.gz` and `_R2.fastq.gz` will be added automatically.
+
+If the barcode is ".", the FASTQ file will be used directly.
+If the barcode is set to a nucleotide sequence, the FASTQ file pair
+will be demultiplexed.
+
+If you use an SRA accession for the FASTQ base name, a separate command can be
+used to automatically download the listed samples from the SRA, see below.
 
 
 ## The groups.tsv file
@@ -80,6 +87,32 @@ to indicate that the replicates are to be pooled before scaling.
 
 The `config.yaml` is used to configure everything else. Please open the
 file in an editor, read through the comments and edit as required.
+
+
+## Downloading data from the Sequence Read Archive (SRA)
+
+To use data from SRA that you have not already downloaded, create the
+`libraries.tsv` file listing your libraries as described above.
+For all samples to be downloaded from the SRA, write a dot (".") in
+the *barcode* (third) column and put the SRA run accession
+(starting with SRR, ERR, or DRR) in the *FASTQ base name* (fourth) column.
+
+The `config.yaml` and `groups.tsv` files are not needed for this step.
+
+Then run
+
+    snakemake -s path/to/Snakefile.download
+
+This will download the files into the `fastq/` directory.
+
+You can now move, copy or link the downloaded files into a separate folder
+somewhere for later use. The next time they are needed, you can avoid the
+download and instead use the existing files.
+
+If you download the data yourself, note that Minute expects file names
+ending in `_R1.fastq.gz` and `_R2.fastq.gz`. Because `fastq-dump` omits
+creates files named `..._1.fastq.gz` and `..._2.fastq.gz`, they need to be
+renamed.
 
 
 ## Running on SLURM clusters (Uppmax in Sweden)

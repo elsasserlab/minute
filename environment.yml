@@ -17,3 +17,4 @@ dependencies:
   - bedtools
   - multiqc
   - xopen
+  - sra-tools
