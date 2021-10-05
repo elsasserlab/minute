@@ -19,6 +19,7 @@ from utils import (
     make_references,
     flatten_scaling_groups,
     Pool,
+    MultiplexedReplicate,
 )
 
 
@@ -45,6 +46,7 @@ localrules:
 
 references = make_references(config["references"])
 libraries = list(read_libraries("libraries.tsv"))
+multiplexed_libraries = [lib for lib in libraries if isinstance(lib, MultiplexedReplicate)]
 scaling_groups = list(read_scaling_groups("groups.tsv", libraries))
 maplibs = list(flatten_scaling_groups(scaling_groups))
 
@@ -135,13 +137,13 @@ rule barcodes:
         barcodes_fasta=temp("tmp/3-barcodes/{fastqbase}.fasta")
     run:
         with open(output.barcodes_fasta, "w") as f:
-            for library in libraries:
+            for library in multiplexed_libraries:
                 if library.fastqbase != wildcards.fastqbase:
                     continue
                 f.write(f">{library.name}\n^{library.barcode}\n")
 
 
-for fastq_base, libs in map_fastq_prefix_to_list_of_libraries(libraries).items():
+for fastq_base, libs in map_fastq_prefix_to_list_of_libraries(multiplexed_libraries).items():
 
     rule:
         output:

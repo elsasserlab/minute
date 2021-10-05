@@ -29,12 +29,16 @@ class Library:
 @dataclass
 class Replicate(Library):
     replicate: str
-    barcode: str
     fastqbase: str
 
     @property
     def name(self):
         return f"{self.sample}_rep{self.replicate}"
+
+
+@dataclass
+class MultiplexedReplicate(Replicate):
+    barcode: str
 
 
 @dataclass
@@ -75,7 +79,12 @@ class ScalingGroup:
 
 def read_libraries(path: str) -> Iterable[Replicate]:
     for row in read_tsv(path, columns=4):
-        yield Replicate(*row)
+        if row[2] == ".":
+            yield Replicate(sample=row[0], replicate=row[1], fastqbase=row[3])
+        else:
+            yield MultiplexedReplicate(
+                sample=row[0], replicate=row[1], barcode=row[2], fastqbase=row[3]
+            )
 
 
 def make_pools(libraries) -> Iterable[Pool]:
@@ -351,7 +360,9 @@ def is_snakemake_calling_itself() -> bool:
     return "snakemake/__main__.py" in sys.argv[0]
 
 
-def map_fastq_prefix_to_list_of_libraries(replicates: List[Replicate]) -> Dict[str, List[Replicate]]:
+def map_fastq_prefix_to_list_of_libraries(
+        replicates: List[MultiplexedReplicate]
+) -> Dict[str, List[MultiplexedReplicate]]:
     return {
         fastq_base: list(reps)
         for fastq_base, reps in
