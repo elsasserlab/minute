@@ -1,10 +1,11 @@
+import re
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from io import StringIO
 from itertools import groupby
-from typing import List, Iterable, Dict, Optional, Tuple
+from typing import List, Iterable, Dict, Tuple
 
 from xopen import xopen
 
@@ -35,6 +36,11 @@ class Replicate(Library):
     def name(self):
         return f"{self.sample}_rep{self.replicate}"
 
+    def has_umi(self) -> bool:
+        with xopen(f"final/demultiplexed/{self.name}_R1.fastq.gz") as f:
+            line = f.readline()
+        return bool(re.search("_[ACGTNacgtn]+", line))
+
 
 @dataclass
 class MultiplexedReplicate(Replicate):
@@ -48,6 +54,9 @@ class Pool(Library):
     @property
     def name(self):
         return f"{self.sample}_pooled"
+
+    def has_umi(self) -> bool:
+        return all(lib.has_umi() for lib in self.replicates)
 
 
 @dataclass

@@ -263,24 +263,41 @@ rule convert_to_single_end:
             keep_unmapped=False)
 
 
+def dupmark_command(wildcards):
+    maplibname = wildcards.maplib
+    commands = {
+        True:
+            "LC_ALL=C je"
+            " markdupes"
+            " MISMATCHES=1"
+            " SLOTS=-1"
+            " SPLIT_CHAR=_",
+        False:
+            "picard"
+            " MarkDuplicates"
+            " VALIDATION_STRINGENCY=SILENT",
+    }
+    for maplib in maplibs:
+        if maplib.name == maplibname:
+            return commands[maplib.library.has_umi()]
+    return commands[True]
+
+
 # TODO have a look at UMI-tools also
 rule mark_duplicates:
     """UMI-aware duplicate marking with je suite"""
     output:
-        bam=temp("tmp/6-dupmarked/{library}.bam"),
-        metrics="stats/6-dupmarked/{library}.metrics"
+        bam=temp("tmp/6-dupmarked/{maplib}.bam"),
+        metrics="stats/6-dupmarked/{maplib}.metrics"
     input:
-        bam="tmp/5-mapped_se/{library}.bam"
+        bam="tmp/5-mapped_se/{maplib}.bam"
     log:
-        "log/6-dupmarked/{library}.bam.log"
+        "log/6-dupmarked/{maplib}.bam.log"
     group: "duplicate_marking"
+    params: command=dupmark_command
     shell:
-        "LC_ALL=C je"
-        " markdupes"
-        " MISMATCHES=1"
+        "{params.command}"
         " REMOVE_DUPLICATES=FALSE"
-        " SLOTS=-1"
-        " SPLIT_CHAR=_"
         " I={input.bam}"
         " O={output.bam}"
         " M={output.metrics}"
