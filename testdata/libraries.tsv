@@ -5,7 +5,11 @@
 #
 # Columns: sample name, replicate id, barcode, FASTQ base name
 #
-IN_SL_CTR	1	CATGCTTA	testdata-Inp
+# If the barcode is ".", the FASTQ file will be used directly.
+# If the barcode is set to a nucleotide sequence, the FASTQ file
+# will be demultiplexed.
+#
+IN_SL_CTR	1	.	IN_SL_CTR_rep1
 IN_SL_CTR	2	GCACATCT	testdata-Inp
 # IN_SL_CTR	3	AGTTGCTT	testdata-Inp
 IN_2i_CTR	1	GGTCCAGA	testdata-Inp

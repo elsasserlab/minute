@@ -19,6 +19,7 @@ from utils import (
     make_references,
     flatten_scaling_groups,
     Pool,
+    MultiplexedReplicate,
 )
 
 
@@ -45,6 +46,8 @@ localrules:
 
 references = make_references(config["references"])
 libraries = list(read_libraries("libraries.tsv"))
+multiplexed_libraries = [lib for lib in libraries if isinstance(lib, MultiplexedReplicate)]
+direct_libraries = [lib for lib in libraries if not isinstance(lib, MultiplexedReplicate)]
 scaling_groups = list(read_scaling_groups("groups.tsv", libraries))
 maplibs = list(flatten_scaling_groups(scaling_groups))
 
@@ -135,24 +138,24 @@ rule barcodes:
         barcodes_fasta=temp("tmp/3-barcodes/{fastqbase}.fasta")
     run:
         with open(output.barcodes_fasta, "w") as f:
-            for library in libraries:
+            for library in multiplexed_libraries:
                 if library.fastqbase != wildcards.fastqbase:
                     continue
                 f.write(f">{library.name}\n^{library.barcode}\n")
 
 
-for fastq_base, libs in map_fastq_prefix_to_list_of_libraries(libraries).items():
+for fastq_base, libs in map_fastq_prefix_to_list_of_libraries(multiplexed_libraries).items():
 
     rule:
         output:
-            expand("final/fastq/{library.name}_R{read}.fastq.gz", library=libs, read=(1, 2)),
+            expand("final/demultiplexed/{library.name}_R{read}.fastq.gz", library=libs, read=(1, 2)),
         input:
             r1="tmp/2-noadapters/{fastqbase}.1.fastq.gz".format(fastqbase=fastq_base),
             r2="tmp/2-noadapters/{fastqbase}.2.fastq.gz".format(fastqbase=fastq_base),
             barcodes_fasta="tmp/3-barcodes/{fastqbase}.fasta".format(fastqbase=fastq_base),
         params:
-            r1=lambda wildcards: "final/fastq/{name}_R1.fastq.gz",
-            r2=lambda wildcards: "final/fastq/{name}_R2.fastq.gz",
+            r1=lambda wildcards: "final/demultiplexed/{name}_R1.fastq.gz",
+            r2=lambda wildcards: "final/demultiplexed/{name}_R2.fastq.gz",
             fastqbase=fastq_base,
         threads: 8
         log:
@@ -190,14 +193,25 @@ def set_demultiplex_rule_names():
 set_demultiplex_rule_names()
 
 
+for lib in direct_libraries:
+
+    rule:
+        output:
+            fastq="final/demultiplexed/{lib.name}_R{{r}}.fastq.gz".format(lib=lib)
+        input:
+            fastq="fastq/{lib.fastqbase}_R{{r}}.fastq.gz".format(lib=lib)
+        shell:
+            "ln -s ../../{input} {output}"
+
+
 rule bowtie2:
     threads:
         19  # One fewer than available to allow other jobs to run in parallel
     output:
         bam=temp("tmp/4-mapped/{sample}_rep{replicate}.{reference}.bam")
     input:
-        r1="final/fastq/{sample}_rep{replicate}_R1.fastq.gz",
-        r2="final/fastq/{sample}_rep{replicate}_R2.fastq.gz",
+        r1="final/demultiplexed/{sample}_rep{replicate}_R1.fastq.gz",
+        r2="final/demultiplexed/{sample}_rep{replicate}_R2.fastq.gz",
     params:
         index=lambda wildcards: references[wildcards.reference].bowtie_index
     log:
@@ -249,24 +263,41 @@ rule convert_to_single_end:
             keep_unmapped=False)
 
 
+def dupmark_command(wildcards):
+    maplibname = wildcards.maplib
+    commands = {
+        True:
+            "LC_ALL=C je"
+            " markdupes"
+            " MISMATCHES=1"
+            " SLOTS=-1"
+            " SPLIT_CHAR=_",
+        False:
+            "picard"
+            " MarkDuplicates"
+            " VALIDATION_STRINGENCY=SILENT",
+    }
+    for maplib in maplibs:
+        if maplib.name == maplibname:
+            return commands[maplib.library.has_umi()]
+    return commands[True]
+
+
 # TODO have a look at UMI-tools also
 rule mark_duplicates:
     """UMI-aware duplicate marking with je suite"""
     output:
-        bam=temp("tmp/6-dupmarked/{library}.bam"),
-        metrics="stats/6-dupmarked/{library}.metrics"
+        bam=temp("tmp/6-dupmarked/{maplib}.bam"),
+        metrics="stats/6-dupmarked/{maplib}.metrics"
     input:
-        bam="tmp/5-mapped_se/{library}.bam"
+        bam="tmp/5-mapped_se/{maplib}.bam"
     log:
-        "log/6-dupmarked/{library}.bam.log"
+        "log/6-dupmarked/{maplib}.bam.log"
     group: "duplicate_marking"
+    params: command=dupmark_command
     shell:
-        "LC_ALL=C je"
-        " markdupes"
-        " MISMATCHES=1"
+        "{params.command}"
         " REMOVE_DUPLICATES=FALSE"
-        " SLOTS=-1"
-        " SPLIT_CHAR=_"
         " I={input.bam}"
         " O={output.bam}"
         " M={output.metrics}"
