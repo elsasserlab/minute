@@ -101,9 +101,13 @@ The `config.yaml` and `groups.tsv` files are not needed for this step.
 
 Then run
 
-    snakemake -s path/to/Snakefile.download
+    snakemake --keep-going -s path/to/Snakefile.download
 
 This will download the files into the `fastq/` directory.
+
+If your `libraries.tsv` refers to non-SRA entries and you have not
+placed those files into the `fastq/` directory, you will get an error
+message for them, but the other files will still be downloaded.
 
 You can now move, copy or link the downloaded files into a separate folder
 somewhere for later use. The next time they are needed, you can avoid the
