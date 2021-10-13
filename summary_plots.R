@@ -92,23 +92,35 @@ ngroups <- get_scaling_groups_number(scalinginfo)
 single_width <- 6
 
 # Account for longer names
-single_height <- 8 
+single_height <- 10 
 
 panel_width <- single_width * 2
 panel_height <- ceiling(ngroups / 2) * single_height
 
-
 ggsave(snakemake@output[[1]],
+       plot = minute_scaled_replicates_barplot(scalinginfo),
+       width = panel_width,
+       height = panel_height,
+       dpi = 150,
+       units = "cm")
+
+ggsave(snakemake@output[[2]],
        plot = minute_scaled_replicates_barplot(scalinginfo),
        width = panel_width,
        height = panel_height,
        dpi = 300,
        units = "cm")
 
-ggsave(snakemake@output[[2]],
+ggsave(snakemake@output[[3]],
+       plot = minute_scaled_grouped_barplot(scalinginfo),
+       width = panel_width,
+       height = panel_height,
+       dpi = 150,
+       units = "cm")
+
+ggsave(snakemake@output[[4]],
        plot = minute_scaled_grouped_barplot(scalinginfo),
        width = panel_width,
        height = panel_height,
        dpi = 300,
        units = "cm")
-

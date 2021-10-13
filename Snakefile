@@ -433,8 +433,8 @@ rule summarize_scaling_factors:
 
 rule summary_scaled_barplots:
     output:
-        plot="reports/scaling_barplot.png",
-        grouped_plot="reports/grouped_scaling_barplot.png"
+        plot=expand("reports/scaling_barplot.{ext}", ext=["png", "pdf"]),
+        grouped_plot=expand("reports/grouped_scaling_barplot.{ext}", ext=["png", "pdf"])
     input:
         info="reports/scalinginfo.txt"
     script:
