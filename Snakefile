@@ -74,6 +74,8 @@ rule multiqc:
         expand("stats/6-dupmarked/{maplib.name}.metrics", maplib=maplibs),
         "reports/scalinginfo.txt",
         "reports/stats_summary.txt",
+        "reports/scaling_barplot.png",
+        "reports/grouped_scaling_barplot.png",
         multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
     log:
         "log/multiqc_reports.log"
@@ -427,6 +429,16 @@ rule summarize_scaling_factors:
                 with open(factor) as factor_file:
                     for line in factor_file:
                         print(line.rstrip(), file=f)
+
+
+rule summary_scaled_barplots:
+    output:
+        plot="reports/scaling_barplot.png",
+        grouped_plot="reports/grouped_scaling_barplot.png"
+    input:
+        info="reports/scalinginfo.txt"
+    script:
+        "summary_plots.R"
 
 
 rule extract_fragment_size:
