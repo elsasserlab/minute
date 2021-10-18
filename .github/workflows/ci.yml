@@ -10,7 +10,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Create Conda environment
         run: |
-          conda env create --quiet -n testenv -f environment.yml
+          conda install -c conda-forge mamba
+          source $CONDA/etc/profile.d/conda.sh
+          mamba env create --quiet -n testenv -f environment.yml
       - name: Run pipeline
         run: |
           source $CONDA/etc/profile.d/conda.sh
