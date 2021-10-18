@@ -18,3 +18,6 @@ dependencies:
   - multiqc
   - xopen
   - sra-tools
+  - r-base
+  - r-ggplot2
+  - r-dplyr

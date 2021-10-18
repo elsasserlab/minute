@@ -3,6 +3,7 @@ subtitle: ""
 intro_text: ""
 show_analysis_paths: False
 skip_generalstats: true
+ignore_images: false
 
 run_modules:
   - fastqc
@@ -42,9 +43,17 @@ custom_data:
   summary:
     file_format: "tsv"
     section_name: "Statistics summary"
+  groupedscaling:
+    section_name: "Minute scaled read stats"
+  replicatescaling:
+    section_name: "Minute scaled read stats - replicates only"
 
 sp:
   scalinginfo:
     fn: "scalinginfo.txt"
   summary:
     fn: "stats_summary.txt"
+  groupedscaling:
+    fn: "grouped_scaling_barplot.png"
+  replicatescaling:
+    fn: "scaling_barplot.png"
