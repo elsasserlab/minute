@@ -5,13 +5,21 @@
 - Install Conda and Bioconda. Use the
   [Bioconda instructions](https://bioconda.github.io/user/install.html) if you
   don’t have Conda and/or Bioconda, yet.
+- Install [Mamba](https://github.com/mamba-org/mamba), which is a faster
+  alternative to Conda:
+
+      conda install mamba
+
+  If you do not want to use mamba, you can skip this step and write `conda`
+  instead of `mamba` in the next step, but doing so will make the installation
+  take longer.
 - Create a Conda environment with the necessary programs:
 
-        conda env create -n minute -f environment.yml
+      mamba env create -n minute -f environment.yml
 
 - Activate the environment
 
-        conda activate minute
+      conda activate minute
 
 
 ## Running
