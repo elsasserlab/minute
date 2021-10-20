@@ -37,9 +37,15 @@ class Replicate(Library):
         return f"{self.sample}_rep{self.replicate}"
 
     def has_umi(self) -> bool:
-        with xopen(f"final/demultiplexed/{self.name}_R1.fastq.gz") as f:
-            line = f.readline()
-        return bool(re.search("_[ACGTNacgtn]+", line))
+        try:
+            with xopen(f"final/demultiplexed/{self.name}_R1.fastq.gz") as f:
+                line = f.readline()
+        except FileNotFoundError:
+            if not is_dry_run():
+                raise
+            return False
+        else:
+            return bool(re.search("_[ACGTNacgtn]+", line))
 
 
 @dataclass
@@ -367,6 +373,19 @@ def format_metadata_overview(references, libraries, maplibs, scaling_groups) -> 
 
 def is_snakemake_calling_itself() -> bool:
     return "snakemake/__main__.py" in sys.argv[0]
+
+
+def is_dry_run() -> bool:
+    for arg in sys.argv:
+        if arg in ["--dry-run", "--dryrun"]:
+            return True
+        elif single_dash_argument(arg) and "n" in arg[1:]:
+            return True
+    return False
+
+
+def single_dash_argument(arg) -> bool:
+    return arg[0] == "-" and arg[1] != "-"
 
 
 def map_fastq_prefix_to_list_of_libraries(
