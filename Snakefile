@@ -72,6 +72,8 @@ rule multiqc:
         expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=libraries),
         expand("log/4-mapped/{maplib.name}.log", maplib=[m for m in maplibs if not isinstance(m.library, Pool)]),
         expand("stats/6-dupmarked/{maplib.name}.metrics", maplib=maplibs),
+        expand("stats/final/{maplib.name}.fingerprint.log", maplib=[m for m in maplibs]),
+        expand("stats/final/{maplib.name}.fingerprint.metrics", maplib=[m for m in maplibs]),
         "reports/scalinginfo.txt",
         "reports/stats_summary.txt",
         "reports/scaling_barplot.png",
@@ -535,6 +537,22 @@ rule compute_effective_genome_size:
     run:
         with open(output.txt, "w") as f:
             print(compute_genome_size(input.fasta), file=f)
+
+
+rule deeptools_fingerprint:
+    output:
+        counts="stats/final/{library}.fingerprint.log",
+        qc="stats/final/{library}.fingerprint.metrics"
+    input:
+        bam="final/bam/{library}.bam"
+    threads: 8
+    shell:
+        "plotFingerprint"
+        " -b {input.bam}"
+        " --outRawCounts {output.counts}"
+        " --outQualityMetrics {output.qc}"
+        " -p {threads}"
+        " --extendReads"
 
 
 rule samtools_index:

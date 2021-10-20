@@ -11,6 +11,7 @@ run_modules:
   - custom_content
   - bowtie2
   - picard
+  - deeptools
 
 module_order:
   - fastqc:
@@ -35,6 +36,10 @@ module_order:
   - picard:
       path_filters:
         - "*.metrics"
+  - deeptools:
+      path_filters:
+        - "stats/final/*fingerprint.log"
+        - "stats/final/*fingerprint.metrics"
 
 custom_data:
   scalinginfo:
