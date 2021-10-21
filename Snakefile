@@ -210,7 +210,8 @@ rule bowtie2:
     threads:
         19  # One fewer than available to allow other jobs to run in parallel
     output:
-        bam=temp("tmp/4-mapped/{sample}_rep{replicate}.{reference}.bam")
+        bam=temp("tmp/4-mapped/{sample}_rep{replicate}.{reference}.bam"),
+        csi=temp("tmp/4-mapped/{sample}_rep{replicate}.{reference}.bam.csi"),
     input:
         r1="final/demultiplexed/{sample}_rep{replicate}_R1.fastq.gz",
         r2="final/demultiplexed/{sample}_rep{replicate}_R2.fastq.gz",
@@ -233,22 +234,27 @@ rule bowtie2:
         " --fast"
         " 2> {log}"
         " "
-        "| samtools sort -@ {threads} -o {output.bam} -"
+        "| samtools sort --write-index -@ {threads} -o {output.bam} -"
 
 
 rule pool_replicates:
     output:
-        bam=temp("tmp/4-mapped/{sample}_pooled.{reference}.bam")
+        bam=temp("tmp/4-mapped/{sample}_pooled.{reference}.bam"),
+        csi=temp("tmp/4-mapped/{sample}_pooled.{reference}.bam.csi")
     input:
         bam_replicates=lambda wildcards: expand(
             "tmp/4-mapped/{{sample}}_rep{replicate}.{{reference}}.bam",
+            replicate=get_replicates(libraries, wildcards.sample)),
+        csi_replicates=lambda wildcards: expand(
+            "tmp/4-mapped/{{sample}}_rep{replicate}.{{reference}}.bam.csi",
             replicate=get_replicates(libraries, wildcards.sample))
     run:
         if len(input.bam_replicates) == 1:
             os.link(input.bam_replicates[0], output.bam)
+            os.link(input.csi_replicates[0], output.csi)
         else:
             # samtools merge output is already sorted
-            shell("samtools merge {output.bam} {input.bam_replicates}")
+            shell("samtools merge --write-index {output.bam} {input.bam_replicates}")
 
 
 rule convert_to_single_end:
@@ -256,7 +262,8 @@ rule convert_to_single_end:
     output:
         bam=temp("tmp/5-mapped_se/{library}.bam")
     input:
-        bam="tmp/4-mapped/{library}.bam"
+        bam="tmp/4-mapped/{library}.bam",
+        csi="tmp/4-mapped/{library}.bam.csi"
     group: "duplicate_marking"
     run:
         se_bam.convert_paired_end_to_single_end_bam(
@@ -300,6 +307,7 @@ rule mark_duplicates:
     shell:
         "{params.command}"
         " REMOVE_DUPLICATES=FALSE"
+        " CREATE_INDEX=True"
         " I={input.bam}"
         " O={output.bam}"
         " M={output.metrics}"
@@ -314,7 +322,9 @@ rule mark_pe_duplicates:
         bam=temp("tmp/7-dedup/{library}.bam")
     input:
         target_bam="tmp/4-mapped/{library}.bam",
-        proxy_bam="tmp/6-dupmarked/{library}.bam"
+        target_csi="tmp/4-mapped/{library}.bam.csi",
+        proxy_bam="tmp/6-dupmarked/{library}.bam",
+        proxy_csi="tmp/6-dupmarked/{library}.bam.csi"
     run:
         se_bam.mark_duplicates_by_proxy_bam(
             input.target_bam,
