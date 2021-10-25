@@ -12,8 +12,11 @@ def convert_paired_end_to_single_end_bam(bam, out, keep_unmapped=False):
     Keyword arguments:
     keep_unmapped -- Keep unmapped reads
     """
+    # Silence spurious "Could not retrieve index file" warnings
+    verbosity = pysam.set_verbosity(0)
     with pysam.AlignmentFile(bam, 'rb') as in_file,\
          pysam.AlignmentFile(out, 'wb', header=in_file.header) as out_file:
+        pysam.set_verbosity(verbosity)
         for alignment in in_file:
             if _is_read_valid(alignment, keep_unmapped):
                 new_alignment = _convert_to_single_end(alignment)
@@ -51,9 +54,11 @@ def mark_duplicates_by_proxy_bam(source_bam, proxy_bam, out, filter_dups=True):
         os.link(source_bam, out)
         return
 
+    # Silence spurious "Could not retrieve index file" warnings
+    verbosity = pysam.set_verbosity(0)
     with pysam.AlignmentFile(source_bam) as source_file,\
          pysam.AlignmentFile(out, 'wb', header=source_file.header) as out_file:
-
+        pysam.set_verbosity(verbosity)
         for alignment in source_file:
             if alignment.query_name in dup_ids:
                 alignment.is_duplicate = True
@@ -63,7 +68,10 @@ def mark_duplicates_by_proxy_bam(source_bam, proxy_bam, out, filter_dups=True):
 
 
 def _get_duplicate_ids(bam):
+    # Silence spurious "Could not retrieve index file" warnings
+    verbosity = pysam.set_verbosity(0)
     with pysam.AlignmentFile(bam, 'rb') as bam_file:
+        pysam.set_verbosity(verbosity)
         idlist = {alignment.query_name
             for alignment in bam_file if alignment.is_duplicate}
         return idlist
