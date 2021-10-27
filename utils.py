@@ -37,7 +37,7 @@ class Replicate(Library):
         return f"{self.sample}_rep{self.replicate}"
 
     def has_umi(self) -> bool:
-        with xopen(f"final/demultiplexed/{self.name}_R1.fastq.gz") as f:
+        with xopen(f"fastq/{self.fastqbase}_R1.fastq.gz") as f:
             line = f.readline()
         return bool(re.search("_[ACGTNacgtn]+", line))
 
@@ -45,6 +45,11 @@ class Replicate(Library):
 @dataclass
 class MultiplexedReplicate(Replicate):
     barcode: str
+
+    def has_umi(self) -> bool:
+        # Demultiplexing and UMI removal are done at the same time in the pipeline, so
+        # we know that a replicate that needed demultiplexing has UMIs
+        return True
 
 
 @dataclass
