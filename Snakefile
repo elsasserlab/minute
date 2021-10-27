@@ -69,7 +69,7 @@ rule multiqc:
     input:
         expand("reports/fastqc/{library.fastqbase}_R{read}_fastqc/fastqc_data.txt",
             library=libraries, read=(1, 2)),
-        expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=libraries),
+        expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=multiplexed_libraries),
         expand("log/4-mapped/{maplib.name}.log", maplib=[m for m in maplibs if not isinstance(m.library, Pool)]),
         expand("stats/6-dupmarked/{maplib.name}.metrics", maplib=maplibs),
         "reports/scalinginfo.txt",
