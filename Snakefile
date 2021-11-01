@@ -56,31 +56,62 @@ if not is_snakemake_calling_itself():
     print(format_metadata_overview(references, libraries, maplibs, scaling_groups), file=sys.stderr)
 
 
+multiqc_inputs = (
+    [
+        "reports/scalinginfo.txt",
+        "reports/stats_summary.txt",
+        "reports/scaling_barplot.png",
+        "reports/grouped_scaling_barplot.png",
+    ]
+    + expand("reports/fastqc/{library.fastqbase}_R{read}_fastqc/fastqc_data.txt", library=libraries, read=(1, 2))
+    + expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=libraries)
+    + expand("log/4-mapped/{maplib.name}.log", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
+    + expand("stats/6-dupmarked/{maplib.name}.metrics", maplib=maplibs)
+)
+bigwigs = (
+    expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=maplibs)
+    + expand("final/bigwig/{maplib.name}.scaled.bw",
+        maplib=flatten_scaling_groups(scaling_groups, controls=False))
+)
+
+
 rule final:
     input:
+        bigwigs,
         "reports/multiqc_report.html",
-        expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=maplibs),
-        expand("final/bigwig/{maplib.name}.scaled.bw",
-            maplib=flatten_scaling_groups(scaling_groups, controls=False)),
+
+
+rule quick:
+    input:
+        bigwigs,
+        "reports/multiqc_report_without_fingerprints.html",
 
 
 rule multiqc:
     output: "reports/multiqc_report.html"
     input:
-        expand("reports/fastqc/{library.fastqbase}_R{read}_fastqc/fastqc_data.txt",
-            library=libraries, read=(1, 2)),
-        expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=libraries),
-        expand("log/4-mapped/{maplib.name}.log", maplib=[m for m in maplibs if not isinstance(m.library, Pool)]),
-        expand("stats/6-dupmarked/{maplib.name}.metrics", maplib=maplibs),
-        "reports/scalinginfo.txt",
-        "reports/stats_summary.txt",
-        "reports/scaling_barplot.png",
-        "reports/grouped_scaling_barplot.png",
+        multiqc_inputs,
+        expand("stats/final/{maplib.name}.fingerprint.log", maplib=maplibs),
+        expand("stats/final/{maplib.name}.fingerprint.metrics", maplib=maplibs),
         multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
     log:
-        "log/multiqc_reports.log"
+        "log/multiqc_report.log"
     shell:
-        "multiqc -o reports/ -c {input.multiqc_config} {input} 2> {log}"
+        "multiqc -o reports/ -c {input.multiqc_config} {input} 'stats/final' 2> {log}"
+
+
+
+rule multiqc_without_fingerprints:
+    output: "reports/multiqc_report_without_fingerprints.html"
+    input:
+        multiqc_inputs,
+        multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
+    log:
+        "log/multiqc_report_without_fingerprints.log"
+    shell:
+        "multiqc -o reports/ -c {input.multiqc_config} {input} 'stats/final' 2> {log}"
+        " && "
+        " mv reports/multiqc_report.html {output}"
 
 
 rule clean:
@@ -535,6 +566,23 @@ rule compute_effective_genome_size:
     run:
         with open(output.txt, "w") as f:
             print(compute_genome_size(input.fasta), file=f)
+
+
+rule deeptools_fingerprint:
+    output:
+        counts="stats/final/{library}.fingerprint.log",
+        qc="stats/final/{library}.fingerprint.metrics"
+    input:
+        bam="final/bam/{library}.bam",
+        bai="final/bam/{library}.bai"
+    threads: 8
+    shell:
+        "plotFingerprint"
+        " -b {input.bam}"
+        " --outRawCounts {output.counts}"
+        " --outQualityMetrics {output.qc}"
+        " -p {threads}"
+        " --extendReads"
 
 
 rule samtools_index:

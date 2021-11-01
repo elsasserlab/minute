@@ -17,4 +17,4 @@ jobs:
         run: |
           source $CONDA/etc/profile.d/conda.sh
           conda activate testenv
-          ./test.sh
+          ./test.sh quick
