@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 from collections import defaultdict
@@ -5,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from io import StringIO
 from itertools import groupby
-from typing import List, Iterable, Dict, Tuple
+from typing import List, Iterable, Dict, Tuple, Optional
 
 from xopen import xopen
 
@@ -19,7 +20,7 @@ class Reference:
     name: str
     fasta: Path
     bowtie_index: Path
-    exclude_bed: Path
+    exclude_bed: Optional[Path]
 
 
 @dataclass
@@ -148,7 +149,7 @@ def make_references(config) -> Dict[str, Reference]:
     references = dict()
     for name, ref in config.items():
         fasta = Path(ref["fasta"])
-        exclude_bed = Path(ref["exclude"])
+        exclude_bed = Path(ref["exclude"]) if ref["exclude"] else None
         try:
             bowtie_index = detect_bowtie_index_name(ref["fasta"])
         except FileNotFoundError as e:
