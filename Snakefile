@@ -196,7 +196,7 @@ for fastq_base, libs in map_fastq_prefix_to_list_of_libraries(multiplexed_librar
         shell:
             "cutadapt"
             " -j {threads}"
-            " -e 1"
+            " -e {config[max_barcode_errors]}"
             " --compression-level=4"
             " -g file:{input.barcodes_fasta}"
             " -o {params.r1}"
