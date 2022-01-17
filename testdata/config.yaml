@@ -21,3 +21,6 @@ umi_length: 6
 
 # Fragment length (insert size)
 fragment_size: 150
+
+# Allow this many errors in the barcode when demultiplexing
+max_barcode_errors: 1
