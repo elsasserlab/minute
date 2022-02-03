@@ -13,6 +13,7 @@ jobs:
           conda install -c conda-forge mamba
           source $CONDA/etc/profile.d/conda.sh
           mamba env create --quiet -n testenv -f environment.yml
+          mamba install --quiet -n testenv -y pytest
       - name: Run pipeline
         run: |
           source $CONDA/etc/profile.d/conda.sh

@@ -3,6 +3,8 @@ set -euo pipefail
 
 version="0.10"
 
+python -m pytest tests/
+
 testdata_file=minute-testdata-${version}.tar.gz
 if ! [[ -f ${testdata_file} ]]; then
   wget -nv https://export.uppmax.uu.se/snic2020-6-3/minute-testdata/${testdata_file}

@@ -240,7 +240,7 @@ def parse_picard_metrics(path, metrics_class: str):
         values = next(f).strip().split("\t")
 
     # Picard issue: it leaves library size blank sometimes, I think for small
-    # sample sizes. 
+    # sample sizes.
     if len(values) == len(header) - 1:
         values.append('NA')
 
