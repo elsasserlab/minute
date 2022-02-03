@@ -1,8 +1,8 @@
 import os
 import sys
 
-import se_bam
-from utils import (
+from minute import se_bam
+from minute import (
     read_libraries,
     read_scaling_groups,
     parse_flagstat,
