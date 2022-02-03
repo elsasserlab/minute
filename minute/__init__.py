@@ -177,7 +177,7 @@ def read_tsv(path, columns: int) -> Iterable[List[str]]:
             line = line.strip()
             if line.startswith("#") or not line:
                 continue
-            fields = line.strip().split("\t")
+            fields = line.strip().split()
             if len(fields) != columns:
                 raise ParseError(
                     f"Expected {columns} tab-separated fields in {path}, but found {len(fields)}")
