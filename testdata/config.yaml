@@ -8,12 +8,13 @@ references:
     # A matching Bowtie2 index must exist in the same location.
     fasta: "ref/ref1.fa.gz"
 
-    # Path to a BED file with regions to exclude
+    # Path to a BED file with regions to exclude.
+    # If this is empty, no regions are excluded.
     exclude: "exclude1.bed"
 
   small:
     fasta: "ref/ref2.fa.gz"
-    exclude: "exclude2.bed"
+    exclude:
 
 
 # Length of the 5' UMI

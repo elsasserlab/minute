@@ -353,19 +353,29 @@ rule mark_pe_duplicates:
             output.bam)
 
 
+def exclude_bed(wildcards):
+    bed = references[wildcards.reference].exclude_bed
+    return str(bed) if bed else []
+
+
 rule remove_exclude_regions:
     output:
         bam="final/bam/{library}.{reference}.bam"
     input:
         bam="tmp/7-dedup/{library}.{reference}.bam",
-        bed=lambda wildcards: str(references[wildcards.reference].exclude_bed)
-    shell:
-        "bedtools"
-        " intersect"
-        " -v"
-        " -abam {input.bam}"
-        " -b {input.bed}"
-        " > {output.bam}"
+        bed=exclude_bed,
+    run:
+        if input.bed:
+            shell(
+                "bedtools"
+                " intersect"
+                " -v"
+                " -abam {input.bam}"
+                " -b {input.bed}"
+                " > {output.bam}"
+            )
+        else:
+            os.link(input.bam, output.bam)
 
 
 rule insert_size_metrics:
