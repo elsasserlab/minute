@@ -61,7 +61,8 @@ if not is_snakemake_calling_itself():
         print(f"ERROR: Library {unused_lib.sample}, replicate {unused_lib.replicate} is listed "
             "in libraries.tsv, but not in groups.tsv", file=sys.stderr)
     if unused_libs:
-        raise SystemExit(1)
+        sys.tracebacklimit = 0
+        sys.exit(1)
 
 multiqc_inputs = (
     [
