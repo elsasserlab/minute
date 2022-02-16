@@ -69,7 +69,7 @@ def run_snakemake(
             f"Pipeline configuration file '{e.filename}' not found. "
             f"Please see the documentation for how to create it.")
     with importlib.resources.path("minute", "Snakefile") as snakefile:
-        command = ["snakemake", f"--cores={cores}", "-p", "-s", snakefile]
+        command = ["snakemake", f"--cores={'all' if cores == 0 else cores}", "-p", "-s", snakefile]
         if dryrun:
             command += ["--dryrun"]
         if targets:

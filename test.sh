@@ -19,4 +19,4 @@ mkdir fastq && mv -- *.fastq.gz fastq/
 mkdir ref && mv ref*.fa.gz ref/
 ( cd ref && bowtie2-build -q ref1.fa.gz ref1 && bowtie2-build -q ref2.fa.gz ref2 )
 
-minute run -j 2 "$@"
+minute run "$@"
