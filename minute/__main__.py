@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 def main(arguments=None):
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     parser = ArgumentParser(description=__doc__, prog="minute")
+    parser.add_argument("--debug", action="store_true", help="Print some debugging information")
     subparsers = parser.add_subparsers()
     subparser = subparsers.add_parser("run", help="Run the pipeline")
 
@@ -48,6 +49,10 @@ def main(arguments=None):
         help="Do not execute anything",
     )
     args, remainder = parser.parse_known_args(arguments)
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+    del args.debug
+
     if hasattr(args, "func"):
         subcommand = args.func
         del args.func
@@ -76,6 +81,7 @@ def run_snakemake(
             command += ["--dryrun"]
         if arguments:
             command += arguments
+        logger.debug("Running: %s", " ".join(str(c) for c in command))
         sys.exit(subprocess.call(command))
 
 
