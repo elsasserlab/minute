@@ -317,9 +317,8 @@ def dupmark_command(wildcards):
     return commands[True]
 
 
-# TODO have a look at UMI-tools also
 rule mark_duplicates:
-    """UMI-aware duplicate marking with je suite"""
+    """UMI-aware duplicate marking with je suite (or MarkDuplicates if UMIs are missing)"""
     output:
         bam=temp("tmp/6-dupmarked/{maplib}.bam"),
         metrics="stats/6-dupmarked/{maplib}.metrics"

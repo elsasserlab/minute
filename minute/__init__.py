@@ -135,14 +135,13 @@ def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True
 
     for group in groups:
         for pair in group.normalization_pairs:
-            if pair.treatment.name not in seen:
-                seen.add(pair.treatment.name)
-                yield pair.treatment
-
+            maplibs = [pair.treatment]
             if controls:
-                if pair.control.name not in seen:
-                    seen.add(pair.control.name)
-                    yield pair.control
+                maplibs.append(pair.control)
+            for maplib in maplibs:
+                if maplib.name not in seen:
+                    seen.add(maplib.name)
+                    yield maplib
 
 
 def make_references(config) -> Dict[str, Reference]:
