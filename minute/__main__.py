@@ -3,6 +3,14 @@
 Run the Minute pipeline
 
 Calls Snakemake to produce all the output files.
+
+Any arguments that this wrapper script does not recognize are forwarded to Snakemake.
+This can be used to provide file(s) to create, targets to run or any other Snakemake
+options. For example, this runs the "quick" target (without fingerprinting) in dry-run mode:
+
+    minute run --dryrun quick
+
+Run 'snakemake --help' or see the Snakemake documentation to see valid snakemake arguments.
 """
 import logging
 import subprocess
@@ -19,12 +27,19 @@ logger = logging.getLogger(__name__)
 def main(arguments=None):
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     parser = ArgumentParser(description=__doc__, prog="minute")
-
     subparsers = parser.add_subparsers()
     subparser = subparsers.add_parser("run", help="Run the pipeline")
 
     arg = subparser.add_argument
     subparser.set_defaults(func=run_snakemake)
+    arg(
+        "--cores",
+        "-c",
+        metavar="N",
+        type=int,
+        help="Run on at most N CPU cores in parallel. Default: Use as many cores as available)",
+    )
+
     arg(
         "--dryrun",
         "-n",
@@ -32,48 +47,35 @@ def main(arguments=None):
         action="store_true",
         help="Do not execute anything",
     )
-    arg(
-        "--cores",
-        "--jobs",
-        "-j",
-        metavar="N",
-        type=int,
-        default=0,
-        help="Run on at most N CPU cores in parallel. Default: Use as many cores as available)",
-    )
-    arg(
-        "targets",
-        nargs="*",
-        default=[],
-        help="File(s) to create or targets to run. If omitted, the full pipeline is run.",
-    )
-    args = parser.parse_args(arguments)
+    args, remainder = parser.parse_known_args(arguments)
     if hasattr(args, "func"):
         subcommand = args.func
         del args.func
     else:
         parser.error("Please provide the name of a subcommand to run")
-    subcommand(**vars(args))
+    subcommand(**vars(args), arguments=remainder)
 
 
 def run_snakemake(
     dryrun=False,
-    cores=0,
-    targets=None,
+    cores=None,
+    arguments=None,
 ):
     try:
-        config = YAML(typ="safe").load(Path("config.yaml"))
-        print("config", config)
+        _ = YAML(typ="safe").load(Path("config.yaml"))
     except FileNotFoundError as e:
         sys.exit(
             f"Pipeline configuration file '{e.filename}' not found. "
-            f"Please see the documentation for how to create it.")
+            f"Please see the documentation for how to create it."
+        )
     with importlib.resources.path("minute", "Snakefile") as snakefile:
-        command = ["snakemake", f"--cores={'all' if cores == 0 else cores}", "-p", "-s", snakefile]
+        command = [
+            "snakemake", f"--cores={'all' if cores is None else cores}", "-p", "-s", snakefile
+        ]
         if dryrun:
             command += ["--dryrun"]
-        if targets:
-            command += targets
+        if arguments:
+            command += arguments
         sys.exit(subprocess.call(command))
 
 

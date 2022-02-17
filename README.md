@@ -153,9 +153,9 @@ config file with your defaults:
             jobname: "{rule}_{jobid}"
             
 Note that you can use rule-dependent parameters such as `rule`, `jobid` and
-`threads`. Then you call `snakemake`:
+`threads`. Then you call `minute run`:
 
-        snakemake -p -s path/to/the/Snakefile --jobs 20 --cluster-config path/to/cluster.yaml --cluster 'sbatch -A {cluster.project} -t {cluster.time} -c {cluster.cpus} -e logs_slurm/{cluster.jobname}.err -o logs_slurm/{cluster.jobname}.out -J {cluster.jobname}'
+        minute run --jobs 20 --cluster-config path/to/cluster.yaml --cluster 'sbatch -A {cluster.project} -t {cluster.time} -c {cluster.cpus} -e logs_slurm/{cluster.jobname}.err -o logs_slurm/{cluster.jobname}.out -J {cluster.jobname}'
 
 The `project` field is required, as SLURM will not queue your jobs if they are
 not attached to a computing project. The `--jobs` parameter in the `snakemake`
