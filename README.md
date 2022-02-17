@@ -21,6 +21,10 @@
 
       conda activate minute
 
+- Install minute
+
+      pip install .
+
 
 ## Running
 
@@ -33,12 +37,9 @@
 4. Copy the `config.yaml` file into `myexperiment/` and edit it as required.
 5. Create `libraries.tsv` and `groups.tsv` files describing your libraries
    (see below).
-6. Run `snakemake -p -s path/to/the/Snakefile`.
+6. Run `minute run`
 
-The `-p` makes `snakemake` print the commands that it executes and can be
-omitted if you don’t want to see that.
-
-Additionally, you may want to run `snakemake` with the option `-n` first, which
+Additionally, you may want to run `minute run` with the option `-n` first, which
 will only show which steps would be executed and not actually run them
 (“dry run”).
 
@@ -152,9 +153,9 @@ config file with your defaults:
             jobname: "{rule}_{jobid}"
             
 Note that you can use rule-dependent parameters such as `rule`, `jobid` and
-`threads`. Then you call `snakemake`:
+`threads`. Then you call `minute run`:
 
-        snakemake -p -s path/to/the/Snakefile --jobs 20 --cluster-config path/to/cluster.yaml --cluster 'sbatch -A {cluster.project} -t {cluster.time} -c {cluster.cpus} -e logs_slurm/{cluster.jobname}.err -o logs_slurm/{cluster.jobname}.out -J {cluster.jobname}'
+        minute run --jobs 20 --cluster-config path/to/cluster.yaml --cluster 'sbatch -A {cluster.project} -t {cluster.time} -c {cluster.cpus} -e logs_slurm/{cluster.jobname}.err -o logs_slurm/{cluster.jobname}.out -J {cluster.jobname}'
 
 The `project` field is required, as SLURM will not queue your jobs if they are
 not attached to a computing project. The `--jobs` parameter in the `snakemake`
