@@ -72,7 +72,7 @@ multiqc_inputs = (
 bigwigs = (
     expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=maplibs)
     + expand("final/bigwig/{maplib.name}.scaled.bw",
-        maplib=flatten_scaling_groups(scaling_groups, controls=False))
+        maplib=flatten_scaling_groups(scaling_groups, expand_pools=False, controls=False))
 )
 
 

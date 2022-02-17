@@ -130,15 +130,33 @@ def read_scaling_groups(path: str, replicates: List[Replicate]) -> Iterable[Scal
         yield ScalingGroup(normalization_pairs, name)
 
 
-def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True) -> Iterable[LibraryWithReference]:
-    seen = set()
+def flatten_scaling_groups(
+        groups: Iterable[ScalingGroup],
+        controls: bool = True,
+        expand_pools: bool = True,
+) -> Iterable[LibraryWithReference]:
+    """
+    Yield all libraries used in a scaling group as LibraryWithReference objects.
 
+    If expand_pools is True, any library that represents a pool is expanded into
+    the individual replicates. The replicates are yielded *in addition* to the
+    pool itself.
+    """
+    def expand_if_pool(maplibs):
+        """If the maplib is a pool, also yield the nested replicates"""
+        for maplib in maplibs:
+            if isinstance(maplib.library, Pool):
+                for replicate in maplib.library.replicates:
+                    yield LibraryWithReference(replicate, maplib.reference)
+            yield maplib
+
+    seen = set()
     for group in groups:
         for pair in group.normalization_pairs:
             maplibs = [pair.treatment]
             if controls:
                 maplibs.append(pair.control)
-            for maplib in maplibs:
+            for maplib in (expand_if_pool(maplibs) if expand_pools else maplibs):
                 if maplib.name not in seen:
                     seen.add(maplib.name)
                     yield maplib
