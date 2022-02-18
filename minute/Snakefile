@@ -55,7 +55,6 @@ maplibs = list(flatten_scaling_groups(scaling_groups))
 if not is_snakemake_calling_itself():
     print(format_metadata_overview(references, libraries, maplibs, scaling_groups), file=sys.stderr)
 
-
 multiqc_inputs = (
     [
         "reports/scalinginfo.txt",

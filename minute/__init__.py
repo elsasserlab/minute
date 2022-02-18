@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from io import StringIO
 from itertools import groupby
-from typing import List, Iterable, Dict, Tuple, Optional
+from typing import List, Iterable, Dict, Tuple, Optional, Union, Set
 
 from xopen import xopen
 
@@ -23,12 +23,12 @@ class Reference:
     exclude_bed: Optional[Path]
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class Library:
     sample: str
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class Replicate(Library):
     replicate: str
     fastqbase: str
@@ -43,7 +43,7 @@ class Replicate(Library):
         return bool(re.search("_[ACGTNacgtn]+", line))
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class MultiplexedReplicate(Replicate):
     barcode: str
 
@@ -53,7 +53,7 @@ class MultiplexedReplicate(Replicate):
         return True
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class Pool(Library):
     replicates: List[Replicate]
 
@@ -92,7 +92,7 @@ class ScalingGroup:
     name: str
 
 
-def read_libraries(path: str) -> Iterable[Replicate]:
+def read_libraries(path: Union[os.PathLike, str]) -> Iterable[Replicate]:
     for row in read_tsv(path, columns=4):
         if row[2] == ".":
             yield Replicate(sample=row[0], replicate=row[1], fastqbase=row[3])
@@ -110,7 +110,9 @@ def make_pools(libraries) -> Iterable[Pool]:
         yield Pool(sample=sample, replicates=replicates)
 
 
-def read_scaling_groups(path: str, replicates: List[Replicate]) -> Iterable[ScalingGroup]:
+def read_scaling_groups(
+        path: Union[os.PathLike, str], replicates: List[Replicate]
+) -> Iterable[ScalingGroup]:
     library_map: Dict[Tuple[str, str], Library] = {
         (rep.sample, rep.replicate): rep for rep in replicates
     }
@@ -382,3 +384,17 @@ def map_fastq_prefix_to_list_of_libraries(
         for fastq_base, reps in
         groupby(sorted(replicates, key=lambda rep: rep.fastqbase), key=lambda rep: rep.fastqbase)
     }
+
+
+def libraries_unused_in_groups(libraries: List[Replicate], groups: List[ScalingGroup]) -> List[Library]:
+    unused: Set[Replicate] = set(libraries)
+    for group in groups:
+        for pair in group.normalization_pairs:
+            for lib in pair.treatment.library, pair.control.library:
+                if isinstance(lib, Replicate):
+                    unused.discard(lib)
+                elif isinstance(lib, Pool):
+                    unused = {a for a in unused if a.sample != lib.sample}
+                else:
+                    assert False, "Expected only Replicate or Pool"
+    return list(unused)

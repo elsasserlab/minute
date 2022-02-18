@@ -21,6 +21,8 @@ from pathlib import Path
 from ruamel.yaml import YAML
 import importlib.resources
 
+from . import libraries_unused_in_groups, read_libraries, read_scaling_groups
+
 logger = logging.getLogger(__name__)
 
 
@@ -73,6 +75,12 @@ def run_snakemake(
             f"Pipeline configuration file '{e.filename}' not found. "
             f"Please see the documentation for how to create it."
         )
+    try:
+        libraries = list(read_libraries("libraries.tsv"))
+        scaling_groups = list(read_scaling_groups("groups.tsv", libraries))
+    except FileNotFoundError as e:
+        sys.exit(e)
+
     with importlib.resources.path("minute", "Snakefile") as snakefile:
         command = [
             "snakemake", f"--cores={'all' if cores is None else cores}", "-p", "-s", snakefile
@@ -82,7 +90,35 @@ def run_snakemake(
         if arguments:
             command += arguments
         logger.debug("Running: %s", " ".join(str(c) for c in command))
-        sys.exit(subprocess.call(command))
+        exit_code = subprocess.call(command)
+
+    warn_about_unused_libraries(libraries, scaling_groups)
+    sys.exit(exit_code)
+
+
+def warn_about_unused_libraries(libraries, scaling_groups, limit=4):
+    """
+    Print warnings for libraries unused in groups.tsv.
+
+    Arguments:
+        limit: How many unused libraries to show at most
+    """
+    unused_libs = libraries_unused_in_groups(libraries, scaling_groups)
+    if unused_libs:
+        n = len(unused_libs)
+        logger.warning(
+            "%s",
+            f"{n} librar{'y' if n == 1 else 'ies'} present in libraries.tsv "
+            f"are not used in groups.tsv:"
+        )
+        if n == limit + 1:
+            # avoid printing "... and 1 more" although
+            # we could have just printed the omitted lib
+            limit = n
+        for unused_lib in unused_libs[:limit]:
+            logger.warning("%s", f"- Library {unused_lib.sample}, replicate {unused_lib.replicate}")
+        if n > limit:
+            logger.warning("... and %d more", n - limit)
 
 
 if __name__ == "__main__":
