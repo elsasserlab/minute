@@ -110,7 +110,9 @@ def make_pools(libraries) -> Iterable[Pool]:
         yield Pool(sample=sample, replicates=replicates)
 
 
-def read_scaling_groups(path: Union[os.PathLike, str], replicates: List[Replicate]) -> Iterable[ScalingGroup]:
+def read_scaling_groups(
+        path: Union[os.PathLike, str], replicates: List[Replicate]
+) -> Iterable[ScalingGroup]:
     library_map: Dict[Tuple[str, str], Library] = {
         (rep.sample, rep.replicate): rep for rep in replicates
     }

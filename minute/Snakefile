@@ -18,7 +18,6 @@ from minute import (
     map_fastq_prefix_to_list_of_libraries,
     make_references,
     flatten_scaling_groups,
-    libraries_unused_in_groups,
     Pool,
     MultiplexedReplicate,
 )
@@ -55,14 +54,6 @@ maplibs = list(flatten_scaling_groups(scaling_groups))
 
 if not is_snakemake_calling_itself():
     print(format_metadata_overview(references, libraries, maplibs, scaling_groups), file=sys.stderr)
-
-    unused_libs = libraries_unused_in_groups(libraries, scaling_groups)
-    for unused_lib in unused_libs:
-        print(f"ERROR: Library {unused_lib.sample}, replicate {unused_lib.replicate} is listed "
-            "in libraries.tsv, but not in groups.tsv", file=sys.stderr)
-    if unused_libs:
-        sys.tracebacklimit = 0
-        sys.exit(1)
 
 multiqc_inputs = (
     [
