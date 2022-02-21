@@ -65,7 +65,7 @@ class Pool(Library):
         return all(lib.has_umi() for lib in self.replicates)
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class LibraryWithReference:
     library: Library
     reference: str
@@ -75,7 +75,7 @@ class LibraryWithReference:
         return f"{self.library.name}.{self.reference}"
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class TreatmentControlPair:
     treatment: LibraryWithReference
     control: LibraryWithReference
@@ -113,6 +113,7 @@ def make_pools(libraries) -> Iterable[Pool]:
 def read_scaling_groups(
         path: Union[os.PathLike, str], replicates: List[Replicate]
 ) -> Iterable[ScalingGroup]:
+
     library_map: Dict[Tuple[str, str], Library] = {
         (rep.sample, rep.replicate): rep for rep in replicates
     }
@@ -121,12 +122,37 @@ def read_scaling_groups(
 
     scaling_map = defaultdict(list)
     for row in read_tsv(path, columns=5):
+        pairs = []
         treatment_name, replicate_id, control_name, scaling_group, reference = row
         treatment_lib = library_map[(treatment_name, replicate_id)]
         control_lib = library_map[(control_name, replicate_id)]
-        treatment = LibraryWithReference(treatment_lib, reference)
-        control = LibraryWithReference(control_lib, reference)
-        scaling_map[scaling_group].append(TreatmentControlPair(treatment, control))
+        # True: explicitly listed in the file
+        pairs.append((treatment_lib, control_lib, True))
+
+        if isinstance(treatment_lib, Pool):
+            assert isinstance(control_lib, Pool)
+            assert len(treatment_lib.replicates) == len(control_lib.replicates)
+            for tlib, clib in zip(treatment_lib.replicates, control_lib.replicates):
+                # False: implicitly added due to being part of a pool
+                pairs.append((tlib, clib, False))
+
+        for treatment_lib, control_lib, explicit in pairs:
+            treatment = LibraryWithReference(treatment_lib, reference)
+            control = LibraryWithReference(control_lib, reference)
+            pair = TreatmentControlPair(treatment, control)
+            if pair in scaling_map.get(scaling_group, []):
+                # Redundant pairs are an error, but only if they were listed explicitly,
+                # not if they were expanded from a pool
+                if explicit:
+                    raise ValueError(
+                        f"The treatment/control pair '{pair.treatment.library.name}'/"
+                        f"'{pair.control.library.name}' occurs more than once in "
+                        f"scaling group '{scaling_group}'. The first occurrence may "
+                        f"be within a pool (if you use 'pooled', all replicates are "
+                        f"added automatically)."
+                    )
+            else:
+                scaling_map[scaling_group].append(pair)
 
     for name, normalization_pairs in scaling_map.items():
         yield ScalingGroup(normalization_pairs, name)

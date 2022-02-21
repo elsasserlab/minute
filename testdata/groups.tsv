@@ -9,7 +9,6 @@
 # - The reference name is a reference defined in config.yaml
 #
 H3K4m3_SL_CTR	pooled	IN_SL_CTR	group1	mini
-H3K4m3_SL_CTR	2	IN_SL_CTR	group1	mini
 
 H3K4m3_2i_CTR	1	IN_2i_CTR	group2	mini
 H3K4m3_2i_CTR	2	IN_2i_CTR	group2	mini
