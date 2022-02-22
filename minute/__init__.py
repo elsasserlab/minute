@@ -126,32 +126,19 @@ def read_scaling_groups(
         treatment_name, replicate_id, control_name, scaling_group, reference = row
         treatment_lib = library_map[(treatment_name, replicate_id)]
         control_lib = library_map[(control_name, replicate_id)]
-        # True: explicitly listed in the file
-        pairs.append((treatment_lib, control_lib, True))
+        pairs.append((treatment_lib, control_lib))
 
         if isinstance(treatment_lib, Pool):
             assert isinstance(control_lib, Pool)
             assert len(treatment_lib.replicates) == len(control_lib.replicates)
             for tlib, clib in zip(treatment_lib.replicates, control_lib.replicates):
-                # False: implicitly added due to being part of a pool
-                pairs.append((tlib, clib, False))
+                pairs.append((tlib, clib))
 
-        for treatment_lib, control_lib, explicit in pairs:
+        for treatment_lib, control_lib in pairs:
             treatment = LibraryWithReference(treatment_lib, reference)
             control = LibraryWithReference(control_lib, reference)
             pair = TreatmentControlPair(treatment, control)
-            if pair in scaling_map.get(scaling_group, []):
-                # Redundant pairs are an error, but only if they were listed explicitly,
-                # not if they were expanded from a pool
-                if explicit:
-                    raise ValueError(
-                        f"The treatment/control pair '{pair.treatment.library.name}'/"
-                        f"'{pair.control.library.name}' occurs more than once in "
-                        f"scaling group '{scaling_group}'. The first occurrence may "
-                        f"be within a pool (if you use 'pooled', all replicates are "
-                        f"added automatically)."
-                    )
-            else:
+            if pair not in scaling_map.get(scaling_group, []):
                 scaling_map[scaling_group].append(pair)
 
     for name, normalization_pairs in scaling_map.items():
