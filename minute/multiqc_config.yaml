@@ -10,6 +10,7 @@ run_modules:
   - cutadapt
   - custom_content
   - bowtie2
+  - samtools
   - picard
   - deeptools
 
@@ -33,6 +34,14 @@ module_order:
       info: "Read mapping of demultiplexed reads with Bowtie2"
       path_filters:
         - "log/4-mapped/*.log"
+  - samtools:
+      name: "Samtools stats"
+      anchor: "samtools"
+      target: ""
+      info: "Extra statistics on final BAM files"
+      path_filters:
+        - "stats/final/*idxstats.txt"
+        - "stats/final/*flagstat.txt"
   - picard:
       path_filters:
         - "*.metrics"
