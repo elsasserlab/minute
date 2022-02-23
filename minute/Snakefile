@@ -402,6 +402,7 @@ rule unscaled_bigwig:
     input:
         bam="final/bam/{library}.{reference}.bam",
         bai="final/bam/{library}.{reference}.bai",
+        fragsize="stats/final/{library}.{reference}.fragsize.txt",
         genome_size="stats/genome.{reference}.size.txt",
     log:
         "log/final/{library}.{reference}.unscaled.bw.log"
@@ -411,6 +412,7 @@ rule unscaled_bigwig:
         " -p {threads}"
         " --normalizeUsing RPGC"
         " --effectiveGenomeSize $(< {input.genome_size})"
+        " --extendReads $(< {input.fragsize})"
         " -b {input.bam}"
         " -o {output.bw}"
         " --binSize 1"
