@@ -6,7 +6,7 @@ dependencies:
   - nomkl
   - snakemake-minimal >=6.9.0
   - samtools >=1.13
-  - cutadapt >=3.5
+  - cutadapt >=3.7
   - bowtie2 >=2.4.4
   - je-suite >=2.0.RC
   - igvtools >=2.5.3
