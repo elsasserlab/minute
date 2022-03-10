@@ -1,124 +1,88 @@
 #!/usr/bin/env python3
 """
-Run the Minute pipeline
-
-Calls Snakemake to produce all the output files.
-
-Any arguments that this wrapper script does not recognize are forwarded to Snakemake.
-This can be used to provide file(s) to create, targets to run or any other Snakemake
-options. For example, this runs the "quick" target (without fingerprinting) in dry-run mode:
-
-    minute run --dryrun quick
-
-Run 'snakemake --help' or see the Snakemake documentation to see valid snakemake arguments.
+Minute
 """
+import ast
 import logging
-import subprocess
+import pkgutil
 import sys
 from argparse import ArgumentParser
-from pathlib import Path
 
-from ruamel.yaml import YAML
 import importlib.resources
 
-from . import libraries_unused_in_groups, read_libraries, read_scaling_groups
+from . import cli
+from .cli import CommandLineError
+from . import __version__
+
 
 logger = logging.getLogger(__name__)
 
 
 def main(arguments=None):
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+    subcommand_name = get_subcommand_name(arguments)
+    module = importlib.import_module("." + subcommand_name, cli.__name__)
+
     parser = ArgumentParser(description=__doc__, prog="minute")
     parser.add_argument("--debug", action="store_true", help="Print some debugging information")
+#    parser.add_argument("--version", action="version", version=__version__)
     subparsers = parser.add_subparsers()
-    subparser = subparsers.add_parser("run", help="Run the pipeline")
-
-    arg = subparser.add_argument
-    subparser.set_defaults(func=run_snakemake)
-    arg(
-        "--cores",
-        "-c",
-        metavar="N",
-        type=int,
-        help="Run on at most N CPU cores in parallel. Default: Use as many cores as available)",
+    subparser = subparsers.add_parser(
+        subcommand_name, help=module.__doc__.split("\n")[1], description=module.__doc__
     )
-
-    arg(
-        "--dryrun",
-        "-n",
-        default=False,
-        action="store_true",
-        help="Do not execute anything",
-    )
+    module.add_arguments(subparser)
     args, remainder = parser.parse_known_args(arguments)
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
     del args.debug
+    try:
+        module.main(args, arguments=remainder)
+    except CommandLineError as e:
+        logger.error(e)
+        sys.exit(1)
 
-    if hasattr(args, "func"):
-        subcommand = args.func
-        del args.func
-    else:
+
+def get_subcommand_name(arguments) -> str:
+    """
+    Parse arguments to find out which subcommand was requested.
+
+    This sets up a minimal ArgumentParser with the correct help strings.
+
+    Because help is obtained from a module’s docstring, but importing each module
+    makes startup slow, the modules are only parsed with the ast module, and
+    not fully imported at this stage.
+
+    Return:
+        subcommand name
+    """
+    parser = ArgumentParser(description=__doc__, prog="minute")
+    parser.add_argument("--version", action="version", version=__version__)
+    subparsers = parser.add_subparsers()
+
+    for module_name, docstring in cli_modules():
+        subparser = subparsers.add_parser(
+            module_name, help=docstring.split("\n")[1], description=docstring, add_help=False
+        )
+        subparser.set_defaults(module_name=module_name)
+    args, _ = parser.parse_known_args(arguments)
+    module_name = getattr(args, "module_name", None)
+    if module_name is None:
         parser.error("Please provide the name of a subcommand to run")
-    subcommand(**vars(args), arguments=remainder)
+    return module_name
 
 
-def run_snakemake(
-    dryrun=False,
-    cores=None,
-    arguments=None,
-):
-    try:
-        _ = YAML(typ="safe").load(Path("config.yaml"))
-    except FileNotFoundError as e:
-        sys.exit(
-            f"Pipeline configuration file '{e.filename}' not found. "
-            f"Please see the documentation for how to create it."
-        )
-    try:
-        libraries = list(read_libraries("libraries.tsv"))
-        scaling_groups = list(read_scaling_groups("groups.tsv", libraries))
-    except FileNotFoundError as e:
-        sys.exit(e)
-
-    with importlib.resources.path("minute", "Snakefile") as snakefile:
-        command = [
-            "snakemake", f"--cores={'all' if cores is None else cores}", "-p", "-s", snakefile
-        ]
-        if dryrun:
-            command += ["--dryrun"]
-        if arguments:
-            command += arguments
-        logger.debug("Running: %s", " ".join(str(c) for c in command))
-        exit_code = subprocess.call(command)
-
-    warn_about_unused_libraries(libraries, scaling_groups)
-    sys.exit(exit_code)
-
-
-def warn_about_unused_libraries(libraries, scaling_groups, limit=4):
+def cli_modules():
     """
-    Print warnings for libraries unused in groups.tsv.
-
-    Arguments:
-        limit: How many unused libraries to show at most
+    Yield (module_name, docstring) tuples for all modules in the "minutee.cli" package.
     """
-    unused_libs = libraries_unused_in_groups(libraries, scaling_groups)
-    if unused_libs:
-        n = len(unused_libs)
-        logger.warning(
-            "%s",
-            f"{n} librar{'y' if n == 1 else 'ies'} present in libraries.tsv "
-            f"are not used in groups.tsv:"
-        )
-        if n == limit + 1:
-            # avoid printing "... and 1 more" although
-            # we could have just printed the omitted lib
-            limit = n
-        for unused_lib in unused_libs[:limit]:
-            logger.warning("%s", f"- Library {unused_lib.sample}, replicate {unused_lib.replicate}")
-        if n > limit:
-            logger.warning("... and %d more", n - limit)
+    modules = pkgutil.iter_modules(cli.__path__)
+    for module in modules:
+        spec = importlib.util.find_spec(cli.__name__ + "." + module.name)
+        with open(spec.origin) as f:
+            mod_ast = ast.parse(f.read())
+        docstring = ast.get_docstring(mod_ast, clean=False)
+        yield module.name, docstring
 
 
 if __name__ == "__main__":

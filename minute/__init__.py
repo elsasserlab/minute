@@ -11,6 +11,9 @@ from typing import List, Iterable, Dict, Tuple, Optional, Union, Set
 from xopen import xopen
 
 
+__version__ = "0.1"
+
+
 class ParseError(Exception):
     pass
 
