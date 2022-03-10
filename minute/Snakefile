@@ -98,7 +98,7 @@ rule multiqc:
     log:
         "log/multiqc_report.log"
     shell:
-        "multiqc -o reports/ -c {input.multiqc_config} {input} 'stats/final' 2> {log}"
+        "multiqc -f -o reports/ -c {input.multiqc_config} {input} 'stats/final' 2> {log}"
 
 
 
@@ -110,7 +110,7 @@ rule multiqc_without_fingerprints:
     log:
         "log/multiqc_report_without_fingerprints.log"
     shell:
-        "multiqc -o reports/ -c {input.multiqc_config} {input} 'stats/final' 2> {log}"
+        "multiqc -f -o reports/ -c {input.multiqc_config} {input} 'stats/final' 2> {log}"
         " && "
         " mv reports/multiqc_report.html {output}"
 
