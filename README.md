@@ -104,13 +104,13 @@ To use data from SRA that you have not already downloaded, create the
 `libraries.tsv` file listing your libraries as described above.
 For all samples to be downloaded from the SRA, write a dot (".") in
 the *barcode* (third) column and put the SRA run accession
-(starting with SRR, ERR, or DRR) in the *FASTQ base name* (fourth) column.
+(starting with SRR, ERR, or DRR) into the *FASTQ base name* (fourth) column.
 
 The `config.yaml` and `groups.tsv` files are not needed for this step.
 
 Then run
 
-    snakemake --keep-going -s path/to/Snakefile.download
+    minute download
 
 This will download the files into the `fastq/` directory.
 
@@ -123,7 +123,7 @@ somewhere for later use. The next time they are needed, you can avoid the
 download and instead use the existing files.
 
 If you download the data yourself, note that Minute expects file names
-ending in `_R1.fastq.gz` and `_R2.fastq.gz`. Because `fastq-dump` omits
+ending in `_R1.fastq.gz` and `_R2.fastq.gz`. Because `fastq-dump`
 creates files named `..._1.fastq.gz` and `..._2.fastq.gz`, they need to be
 renamed.
 
