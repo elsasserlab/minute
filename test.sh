@@ -11,7 +11,7 @@ if ! [[ -f ${testdata_file} ]]; then
 fi
 
 rm -rf testrun
-mkdir testrun
+minute init testrun
 cd testrun
 tar --strip-components=1 -xf ../${testdata_file}
 cp ../testdata/*.{tsv,bed,sizes,yaml} .
