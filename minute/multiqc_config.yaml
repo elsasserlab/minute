@@ -71,3 +71,20 @@ sp:
     fn: "grouped_scaling_barplot.png"
   replicatescaling:
     fn: "scaling_barplot.png"
+
+
+table_cond_formatting_rules:
+  percent_duplication:
+      pass:
+        - lt: 0.1
+      warn:
+        - gt: 0.1
+      fail:
+        - gt: 0.25
+  insert_size:
+        pass:
+          - gt: 130
+        warn:
+          - lt: 130
+        fail:
+          - lt: 100
