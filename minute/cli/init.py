@@ -48,15 +48,15 @@ def run_init(directory: Path, reads: Optional[Path]):
             directory,
         )
 
-    configuration = importlib.resources.read_text("minute", "config.yaml")
-    with open(Path(directory) / "config.yaml", "w") as f:
+    configuration = importlib.resources.read_text("minute", "minute.yaml")
+    with open(Path(directory) / "minute.yaml", "w") as f:
         f.write(configuration)
 
     logger.info("Pipeline directory %s created", directory)
     logger.info(
         'Edit %s/%s and run "cd %s && minute run" to start the analysis',
         directory,
-        "config.yaml",
+        "minute.yaml",
         directory,
     )
 
