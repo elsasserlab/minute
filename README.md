@@ -124,6 +124,10 @@ ending in `_R1.fastq.gz` and `_R2.fastq.gz`. Because `fastq-dump`
 creates files named `..._1.fastq.gz` and `..._2.fastq.gz`, they need to be
 renamed.
 
+## License
+
+Minute is available under the MIT license.
+
 
 ## Running on SLURM clusters (Uppmax in Sweden)
 
