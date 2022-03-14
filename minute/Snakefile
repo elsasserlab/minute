@@ -23,7 +23,7 @@ from minute import (
 )
 
 
-configfile: "config.yaml"
+configfile: "minute.yaml"
 
 
 localrules: 

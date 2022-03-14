@@ -51,7 +51,7 @@ def run_snakemake(
     arguments=None,
 ):
     try:
-        _ = YAML(typ="safe").load(Path("config.yaml"))
+        _ = YAML(typ="safe").load(Path("minute.yaml"))
     except FileNotFoundError as e:
         sys.exit(
             f"Pipeline configuration file '{e.filename}' not found. "

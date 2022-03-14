@@ -34,7 +34,7 @@
    FASTQ files (those that contain the multiplexed libraries). Read 1 and
    read 2 files must have names ending in `_R1.fastq.gz` and `_R2.fastq.gz`,
    respectively.
-4. Copy the `config.yaml` file into `myexperiment/` and edit it as required.
+4. Copy the `minute.yaml` file into `myexperiment/` and edit it as required.
 5. Create `libraries.tsv` and `groups.tsv` files describing your libraries
    (see below).
 6. Run `minute run`
@@ -46,7 +46,7 @@ will only show which steps would be executed and not actually run them
 
 ## Configuration files
 
-The configuration files `libraries.tsv`, `groups.tsv` and `config.yaml`
+The configuration files `libraries.tsv`, `groups.tsv` and `minute.yaml`
 need to be placed in the `myexperiment/` directory. Use the provided
 example files as templates and adjust as needed.
 
@@ -92,9 +92,9 @@ to indicate that the replicates are to be pooled before scaling.
 4. Scaling group.
 
 
-## The config.yaml file
+## The minute.yaml file
 
-The `config.yaml` is used to configure everything else. Please open the
+The `minute.yaml` is used to configure everything else. Please open the
 file in an editor, read through the comments and edit as required.
 
 
@@ -106,7 +106,7 @@ For all samples to be downloaded from the SRA, write a dot (".") in
 the *barcode* (third) column and put the SRA run accession
 (starting with SRR, ERR, or DRR) into the *FASTQ base name* (fourth) column.
 
-The `config.yaml` and `groups.tsv` files are not needed for this step.
+The `minute.yaml` and `groups.tsv` files are not needed for this step.
 
 Then run
 
@@ -132,7 +132,7 @@ renamed.
 
 Snakemake supports running on HPC environments. As such, it is possible to
 run minute on SLURM clusters, including the Swedish UPPMAX clusters. Handling
-of `config.yaml` and `libraries.tsv` files
+of `minute.yaml` and `libraries.tsv` files
 will work the same. You just need to have conda available
 and an active minute environment that you can install as described in the
 **setup** section.
