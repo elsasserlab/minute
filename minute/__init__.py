@@ -10,8 +10,12 @@ from typing import List, Iterable, Dict, Tuple, Optional, Union, Set
 
 from xopen import xopen
 
+try:
+    from importlib.metadata import version as _version
+except ImportError:
+    from importlib_metadata import version as _version
 
-__version__ = "0.1"
+__version__ = _version("minute")
 
 
 class ParseError(Exception):

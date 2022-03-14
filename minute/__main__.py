@@ -10,9 +10,8 @@ from argparse import ArgumentParser
 
 import importlib.resources
 
-from . import cli
+from . import cli, __version__
 from .cli import CommandLineError
-from . import __version__
 
 
 logger = logging.getLogger(__name__)
