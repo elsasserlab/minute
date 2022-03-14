@@ -5,28 +5,26 @@
 - Install Conda and Bioconda. Use the
   [Bioconda instructions](https://bioconda.github.io/user/install.html) if you
   don’t have Conda and/or Bioconda, yet.
-- Install [Mamba](https://github.com/mamba-org/mamba), which is a faster
+- Optionally, but highly recommend is to install [Mamba](https://github.com/mamba-org/mamba), which is a faster
   alternative to Conda:
 
       conda install mamba
 
-  If you do not want to use mamba, you can skip this step and write `conda`
-  instead of `mamba` in the next step, but doing so will make the installation
-  take longer.
-- Create a Conda environment with the necessary programs:
+  If you skip this, write `conda` instead of `mamba` in the next step,
+  but the installation will take longer.
+- Install Minute from Bioconda into a new environment:
 
-      mamba env create -n minute -f environment.yml
+      mamba create -n minute minute
 
 - Activate the environment
 
       conda activate minute
 
-- Install minute
+If you are a developer: Instead of the above, install the dependencies with
+`mamba env create -n minute -f environment.yml` and install Minute
+with `pip install .`.
 
-      pip install .
-
-
-## Running
+## Running Minute
 
 1. Create an empty folder somewhere (called `myexperiment` in the following)
 2. Create a subfolder `fastq` in the `myexperiment` folder
@@ -40,9 +38,8 @@
 6. Run `minute run`
 
 Additionally, you may want to run `minute run` with the option `-n` first, which
-will only show which steps would be executed and not actually run them
-(“dry run”).
-
+will do a “dry run”, that is, it only shows which steps would be executed and
+does not actually run them.
 
 ## Configuration files
 
