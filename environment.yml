@@ -4,6 +4,9 @@ channels:
   - defaults
 dependencies:
   - nomkl
+  - python
+  # - importlib-metadata   # [py<38]
+  - ruamel.yaml
   - snakemake-minimal >=6.9.0
   - samtools >=1.13
   - cutadapt >=3.7
