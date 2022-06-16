@@ -186,7 +186,7 @@ def make_references(config) -> Dict[str, Reference]:
 
 def read_tsv(path, columns: int) -> Iterable[List[str]]:
     """
-    Read a tab-separated value file from path, allowing "#"-prefixed comments
+    Read a whitespace-separated value file from path, allowing "#"-prefixed comments
 
     Yield a list of fields for every row (ignoring comments and empty lines)
 
@@ -201,7 +201,10 @@ def read_tsv(path, columns: int) -> Iterable[List[str]]:
             fields = line.strip().split()
             if len(fields) != columns:
                 raise ParseError(
-                    f"Expected {columns} tab-separated fields in {path}, but found {len(fields)}")
+                    f"Expected {columns} whitespace-separated fields in {path}, "
+                    f"but found {len(fields)}. Including a space character in a value "
+                    f"can cause this error."
+                )
             yield fields
 
 
