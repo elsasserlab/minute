@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from minute.se_dedup import AlignmentIndex, FirstMateDeduplicator
@@ -20,9 +21,12 @@ def test_se_dedup(tmp_path):
                                          multimap_cutoff=5,
                                          stub_length=20)
 
-    dups_summary = deduplicator.deduplicate(alignment_file)
+    dups_summary = deduplicator.deduplicate(alignment_file, dedup_file)
 
     assert(dups_summary.total == 12)
     assert(dups_summary.total_dups == 1)
     assert(dups_summary.r1_dups == 1)
     assert(dups_summary.r2_only_dups == 0)
+    assert(os.path.exists(dedup_file))
+
+    os.unlink(dedup_file)

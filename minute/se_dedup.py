@@ -25,6 +25,15 @@ def get_mapped_segments(bam: os.PathLike) -> Iterator[pysam.AlignedSegment]:
                 yield read
 
 
+def write_bam_excluding_reads(src_file, dst_file, exclude_ids, umi_length=6):
+    verbosity = pysam.set_verbosity(0)
+    with pysam.AlignmentFile(src_file, 'rb') as src, \
+            pysam.AlignmentFile(dst_file, 'wb', header=src.header) as dst:
+        pysam.set_verbosity(verbosity)
+        for r in src:
+            if not r.query_name[:-umi_length - 1] in exclude_ids:
+                dst.write(r)
+
 class AlignmentType(Enum):
     SINGLE = 0
     MULTI = 1
@@ -206,7 +215,7 @@ class FirstMateDeduplicator:
         self.umi_mismatches = umi_mismatches
         self.seq_mismatches = seq_mismatches
 
-    def deduplicate(self, src_bam):
+    def deduplicate(self, src_bam, dst_bam):
         index = AlignmentIndex(src_bam, self.umi_length, self.multimap_cutoff,
                                self.stub_length)
         r1_dups = self._find_duplicate_ids(index.r1_reads_by_position)
@@ -214,6 +223,7 @@ class FirstMateDeduplicator:
         multi_duplicates = self.mark_duplicates_by_umi_and_sequence(
             index.multimappers)
         all_dups = set(r1_dups + r2_dups + multi_duplicates)
+        write_bam_excluding_reads(src_bam, dst_bam, all_dups, self.umi_length)
 
         return DedupSummary(
             total=index.total,
