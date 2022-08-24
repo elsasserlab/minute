@@ -190,6 +190,9 @@ class FirstMateDeduplicator:
     """Deduplicates a BAM file using R1 position only when possible.
 
     Read pairs where only R2 is mapped are deduplicated using their position.
+    Multimappers are all pooled together and clustered hierarchically,
+    first by UMI, then by a sequence stub of max length stub_length, after
+    which reads are deduplicated.
     """
     def __init__(self, umi_length: int = 6,
                  multimap_cutoff: int = 5,
@@ -208,14 +211,16 @@ class FirstMateDeduplicator:
                                self.stub_length)
         r1_dups = self._find_duplicate_ids(index.r1_reads_by_position)
         r2_dups = self._find_duplicate_ids(index.r2_only_reads_by_position)
-        all_dups = set(r1_dups + r2_dups)
+        multi_duplicates = self.mark_duplicates_by_umi_and_sequence(
+            index.multimappers)
+        all_dups = set(r1_dups + r2_dups + multi_duplicates)
 
         return DedupSummary(
             total=index.total,
             total_dups=len(all_dups),
             r1_dups=len(r1_dups),
             r2_only_dups=len(r2_dups),
-            multi_dups=0)
+            multi_dups=len(multi_duplicates))
 
     def _find_duplicate_ids(self, aln_index):
         duplicates = list()
@@ -239,6 +244,30 @@ class FirstMateDeduplicator:
                 unique_reads.append(self.pick_best(unique_candidates))
             else:
                 unique_reads.append(unique_candidates[0])
+
+        unique_reads_set = set(r.name for r in unique_reads)
+        return [r.name for r in read_list if r.name not in unique_reads_set]
+
+    def mark_duplicates_by_umi_and_sequence(self, read_list, umi_mismatches=1, seq_mismatches=2):
+        # First group by similar UMIs
+        # Then for each group cluster by sequences that match all those UMIs
+        # (we are not picking yet)
+        seq_list = [r.umi for r in read_list]
+        umi_clusters = self.cluster_sequences(seq_list, mismatches=umi_mismatches)
+
+        unique_reads = []
+        for c in umi_clusters:
+            cluster_reads = self.filter_by_attribute(read_list, c, "umi")
+            # Require stub to reach length - UMIClusterer requires all counts
+            # to have the same length
+            cluster_seqs = [r.stub for r in cluster_reads if len(r.stub) == self.stub_length]
+            sub_clusters = self.cluster_sequences(cluster_seqs, mismatches=seq_mismatches)
+            for s in sub_clusters:
+                # First stub in the cluster is considered the "original"
+                # according to UMItools documentation
+                sub_cluster_reads = self.filter_by_attribute(cluster_reads, s[0], "stub")
+                best_read = self.pick_best(sub_cluster_reads)
+                unique_reads.append(best_read)
 
         unique_reads_set = set(r.name for r in unique_reads)
         return [r.name for r in read_list if r.name not in unique_reads_set]
