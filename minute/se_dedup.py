@@ -17,7 +17,9 @@ def count_sequences(seq_list):
 def get_mapped_segments(bam: os.PathLike) -> Iterator[pysam.AlignedSegment]:
     """Iterates through a BAM file returning only mapped AlignedSegment
     objects """
-    with pysam.AlignmentFile(bam) as handle:
+    verbosity = pysam.set_verbosity(0)
+    with pysam.AlignmentFile(bam, 'rb') as handle:
+        pysam.set_verbosity(verbosity)
         for read in handle:
             if not read.is_unmapped:
                 yield read
