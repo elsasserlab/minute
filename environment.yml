@@ -25,3 +25,4 @@ dependencies:
   - r-base >=4.0.0
   - r-ggplot2 >=3.3.0
   - r-dplyr >=1.0.0
+  - umi_tools

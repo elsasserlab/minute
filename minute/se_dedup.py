@@ -1,8 +1,17 @@
 import os
 import pysam
 from collections import defaultdict
+from dataclasses import dataclass
 from enum import Enum
-from typing import Iterator
+from typing import Iterator, List
+from umi_tools import UMIClusterer
+
+
+def count_sequences(seq_list):
+    counts = defaultdict(int)
+    for s in seq_list:
+        counts[s] += 1
+    return counts
 
 
 def get_mapped_segments(bam: os.PathLike) -> Iterator[pysam.AlignedSegment]:
@@ -161,3 +170,94 @@ class AlignmentIndex:
                     self.multimappers.append(aln)
                     second_ids.append(aln.name)
         return set(second_ids)
+
+
+@dataclass
+class DedupSummary:
+    total: int
+    total_dups: int
+    r1_dups: int
+    r2_only_dups: int
+    multi_dups: int
+
+    def fraction_duplication(self) -> float:
+        return self.total_dups / self.total
+
+
+class FirstMateDeduplicator:
+    """Deduplicates a BAM file using R1 position only when possible.
+
+    Read pairs where only R2 is mapped are deduplicated using their position.
+    """
+    def __init__(self, umi_length: int = 6,
+                 multimap_cutoff: int = 5,
+                 stub_length: int = 20,
+                 umi_mismatches: int = 1,
+                 seq_mismatches: int = 2):
+
+        self.umi_length = umi_length
+        self.multimap_cutoff = multimap_cutoff
+        self.stub_length = stub_length
+        self.umi_mismatches = umi_mismatches
+        self.seq_mismatches = seq_mismatches
+
+    def deduplicate(self, src_bam):
+        index = AlignmentIndex(src_bam, self.umi_length, self.multimap_cutoff,
+                               self.stub_length)
+        r1_dups = self._find_duplicate_ids(index.r1_reads_by_position)
+        r2_dups = self._find_duplicate_ids(index.r2_only_reads_by_position)
+        all_dups = set(r1_dups + r2_dups)
+
+        return DedupSummary(
+            total=index.total,
+            total_dups=len(all_dups),
+            r1_dups=len(r1_dups),
+            r2_only_dups=len(r2_dups),
+            multi_dups=0)
+
+    def _find_duplicate_ids(self, aln_index):
+        duplicates = list()
+        for ref in aln_index.keys():
+            for i, dup_candidates in aln_index[ref].items():
+                if len(dup_candidates) > 1:
+                    dup_ids = self.mark_duplicates_by_umi(
+                        dup_candidates, self.umi_mismatches)
+                    duplicates.extend(dup_ids)
+        return duplicates
+
+    def mark_duplicates_by_umi(self, read_list, umi_mismatches=1):
+        seqs = [r.umi for r in read_list]
+        clusters = self.cluster_sequences(seqs, mismatches=umi_mismatches)
+        unique_reads = []
+        for c in clusters:
+            # First element in the list is considered the original according
+            # to UMI-tools documentation
+            unique_candidates = self.filter_by_attribute(read_list, c[0], "umi")
+            if len(unique_candidates) > 1:
+                unique_reads.append(self.pick_best(unique_candidates))
+            else:
+                unique_reads.append(unique_candidates[0])
+
+        unique_reads_set = set(r.name for r in unique_reads)
+        return [r.name for r in read_list if r.name not in unique_reads_set]
+
+    @staticmethod
+    def cluster_sequences(seq_list, mismatches=1, cluster_method="directional"):
+        clusters = []
+        if len(seq_list) > 0:
+            clusterer = UMIClusterer(cluster_method=cluster_method)
+            counts = count_sequences(seq_list)
+            clusters = clusterer(counts, threshold=mismatches)
+        return clusters
+
+    @staticmethod
+    def filter_by_attribute(reads: List[AlignedSegmentSummary], allowed: List[str], attribute: str) -> List[AlignedSegmentSummary]:
+        return [r for r in reads if getattr(r, attribute) in allowed]
+
+    @staticmethod
+    def pick_best(readlist):
+        best = readlist[0]
+        for r in readlist[1:]:
+            if r.score > best.score:
+                best = r
+        return best
