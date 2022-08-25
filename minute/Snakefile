@@ -1,7 +1,6 @@
 import os
 import sys
 
-from minute import se_bam
 from minute import (
     read_libraries,
     read_scaling_groups,
@@ -65,7 +64,7 @@ multiqc_inputs = (
     + expand("reports/fastqc/{library.fastqbase}_R{read}_fastqc/fastqc_data.txt", library=multiplexed_libraries, read=(1, 2))
     + expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=multiplexed_libraries)
     + expand("log/4-mapped/{maplib.name}.log", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
-    + expand("stats/5-dupmarked/{maplib.name}.metrics", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
+    + expand("stats/5-dedup/{maplib.name}.metrics", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
     + expand("stats/final/{maplib.name}.idxstats.txt", maplib=[m for m in maplibs])
 )
 bigwigs = (
@@ -306,36 +305,20 @@ def dupmark_command(wildcards):
 rule mark_duplicates:
     """UMI-aware duplicate marking with je suite (or MarkDuplicates if UMIs are missing)"""
     output:
-        bam=temp("tmp/5-dupmarked/{maplib}.bam"),
-        metrics="stats/5-dupmarked/{maplib}.metrics"
+        bam=temp("tmp/5-dedup/{maplib}.bam"),
+        metrics="stats/5-dedup/{maplib}.metrics"
     input:
         bam="tmp/4-mapped/{maplib}.bam"
     log:
-        "log/5-dupmarked/{maplib}.bam.log"
+        "log/5-dedup/{maplib}.bam.log"
     params: command=dupmark_command
     shell:
         "{params.command}"
-        " REMOVE_DUPLICATES=FALSE"
+        " REMOVE_DUPLICATES=TRUE"
         " I={input.bam}"
         " O={output.bam}"
         " M={output.metrics}"
         " 2> {log}"
-
-
-rule mark_pe_duplicates:
-    """Select duplicate-flagged alignments and mark them in the PE file"""
-    resources:
-        mem_mb = lambda wildcards, attempt: attempt * 6400
-    output:
-        bam=temp("tmp/6-dedup/{library}.bam")
-    input:
-        target_bam="tmp/4-mapped/{library}.bam",
-        proxy_bam="tmp/5-dupmarked/{library}.bam"
-    run:
-        se_bam.mark_duplicates_by_proxy_bam(
-            input.target_bam,
-            input.proxy_bam,
-            output.bam)
 
 
 def exclude_bed(wildcards):
@@ -347,7 +330,7 @@ rule remove_exclude_regions:
     output:
         bam="final/bam/{library}.{reference}.bam"
     input:
-        bam="tmp/6-dedup/{library}.{reference}.bam",
+        bam="tmp/5-dedup/{library}.{reference}.bam",
         bed=exclude_bed,
     run:
         if input.bed:
@@ -507,11 +490,11 @@ rule scaled_bigwig:
 
 rule replicate_stats:
     output:
-        txt="stats/9-stats/{library}.{reference}.txt"
+        txt="stats/6-stats/{library}.{reference}.txt"
     input:
         mapped_flagstat="stats/4-mapped/{library}.{reference}.flagstat.txt",
-        metrics="stats/5-dupmarked/{library}.{reference}.metrics",
-        dedup_flagstat="stats/6-dedup/{library}.{reference}.flagstat.txt",
+        metrics="stats/5-dedup/{library}.{reference}.metrics",
+        dedup_flagstat="stats/5-dedup/{library}.{reference}.flagstat.txt",
         final_flagstat="stats/final/{library}.{reference}.flagstat.txt",
         insertsizes="stats/final/{library}.{reference}.insertsizes.txt",
     run:
@@ -532,7 +515,7 @@ rule replicate_stats:
 
 rule pooled_stats:
     output:
-        txt = "stats/9-stats/{library}_pooled.{reference}.txt"
+        txt = "stats/6-stats/{library}_pooled.{reference}.txt"
     input:
         final_flagstat="stats/final/{library}_pooled.{reference}.flagstat.txt",
         insertsizes="stats/final/{library}_pooled.{reference}.insertsizes.txt",
@@ -551,7 +534,7 @@ rule stats_summary:
     output:
         txt="reports/stats_summary.txt"
     input:
-        expand("stats/9-stats/{maplib.name}.txt", maplib=maplibs)
+        expand("stats/6-stats/{maplib.name}.txt", maplib=maplibs)
     run:
         header = [
             "library",
