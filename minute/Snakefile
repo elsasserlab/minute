@@ -293,6 +293,8 @@ def is_umi_rule(wildcards):
 
 rule mark_duplicates:
     """UMI-aware duplicate marking with UMI-tools (or MarkDuplicates if UMIs are missing)"""
+    threads:
+        2
     output:
         bam=temp("tmp/5-dedup/{maplib}.bam"),
         metrics="stats/5-dedup/{maplib}.metrics"
