@@ -234,6 +234,7 @@ class AlignmentIndex:
 
 @dataclass
 class DedupSummary:
+    library: str
     total: int
     total_dups: int
     r1_dups: int
@@ -249,7 +250,7 @@ class DedupSummary:
     def format_stats(self) -> str:
         # Each element in a pair is only counted once, so theoretically
         # we are still counting "pairs"
-        header = "## METRICS CLASS\tpicard.sam.DuplicationMetrics"
+        header = "## METRICS CLASS\tminute.DuplicationMetrics"
         fields = ["LIBRARY",
                   "READ_PAIRS_EXAMINED",
                   "READ_PAIR_DUPLICATES",
@@ -258,7 +259,7 @@ class DedupSummary:
                   "MULTIMAPPING_DUPLICATES",
                   "PERCENT_DUPLICATION",
                   "ESTIMATED_LIBRARY_SIZE"]
-        values = ["Unknown library",
+        values = [self.library,
                   self.total,
                   self.total_dups,
                   self.r1_dups,
@@ -302,6 +303,7 @@ class FirstMateDeduplicator:
         write_bam_excluding_reads(src_bam, dst_bam, all_dups, self.umi_length)
 
         return DedupSummary(
+            library=os.path.basename(src_bam),
             total=index.total,
             total_dups=len(all_dups),
             r1_dups=len(r1_dups),

@@ -229,7 +229,10 @@ def parse_insert_size_metrics(path):
 
 
 def parse_duplication_metrics(path):
-    return parse_picard_metrics(path, metrics_class="picard.sam.DuplicationMetrics")
+    try:
+        return parse_picard_metrics(path, metrics_class="minute.DuplicationMetrics")
+    except ParseError:
+        return parse_picard_metrics(path, metrics_class="picard.sam.DuplicationMetrics")
 
 
 def parse_picard_metrics(path, metrics_class: str):
