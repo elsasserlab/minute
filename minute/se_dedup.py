@@ -1,3 +1,4 @@
+import math
 import os
 import pysam
 from collections import defaultdict
@@ -33,6 +34,54 @@ def write_bam_excluding_reads(src_file, dst_file, exclude_ids, umi_length=6):
         for r in src:
             if not r.query_name[:-umi_length - 1] in exclude_ids:
                 dst.write(r)
+
+
+def lander_waterman(x: int, c: int, n: int) -> float:
+    """Lander-Waterman equation C/X = 1 - exp( -N/X )
+            y = C/X -1 + exp(-N/X)
+    """
+    return c / x - 1 + math.exp(-n / x)
+
+
+def estimate_library_size(total, unique, iter=40) -> float|None:
+    """Estimates the size of a library based on Lander Waterman equation,
+    same way as PICARD does (MIT-licensed), based on the total number of
+    reads and the number of unique reads observed.
+
+    NOTE:
+    For PICARD, total reads are: PAIRS EXAMINED - OPTICAL DUPS
+                unique reads are: PAIRS EXAMINED - PAIR DUPS.
+    We do not estimate optical duplicates, so these are included in the
+    library size estimate.
+    """
+    if total > 0 and unique > 0:
+        lower_bound = 1.0
+        upper_bound = 100.0
+
+        wt_lower = lander_waterman(lower_bound * unique, unique, total)
+        if unique >= total or wt_lower < 0:
+            print(f"Non valid values for pairs and unique pairs: {total} {unique}")
+            return None
+
+        # find value of upper bound
+        while lander_waterman(upper_bound * unique, unique, total) > 0:
+            upper_bound *= 10.0
+
+        for i in range(iter):
+            pivot = (lower_bound + upper_bound) / 2.0
+            u = lander_waterman(pivot * unique, unique, total)
+
+            if u == 0:
+                break
+            elif u > 0:
+                lower_bound = pivot
+            elif u < 0:
+                upper_bound = pivot
+
+        return unique * (lower_bound + upper_bound) / 2.0
+    else:
+        return None
+
 
 class AlignmentType(Enum):
     SINGLE = 0
@@ -194,6 +243,9 @@ class DedupSummary:
     def fraction_duplication(self) -> float:
         return self.total_dups / self.total
 
+    def libsize(self) -> float:
+        return estimate_library_size(self.total, self.total - self.total_dups)
+
     def format_stats(self) -> str:
         # Each element in a pair is only counted once, so theoretically
         # we are still counting "pairs"
@@ -213,7 +265,7 @@ class DedupSummary:
                   self.r2_only_dups,
                   self.multi_dups,
                   self.fraction_duplication(),
-                  "NA"]
+                  self.libsize()]
         values_str = "\t".join(str(v) for v in values)
         fields_str = "\t".join(fields)
         return f"{header}\n{fields_str}\n{values_str}"
