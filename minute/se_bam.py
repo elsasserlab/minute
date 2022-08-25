@@ -4,39 +4,8 @@ import pysam
 import tempfile
 
 
-def convert_paired_end_to_single_end_bam(bam, out, keep_unmapped=False):
-    """
-    Iterates through a paired-end BAM file and keeps only the first
-    mate of each pair.
-
-    Keyword arguments:
-    keep_unmapped -- Keep unmapped reads
-    """
-    # Silence spurious "Could not retrieve index file" warnings
-    verbosity = pysam.set_verbosity(0)
-    with pysam.AlignmentFile(bam, 'rb') as in_file,\
-         pysam.AlignmentFile(out, 'wb', header=in_file.header) as out_file:
-        pysam.set_verbosity(verbosity)
-        for alignment in in_file:
-            if _is_read_valid(alignment, keep_unmapped):
-                new_alignment = _convert_to_single_end(alignment)
-                out_file.write(new_alignment)
-
-
 def _is_read_valid(alignment, keep_unmapped):
     return alignment.is_read1 and (keep_unmapped or not alignment.is_unmapped)
-
-
-def _convert_to_single_end(alignment):
-    alignment.is_paired = False
-    alignment.is_read1 = False
-    alignment.is_proper_pair = False
-    alignment.mate_is_reverse = False
-    alignment.mate_is_unmapped = False
-    alignment.next_reference_id = 0
-    alignment.next_reference_start = 0
-    alignment.next_reference_name = None
-    return alignment
 
 
 def mark_duplicates_by_proxy_bam(source_bam, proxy_bam, out, filter_dups=True):
