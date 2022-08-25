@@ -194,6 +194,30 @@ class DedupSummary:
     def fraction_duplication(self) -> float:
         return self.total_dups / self.total
 
+    def format_stats(self) -> str:
+        # Each element in a pair is only counted once, so theoretically
+        # we are still counting "pairs"
+        header = "## METRICS CLASS\tpicard.sam.DuplicationMetrics"
+        fields = ["LIBRARY",
+                  "READ_PAIRS_EXAMINED",
+                  "READ_PAIR_DUPLICATES",
+                  "R1_DUPLICATES",
+                  "R2_ONLY_DUPLICATES",
+                  "MULTIMAPPING_DUPLICATES",
+                  "PERCENT_DUPLICATION",
+                  "ESTIMATED_LIBRARY_SIZE"]
+        values = ["Unknown library",
+                  self.total,
+                  self.total_dups,
+                  self.r1_dups,
+                  self.r2_only_dups,
+                  self.multi_dups,
+                  self.fraction_duplication(),
+                  "NA"]
+        values_str = "\t".join(str(v) for v in values)
+        fields_str = "\t".join(fields)
+        return f"{header}\n{fields_str}\n{values_str}"
+
 
 class FirstMateDeduplicator:
     """Deduplicates a BAM file using R1 position only when possible.

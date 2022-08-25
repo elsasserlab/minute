@@ -1,6 +1,7 @@
 import os
 import sys
 
+from minute import se_dedup
 from minute import (
     read_libraries,
     read_scaling_groups,
@@ -282,28 +283,16 @@ rule pool_replicates:
             shell("samtools merge {output.bam} {input.bam_replicates}")
 
 
-def dupmark_command(wildcards):
+def is_umi_rule(wildcards):
     maplibname = wildcards.maplib
-    commands = {
-        True:
-            "LC_ALL=C je"
-            " markdupes"
-            " MISMATCHES=1"
-            " SLOTS=-1"
-            " SPLIT_CHAR=_",
-        False:
-            "picard"
-            " MarkDuplicates"
-            " VALIDATION_STRINGENCY=SILENT",
-    }
     for maplib in maplibs:
         if maplib.name == maplibname:
-            return commands[maplib.library.has_umi()]
-    return commands[True]
+            return maplib.library.has_umi()
+    return True
 
 
 rule mark_duplicates:
-    """UMI-aware duplicate marking with je suite (or MarkDuplicates if UMIs are missing)"""
+    """UMI-aware duplicate marking with UMI-tools (or MarkDuplicates if UMIs are missing)"""
     output:
         bam=temp("tmp/5-dedup/{maplib}.bam"),
         metrics="stats/5-dedup/{maplib}.metrics"
@@ -311,14 +300,26 @@ rule mark_duplicates:
         bam="tmp/4-mapped/{maplib}.bam"
     log:
         "log/5-dedup/{maplib}.bam.log"
-    params: command=dupmark_command
-    shell:
-        "{params.command}"
-        " REMOVE_DUPLICATES=TRUE"
-        " I={input.bam}"
-        " O={output.bam}"
-        " M={output.metrics}"
-        " 2> {log}"
+    run:
+        if is_umi_rule(wildcards):
+            map_qual_cutoff = 5
+            stub_length = 20
+            deduplicator = se_dedup.FirstMateDeduplicator(config["umi_length"], map_qual_cutoff, stub_length)
+            dup_stats = deduplicator.deduplicate(input.bam, output.bam)
+            with open(output.metrics, "w") as f:
+                print(dup_stats.format_stats(), file=f)
+
+        else:
+            shell(
+                "picard"
+                " MarkDuplicates"
+                " VALIDATION_STRINGENCY=SILENT"
+                " REMOVE_DUPLICATES=TRUE"
+                " I={input.bam}"
+                " O={output.bam}"
+                " M={output.metrics}"
+                " 2> {log}"
+            )
 
 
 def exclude_bed(wildcards):
@@ -391,8 +392,8 @@ rule unscaled_bigwig:
 for group in scaling_groups:
     rule:
         output:
-            factors=temp(["stats/8-factors/{library.name}.factor.txt".format(library=np.treatment) for np in group.normalization_pairs]),
-            info="stats/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name)
+            factors=temp(["stats/7-factors/{library.name}.factor.txt".format(library=np.treatment) for np in group.normalization_pairs]),
+            info="stats/7-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name)
         input:
             treatments=["stats/final/{maplib.name}.flagstat.txt".format(maplib=np.treatment) for np in group.normalization_pairs],
             controls=["stats/final/{maplib.name}.flagstat.txt".format(maplib=np.control) for np in group.normalization_pairs],
@@ -419,7 +420,7 @@ def set_compute_scaling_rule_names():
     This sets the names of the compute scaling rules, which need to be
     defined anonymously because they are defined (above) in a loop.
     """
-    prefix = "stats/8-scalinginfo/"
+    prefix = "stats/7-scalinginfo/"
     for rul in workflow.rules:
         if "controls" in rul.input.keys():
             rul.name = "compute_scaling_factors_group_" + rul.output["info"][len(prefix):-4]
@@ -432,7 +433,7 @@ rule summarize_scaling_factors:
     output:
         info="reports/scalinginfo.txt"
     input:
-        factors=["stats/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name) for group in scaling_groups]
+        factors=["stats/7-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name) for group in scaling_groups]
     run:
         with open(output.info, "w") as f:
             print("sample_name", "#reads", "n_scaled_reads", "input_name", "n_input_reads", "factor", "scaling_group", sep="\t", file=f)
@@ -467,7 +468,7 @@ rule scaled_bigwig:
     output:
         bw="final/bigwig/{library}.scaled.bw"
     input:
-        factor="stats/8-factors/{library}.factor.txt",
+        factor="stats/7-factors/{library}.factor.txt",
         fragsize="stats/final/{library}.fragsize.txt",
         bam="final/bam/{library}.bam",
         bai="final/bam/{library}.bai",
