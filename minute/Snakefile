@@ -299,7 +299,8 @@ rule mark_duplicates:
         bam=temp("tmp/5-dedup/{maplib}.bam"),
         metrics="stats/5-dedup/{maplib}.metrics"
     input:
-        bam="tmp/4-mapped/{maplib}.bam"
+        bam="tmp/4-mapped/{maplib}.bam",
+        index="tmp/4-mapped/{maplib}.bai"
     log:
         "log/5-dedup/{maplib}.bam.log"
     run:
@@ -307,7 +308,7 @@ rule mark_duplicates:
             map_qual_cutoff = 5
             stub_length = 20
             deduplicator = se_dedup.FirstMateDeduplicator(config["umi_length"], map_qual_cutoff, stub_length)
-            dup_stats = deduplicator.deduplicate(input.bam, output.bam)
+            dup_stats = deduplicator.deduplicate(input.bam, input.index, output.bam)
             with open(output.metrics, "w") as f:
                 print(dup_stats.format_stats(), file=f)
 

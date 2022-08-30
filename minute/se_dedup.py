@@ -1,9 +1,9 @@
+import datetime
 import math
 import os
 import pysam
 from collections import defaultdict
 from dataclasses import dataclass
-from enum import Enum
 from typing import Iterator, List
 from umi_tools import UMIClusterer
 
@@ -13,27 +13,6 @@ def count_sequences(seq_list):
     for s in seq_list:
         counts[s] += 1
     return counts
-
-
-def get_mapped_segments(bam: os.PathLike) -> Iterator[pysam.AlignedSegment]:
-    """Iterates through a BAM file returning only mapped AlignedSegment
-    objects """
-    verbosity = pysam.set_verbosity(0)
-    with pysam.AlignmentFile(bam, 'rb') as handle:
-        pysam.set_verbosity(verbosity)
-        for read in handle:
-            if not read.is_unmapped:
-                yield read
-
-
-def write_bam_excluding_reads(src_file, dst_file, exclude_ids, umi_length=6):
-    verbosity = pysam.set_verbosity(0)
-    with pysam.AlignmentFile(src_file, 'rb') as src, \
-            pysam.AlignmentFile(dst_file, 'wb', header=src.header) as dst:
-        pysam.set_verbosity(verbosity)
-        for r in src:
-            if not r.query_name[:-umi_length - 1] in exclude_ids:
-                dst.write(r)
 
 
 def lander_waterman(x: int, c: int, n: int) -> float:
@@ -83,45 +62,88 @@ def estimate_library_size(total, unique, iter=40) -> float|None:
         return None
 
 
-class AlignmentType(Enum):
-    SINGLE = 0
-    MULTI = 1
+class PysamAlignmentFile:
+    def __init__(self, bam_file, index_file):
+        self.bam = bam_file
+        self.index = index_file
+
+    def get_mapped_segments(self, contig: str = None, min_quality: int = 0, max_quality: int = 44) -> Iterator[pysam.AlignedSegment]:
+        verbosity = pysam.set_verbosity(0)
+        with pysam.AlignmentFile(self.bam, mode='rb',
+                                 index_filename=self.index) as handle:
+            pysam.set_verbosity(verbosity)
+            for read in handle.fetch(contig=contig):
+                if not read.is_unmapped and read.mapping_quality >= min_quality and read.mapping_quality < max_quality:
+                    yield read
+
+    def get_mapped_count(self) -> int:
+        """Returns total number of fragments in the whole alignment"""
+        # Discordant alignments can be counted twice if done per contig.
+        seen = []
+        with pysam.AlignmentFile(self.bam, mode='rb',
+                                 index_filename=self.index) as handle:
+            for read in handle:
+                if not read.is_unmapped:
+                    seen.append(read.query_name)
+
+        return len(set(seen))
+
+    def get_alignment_statistics(self) -> List:
+        with pysam.AlignmentFile(self.bam, mode='rb', index_filename=self.index) as handle:
+            return handle.get_index_statistics()
+
+    def get_contig_names(self) -> Iterator[str]:
+        with pysam.AlignmentFile(self.bam, mode='rb', index_filename=self.index) as handle:
+            for name in handle.references:
+                yield name
+
+    def write(self, dst_file, exclude_ids, umi_length=6):
+        verbosity = pysam.set_verbosity(0)
+        with pysam.AlignmentFile(self.bam, mode='rb') as src, \
+                pysam.AlignmentFile(dst_file, 'wb', header=src.header) as dst:
+            pysam.set_verbosity(verbosity)
+            for r in src:
+                if not r.query_name[:-umi_length - 1] in exclude_ids:
+                    dst.write(r)
 
 
-class AlignedSegmentSummary:
-    """Information about a pysam.AlignedSegment relevant for the
-    deduplication method"""
-    def __init__(self,
-                 read_info: pysam.AlignedSegment,
-                 umi_length: int,
-                 multimap_cutoff: int,
-                 stub_length: int):
+class SegmentSummary:
+    name: str
+    umi: bytes
+    stub: bytes
 
-        self.name = self.get_name(read_info, umi_length)
-        self.umi = self.get_umi(read_info, umi_length)
-        self.mate = self.get_mate(read_info)
-        self.reference = read_info.reference_name
-        self.start = read_info.reference_start
-        self.mate_start = read_info.next_reference_start
+    def __init__(self, read_info: pysam.AlignedSegment, umi_length: int, stub_length: int):
+        self.name = self.parse_name(read_info, umi_length)
+        self.umi = self.parse_umi(read_info, umi_length)
+        self.stub = str.encode(read_info.query_sequence[0:stub_length])
         self.mapping_quality = read_info.mapping_quality
-        self.stub = self.get_stub(read_info, multimap_cutoff, stub_length)
         self.score = self.get_score(read_info)
-        self.type = self.get_type(read_info, multimap_cutoff)
 
     @staticmethod
-    def get_type(read, multimap_cutoff):
-        t = AlignmentType.SINGLE
-        if read.mapping_quality < multimap_cutoff:
-            t = AlignmentType.MULTI
-        return t
-
-    @staticmethod
-    def get_name(read, umi_length):
+    def parse_name(read, umi_length):
         return read.query_name[:-umi_length - 1]
 
     @staticmethod
-    def get_umi(read, umi_length):
+    def parse_umi(read, umi_length):
         return str.encode(read.query_name[-umi_length:])
+
+    @staticmethod
+    def get_score(read):
+        return sum([int(q) for q in read.query_alignment_qualities])
+
+    def is_multi(self, multimap_cutoff):
+        if self.mapping_quality < multimap_cutoff:
+            return True
+
+
+class AlignedSegmentSummary(SegmentSummary):
+    def __init__(self, read_info: pysam.AlignedSegment, umi_length: int, stub_length: int):
+        super().__init__(read_info, umi_length, stub_length)
+        self.mate = self.get_mate(read_info)
+        self.start = read_info.reference_start
+        self.mate_start = read_info.next_reference_start
+        # We don't need the stub for aligned reads
+        self.stub = b""
 
     @staticmethod
     def get_mate(read):
@@ -135,21 +157,9 @@ class AlignedSegmentSummary:
             # to map the reads independently.
             return -1
 
-    @staticmethod
-    def get_stub(read, multimap_cutoff, length):
-        if read.mapping_quality < multimap_cutoff:
-            stub = str.encode(read.query_sequence[:length])
-            return stub
-        else:  # Save memory storing only this info if necessary (multimappers)
-            return b""
 
-    @staticmethod
-    def get_score(read):
-        return sum([int(q) for q in read.query_alignment_qualities])
-
-
-class AlignmentIndex:
-    """Indexes a BAM alignment in three categories:
+class ContigIndex:
+    """Indexes a contig BAM alignment in two categories:
     - R1 reads: Mapped reads that have mapping quality >= multimap_cutoff
     and are flagged as R1. These can be part of a proper pair or not, since
     the deduplication is done based solely on R1 sequence. They are indexed
@@ -157,22 +167,17 @@ class AlignmentIndex:
     - R2-only reads: Mapped reads that have mapping quality >= multimap_cutoff,
     are flagged as R2 and whose matching R1 is not found in the alignment, or
     is unmapped. They are indexed by genomic position.
-    - Multimappers: Mapped reads that have mapping quality < multimap_cutoff.
-    R1 reads based on the same criteria as before, and R2 where R1 is not
-    found are gathered together, as their deduplication is not based on
-    position, only on sequence.
     """
-    def __init__(self, bam, umi_length, multimap_cutoff, stub_length):
-        self.r1_reads_by_position = defaultdict(lambda: defaultdict(list))
-        self.r2_only_reads_by_position = defaultdict(lambda: defaultdict(list))
-        self.multimappers = list()
+    def __init__(self, alignment: PysamAlignmentFile, contig: str, umi_length: int, multimap_cutoff: int):
+        self.alignment = alignment
+        self.r1_reads_by_position = defaultdict(list)
+        self.r2_only_reads_by_position = defaultdict(list)
 
         self.umi_length = umi_length
         self.multimap_cutoff = multimap_cutoff
-        self.stub_length = stub_length
 
-        seen_1st = self._index_first_mates(bam)
-        seen_2nd = self._index_second_mates(bam, seen_1st)
+        seen_1st = self._index_first_mates(contig)
+        seen_2nd = self._index_second_mates(contig, seen_1st)
 
         self.r1_counts = len(seen_1st)
         self.r2_counts = len(seen_2nd)
@@ -192,42 +197,30 @@ class AlignmentIndex:
         r2_ref = len(self.r2_only_reads_by_position)
         print(f"R1: {self.r1_counts} ({r1_npos} pos, {r1_ref} ref)")
         print(f"R2: {self.r2_counts} ({r2_npos} pos, {r2_ref} ref)")
-        print(f"Multi: {len(self.multimappers)}")
 
-    def _index_first_mates(self, bam):
+    def _index_first_mates(self, contig):
         seen = list()
-        for read in get_mapped_segments(bam):
+        for read in self.alignment.get_mapped_segments(contig, self.multimap_cutoff):
             aln = AlignedSegmentSummary(read,
-                                        self.umi_length,
-                                        self.multimap_cutoff,
-                                        self.stub_length)
+                                        umi_length=self.umi_length,
+                                        stub_length=0)
             if aln.mate == 1:
-                if aln.type == AlignmentType.SINGLE:
-                    refname = read.reference_name
+                if not aln.is_multi(multimap_cutoff=self.multimap_cutoff):
                     pos = read.reference_start
-                    self.r1_reads_by_position[refname][pos].append(aln)
-                    seen.append(aln.name)
-                elif aln.type == AlignmentType.MULTI:
-                    self.multimappers.append(aln)
+                    self.r1_reads_by_position[pos].append(aln)
                     seen.append(aln.name)
         return set(seen)
 
-    def _index_second_mates(self, bam, seen):
+    def _index_second_mates(self, contig, seen):
         second_ids = []
-        for read in get_mapped_segments(bam):
-            aln = AlignedSegmentSummary(read,
-                                        self.umi_length,
-                                        self.multimap_cutoff,
-                                        self.stub_length)
+        for read in self.alignment.get_mapped_segments(contig, self.multimap_cutoff):
+            aln = AlignedSegmentSummary(read, umi_length=self.umi_length,
+                                        stub_length=0)
 
             if aln.mate == 2 and aln.name not in seen:
-                if aln.type == AlignmentType.SINGLE:
-                    refname = read.reference_name
+                if not aln.is_multi(multimap_cutoff=self.multimap_cutoff):
                     pos = read.reference_start
-                    self.r2_only_reads_by_position[refname][pos].append(aln)
-                    second_ids.append(aln.name)
-                elif aln.type == AlignmentType.MULTI:
-                    self.multimappers.append(aln)
+                    self.r2_only_reads_by_position[pos].append(aln)
                     second_ids.append(aln.name)
         return set(second_ids)
 
@@ -272,11 +265,16 @@ class DedupSummary:
         return f"{header}\n{fields_str}\n{values_str}"
 
 
+def print_timed(s):
+    time_str = str(datetime.datetime.now())
+    print(f"{time_str}: {s}")
+
+
 class FirstMateDeduplicator:
     """Deduplicates a BAM file using R1 position only when possible.
 
     Read pairs where only R2 is mapped are deduplicated using their position.
-    Multimappers are all pooled together and clustered hierarchically,
+    Multimap pers are all pooled together and clustered hierarchically,
     first by UMI, then by a sequence stub of max length stub_length, after
     which reads are deduplicated.
     """
@@ -292,32 +290,58 @@ class FirstMateDeduplicator:
         self.umi_mismatches = umi_mismatches
         self.seq_mismatches = seq_mismatches
 
-    def deduplicate(self, src_bam, dst_bam):
-        index = AlignmentIndex(src_bam, self.umi_length, self.multimap_cutoff,
-                               self.stub_length)
+    def deduplicate_contig(self, alignment, contig):
+        index = ContigIndex(alignment, contig, self.umi_length, self.multimap_cutoff)
         r1_dups = self._find_duplicate_ids(index.r1_reads_by_position)
         r2_dups = self._find_duplicate_ids(index.r2_only_reads_by_position)
-        multi_duplicates = self.mark_duplicates_by_umi_and_sequence(
-            index.multimappers)
-        all_dups = set(r1_dups + r2_dups + multi_duplicates)
-        write_bam_excluding_reads(src_bam, dst_bam, all_dups, self.umi_length)
+        return [r1_dups, r2_dups]
+
+    def deduplicate(self, src_bam, scr_index, dst_bam):
+        alignment = PysamAlignmentFile(src_bam, scr_index)
+        all_mapped_dups = dict()
+        for contig in alignment.get_contig_names():
+            print_timed(f"Dedup contig {contig}")
+            all_mapped_dups[contig] = self.deduplicate_contig(alignment, contig)
+
+        # Deduplicate multimappers
+        multi = [SegmentSummary(r, umi_length=self.umi_length, stub_length=self.stub_length)
+                 for r in alignment.get_mapped_segments(max_quality = self.multimap_cutoff)]
+        print_timed(f"Deduplicating {len(multi)} multimapping reads")
+        multi_dups = self.mark_duplicates_by_umi_and_sequence(multi)
+
+        print_timed("Writing without the duplicates")
+        alignment.write(dst_bam, all_mapped_dups, self.umi_length)
+        print_timed("Done")
+        contig_dups = self.summarise_contig_dups(alignment, all_mapped_dups)
+        total = alignment.get_mapped_count()
 
         return DedupSummary(
-            library=os.path.basename(src_bam),
-            total=index.total,
-            total_dups=len(all_dups),
-            r1_dups=len(r1_dups),
-            r2_only_dups=len(r2_dups),
-            multi_dups=len(multi_duplicates))
+            library=os.path.basename(alignment.bam),
+            total=total,
+            total_dups=sum(contig_dups)+len(multi_dups),
+            r1_dups=contig_dups[0],
+            r2_only_dups=contig_dups[1],
+            multi_dups=len(multi_dups)
+        )
+
+    @staticmethod
+    def summarise_contig_dups(alignment, dups_dict):
+        r1_dups = 0
+        r2_dups = 0
+
+        for contig in dups_dict:
+            r1_dups += len(dups_dict[contig][0])
+            r2_dups += len(dups_dict[contig][1])
+
+        return [r1_dups, r2_dups]
 
     def _find_duplicate_ids(self, aln_index):
         duplicates = list()
-        for ref in aln_index.keys():
-            for i, dup_candidates in aln_index[ref].items():
-                if len(dup_candidates) > 1:
-                    dup_ids = self.mark_duplicates_by_umi(
-                        dup_candidates, self.umi_mismatches)
-                    duplicates.extend(dup_ids)
+        for i, dup_candidates in aln_index.items():
+            if len(dup_candidates) > 1:
+                dup_ids = self.mark_duplicates_by_umi(
+                    dup_candidates, self.umi_mismatches)
+                duplicates.extend(dup_ids)
         return duplicates
 
     def mark_duplicates_by_umi(self, read_list, umi_mismatches=1):
