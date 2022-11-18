@@ -20,6 +20,7 @@ from minute import (
     flatten_scaling_groups,
     Pool,
     MultiplexedReplicate,
+    estimate_library_size,
 )
 
 
@@ -539,7 +540,10 @@ rule replicate_stats:
             (input.final_flagstat, "final_mapped"),
         ]:
             d[name] = parse_flagstat(flagstat).mapped_reads
-        d["library_size"] = parse_duplication_metrics(input.metrics)["estimated_library_size"]
+        d["library_size"] = estimate_library_size(
+            parse_duplication_metrics(input.metrics)["unpaired_reads_examined"],
+            parse_duplication_metrics(input.metrics)["unpaired_read_duplicates"])
+
         d["percent_duplication"] = parse_duplication_metrics(input.metrics)["percent_duplication"]
         d["insert_size"] = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
         with open(output.txt, "w") as f:
