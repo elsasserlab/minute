@@ -549,7 +549,11 @@ rule replicate_stats:
         insertsizes="stats/final/{library}.{reference}.insertsizes.txt",
         demux_stats="stats/final/{library}.nreads.txt",
     run:
-        d = dict(library=wildcards.library, reference=wildcards.reference)
+        d = dict(
+                map_id=f"{wildcards.library}.{wildcards.reference}",
+                library=wildcards.library,
+                reference=wildcards.reference
+            )
         for flagstat, name in [
             (input.mapped_flagstat, "raw_mapped"),
             (input.dedup_flagstat, "dedup_mapped"),
@@ -576,7 +580,11 @@ rule pooled_stats:
         final_flagstat="stats/final/{library}_pooled.{reference}.flagstat.txt",
         insertsizes="stats/final/{library}_pooled.{reference}.insertsizes.txt",
     run:
-        d = dict(library=f"{wildcards.library}_pooled", reference=wildcards.reference)
+        d = dict(
+                map_id=f"{wildcards.library}_pooled.{wildcards.reference}",
+                library=f"{wildcards.library}_pooled",
+                reference=wildcards.reference
+            )
         for key in ["raw_demultiplexed", "raw_mapped", "dedup_mapped", "library_size", "percent_duplication"]:
             d[key] = "."
         d["final_mapped"] = parse_flagstat(input.final_flagstat).mapped_reads
@@ -593,6 +601,7 @@ rule stats_summary:
         expand("stats/9-stats/{maplib.name}.txt", maplib=maplibs)
     run:
         header = [
+            "map_id",
             "library",
             "reference",
             "raw_demultiplexed",
