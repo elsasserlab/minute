@@ -61,6 +61,9 @@ custom_data:
     headers:
       reference:
         description: "Reference to which reads were mapped"
+      raw_demultiplexed:
+        description: "Number of demultiplexed reads"
+        format: "{:,.0f}"
       raw_mapped:
         description: "Number of mapped reads"
         format: "{:,.0f}"
@@ -120,6 +123,7 @@ table_columns_placement:
   summary:
     library: 1
     reference: 2
+    raw_demultiplexed: 2.5
     raw_mapped: 3
     dedup_mapped: 4
     final_mapped: 5

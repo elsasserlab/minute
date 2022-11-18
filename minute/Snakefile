@@ -23,6 +23,7 @@ from minute import (
     estimate_library_size,
 )
 
+from xopen import xopen
 
 configfile: "minute.yaml"
 
@@ -239,6 +240,20 @@ for lib in direct_libraries:
             fastq="fastq/{lib.fastqbase}_R{{r}}.fastq.gz".format(lib=lib)
         shell:
             "ln -s ../../{input} {output}"
+
+
+rule demultiplex_stats:
+    input:
+        fastq="final/demultiplexed/{library}_R1.fastq.gz",
+    output:
+        stats="stats/final/{library}.nreads.txt",
+    run:
+         with xopen(input.fastq) as f:
+            lines = len([line for line in f])
+            with open(output.stats, "w") as fo:
+                # PE data: FASTQ have 4 lines per read, but
+                # we have to count both mates (because flagstat does)
+                fo.write(str(lines//2))
 
 
 rule bowtie2:
@@ -532,6 +547,7 @@ rule replicate_stats:
         dedup_flagstat="stats/7-dedup/{library}.{reference}.flagstat.txt",
         final_flagstat="stats/final/{library}.{reference}.flagstat.txt",
         insertsizes="stats/final/{library}.{reference}.insertsizes.txt",
+        demux_stats="stats/final/{library}.nreads.txt",
     run:
         d = dict(library=wildcards.library, reference=wildcards.reference)
         for flagstat, name in [
@@ -540,6 +556,8 @@ rule replicate_stats:
             (input.final_flagstat, "final_mapped"),
         ]:
             d[name] = parse_flagstat(flagstat).mapped_reads
+
+        d["raw_demultiplexed"] = read_int_from_file(input.demux_stats)
         d["library_size"] = estimate_library_size(
             parse_duplication_metrics(input.metrics)["unpaired_reads_examined"],
             parse_duplication_metrics(input.metrics)["unpaired_read_duplicates"])
@@ -559,7 +577,7 @@ rule pooled_stats:
         insertsizes="stats/final/{library}_pooled.{reference}.insertsizes.txt",
     run:
         d = dict(library=f"{wildcards.library}_pooled", reference=wildcards.reference)
-        for key in ["raw_mapped", "dedup_mapped", "library_size", "percent_duplication"]:
+        for key in ["raw_demultiplexed", "raw_mapped", "dedup_mapped", "library_size", "percent_duplication"]:
             d[key] = "."
         d["final_mapped"] = parse_flagstat(input.final_flagstat).mapped_reads
         d["insert_size"] = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
@@ -577,6 +595,7 @@ rule stats_summary:
         header = [
             "library",
             "reference",
+            "raw_demultiplexed",
             "raw_mapped",
             "dedup_mapped",
             "final_mapped",
