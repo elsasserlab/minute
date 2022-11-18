@@ -45,6 +45,7 @@ module_order:
   - picard:
       path_filters:
         - "*.metrics"
+        - "*.insertsizes.txt"
   - deeptools:
       path_filters:
         - "stats/final/*fingerprint.log"
