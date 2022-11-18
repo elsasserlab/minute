@@ -59,6 +59,8 @@ custom_data:
       id: "summary"
       namespace: "summary"
     headers:
+      library:
+        description: "Library name"
       reference:
         description: "Reference to which reads were mapped"
       raw_demultiplexed:
@@ -122,7 +124,6 @@ sp:
 table_columns_placement:       
   summary:
     library: 1
-    reference: 2
     raw_demultiplexed: 2.5
     raw_mapped: 3
     dedup_mapped: 4
@@ -131,6 +132,7 @@ table_columns_placement:
     percent_duplication: 10
     insert_size: 12
     library_size: 13
+    reference: 14
   scalinginfo:
     sample_name: 1
     "#reads": 2
@@ -139,6 +141,10 @@ table_columns_placement:
     n_input_reads: 5
     factor: 6
     scaling_group: 7
+
+table_columns_name:
+  summary:
+    library: "library name"
 
 table_cond_formatting_rules:
   percent_duplication:
