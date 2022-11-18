@@ -58,6 +58,30 @@ custom_data:
   summary:
     file_format: "tsv"
     section_name: "Statistics summary"
+    pconfig:
+      id: "summary"
+      namespace: "summary"
+    headers:
+      reference:
+        description: "Reference to which reads were mapped"
+      raw_mapped:
+        description: "Number of mapped reads"
+        format: "{:,.0f}"
+      dedup_mapped:
+        description: "Number of reads mapped after deduplication"
+        format: "{:,.0f}"
+      final_mapped:
+        description: "Number of reads mapped after deduplication and blocklist filter"
+        format: "{:,.0f}"
+      percent_duplication:
+        description: "Percentage duplication"
+        format: "{:,.3f}"
+      insert_size:
+        description: "Insert size median"
+        format: "{:,.0f}"
+      library_size:
+        description: "Library size estimate"
+        format: "{:,.0f}"
   groupedscaling:
     section_name: "Minute scaled read stats"
   replicatescaling:
@@ -73,6 +97,17 @@ sp:
   replicatescaling:
     fn: "scaling_barplot.png"
 
+table_columns_placement:       
+  summary:
+    library: 1
+    reference: 2
+    raw_mapped: 3
+    dedup_mapped: 4
+    final_mapped: 5
+    demultiplexed: 6
+    percent_duplication: 10
+    insert_size: 12
+    library_size: 13
 
 table_cond_formatting_rules:
   percent_duplication:
