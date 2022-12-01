@@ -249,7 +249,7 @@ rule demultiplex_stats:
         stats="stats/final/{library}.nreads.txt",
     run:
         with xopen(input.fastq) as f:
-            lines = len([line for line in f])
+            lines = sum(1 for _ in f)
         
         with open(output.stats, "w") as fo:
             # PE data: FASTQ have 4 lines per read, but
