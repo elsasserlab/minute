@@ -248,12 +248,13 @@ rule demultiplex_stats:
     output:
         stats="stats/final/{library}.nreads.txt",
     run:
-         with xopen(input.fastq) as f:
+        with xopen(input.fastq) as f:
             lines = len([line for line in f])
-            with open(output.stats, "w") as fo:
-                # PE data: FASTQ have 4 lines per read, but
-                # we have to count both mates (because flagstat does)
-                fo.write(str(lines//2))
+        
+        with open(output.stats, "w") as fo:
+            # PE data: FASTQ have 4 lines per read, but
+            # we have to count both mates (because flagstat does)
+            print(lines // 2, file=fo)
 
 
 rule bowtie2:
@@ -562,6 +563,10 @@ rule replicate_stats:
             d[name] = parse_flagstat(flagstat).mapped_reads
 
         d["raw_demultiplexed"] = read_int_from_file(input.demux_stats)
+        
+        # Note that here we use as total/unique single ended fragments, because we deduplicate
+        # based on 1st mate. However if we used proper-pairs the result would be very similar,
+        # since in any case the paired-end read is a single sequencing event.
         d["library_size"] = estimate_library_size(
             parse_duplication_metrics(input.metrics)["unpaired_reads_examined"],
             parse_duplication_metrics(input.metrics)["unpaired_read_duplicates"])

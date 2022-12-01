@@ -424,48 +424,49 @@ def libraries_unused_in_groups(libraries: List[Replicate], groups: List[ScalingG
     return list(unused)
 
 
-
-# Lander-Waterman equation that states:
-# C/X = 1 - exp( -N/X )
-# where
-# X = number of distinct molecules in library
-# N = number of read pairs
-# C = number of distinct fragments observed in read pairs
 def lander_waterman(x, c, n):
+    """
+    Lander-Waterman equation states:
+    C/X = 1 - exp( -N/X )
+    where
+     X = number of distinct molecules in library
+     N = number of read pairs
+     C = number of distinct fragments observed in read pairs
+
+    Returns y value of the function: y = c/x -1 + exp(-n/x)
+    """
     return c/x - 1 + math.exp(-n / x)
 
-# Picard procedure for estimating library size translated directly to python.
-# See Picard repository for the original: https://github.com/broadinstitute/picard
-#
-# Note that here we use as total/unique single ended fragments, because we deduplicate
-# based on 1st mate. However if we used proper-pairs the result would be very similar,
-# since in any case the paired-end read is a single sequencing event.
+
 def estimate_library_size(total_reads, duplicate_reads):
+    """
+    Picard procedure for estimating library size translated directly to Python.
+    See Picard repository for the original: 
+    https://github.com/broadinstitute/picard/blob/5295289523f8526b42a08b6e0f0111c8ed5e4399/src/main/java/picard/sam/DuplicationMetrics.java#L143
+    """
     unique_reads = total_reads - duplicate_reads
-    if (total_reads > 0 and duplicate_reads > 0):
-        m = 1.0
-        M = 100.0
-
-        if (unique_reads >= total_reads or lander_waterman(m * unique_reads, unique_reads, total_reads) < 0):
-            print("Non valid values for pairs and unique pairs: {} {}".format(total_reads, unique_reads))
-            return None
-
-        # find value of M, large enough to act as other side for bisection method
-        while (lander_waterman(M * unique_reads, unique_reads, total_reads) > 0):
-            M *= 10.0
-
-        # use bisection method (no more than 40 times) to find solution
-        for i in range(0, 40):
-            r = (m + M) / 2.0
-            u = lander_waterman(r*unique_reads, unique_reads, total_reads)
-
-            if u == 0:
-                break
-            elif u > 0:
-                m = r
-            elif u < 0:
-                M = r
-
-        return (unique_reads * (m + M) / 2.0);
-    else:
+    if total_reads == 0 or duplicate_reads == 0:
         return None
+
+    m = 1.0
+    M = 100.0
+
+    if (unique_reads >= total_reads or lander_waterman(m * unique_reads, unique_reads, total_reads) < 0):
+        raise ValueError(f"Invalid values for pairs and unique pairs: {total_reads} {unique_reads}")
+
+    # find value of M, large enough to act as other side for bisection method
+    while lander_waterman(M * unique_reads, unique_reads, total_reads) > 0:
+        M *= 10.0
+
+    for i in range(40):
+        r = (m + M) / 2.0
+        u = lander_waterman(r*unique_reads, unique_reads, total_reads)
+
+        if u == 0:
+            break
+        elif u > 0:
+            m = r
+        elif u < 0:
+            M = r
+
+    return unique_reads * (m + M) / 2.0
