@@ -128,6 +128,9 @@ renamed.
 
 Minute is available under the MIT license.
 
+## Changelog
+
+See [Changelog](CHANGES.md).
 
 ## Running on SLURM clusters (Uppmax in Sweden)
 

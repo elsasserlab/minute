@@ -45,33 +45,106 @@ module_order:
   - picard:
       path_filters:
         - "*.metrics"
+        - "*.insertsizes.txt"
   - deeptools:
       path_filters:
         - "stats/final/*fingerprint.log"
         - "stats/final/*fingerprint.metrics"
 
 custom_data:
-  scalinginfo:
-    file_format: "tsv"
-    section_name: "Scaling factors"
   summary:
     file_format: "tsv"
     section_name: "Statistics summary"
+    pconfig:
+      id: "summary"
+      namespace: "summary"
+    headers:
+      library:
+        description: "Library name"
+      reference:
+        description: "Reference to which reads were mapped"
+      raw_demultiplexed:
+        description: "Number of demultiplexed reads"
+        format: "{:,.0f}"
+      raw_mapped:
+        description: "Number of mapped reads"
+        format: "{:,.0f}"
+      dedup_mapped:
+        description: "Number of reads mapped after deduplication"
+        format: "{:,.0f}"
+      final_mapped:
+        description: "Number of reads mapped after deduplication and blocklist filter"
+        format: "{:,.0f}"
+      percent_duplication:
+        description: "Percentage duplication"
+        format: "{:,.3f}"
+      insert_size:
+        description: "Insert size median"
+        format: "{:,.0f}"
+      library_size:
+        description: "Library size estimate"
+        format: "{:,.0f}"
+  scalinginfo:
+    file_format: "tsv"
+    section_name: "Scaling factors"
+    pconfig:
+      id: "scalinginfo"
+      namespace: "scalinginfo"
+    headers:
+      "#reads":
+        description: "Number of final mapped reads"
+        format: "{:,.0f}"
+      n_scaled_reads:
+        description: "Number of reads after scaling. If reference, this will be RPGC-scaled. Otherwise, scaled according to reference"
+        format: "{:,.2f}"
+      input_name:
+        description: "Matching input"
+      n_input_reads:
+        description: "Number of final mapped input reads"
+      factor:
+        description: "Calculated scaling factor"
+        format: "{:,.2f}"
+      scaling_group:
+        description: "Scaling group"
   groupedscaling:
     section_name: "Minute scaled read stats"
   replicatescaling:
     section_name: "Minute scaled read stats - replicates only"
 
 sp:
-  scalinginfo:
-    fn: "scalinginfo.txt"
   summary:
     fn: "stats_summary.txt"
+  scalinginfo:
+    fn: "scalinginfo.txt"
   groupedscaling:
     fn: "grouped_scaling_barplot.png"
   replicatescaling:
     fn: "scaling_barplot.png"
 
+table_columns_placement:       
+  summary:
+    library: 1
+    raw_demultiplexed: 2.5
+    raw_mapped: 3
+    dedup_mapped: 4
+    final_mapped: 5
+    demultiplexed: 6
+    percent_duplication: 10
+    insert_size: 12
+    library_size: 13
+    reference: 14
+  scalinginfo:
+    sample_name: 1
+    "#reads": 2
+    n_scaled_reads: 3
+    input_name: 4
+    n_input_reads: 5
+    factor: 6
+    scaling_group: 7
+
+table_columns_name:
+  summary:
+    library: "library name"
 
 table_cond_formatting_rules:
   percent_duplication:

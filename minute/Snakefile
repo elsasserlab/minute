@@ -20,8 +20,10 @@ from minute import (
     flatten_scaling_groups,
     Pool,
     MultiplexedReplicate,
+    estimate_library_size,
 )
 
+from xopen import xopen
 
 configfile: "minute.yaml"
 
@@ -67,6 +69,7 @@ multiqc_inputs = (
     + expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=multiplexed_libraries)
     + expand("log/4-mapped/{maplib.name}.log", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
     + expand("stats/6-dupmarked/{maplib.name}.metrics", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
+    + expand("stats/final/{maplib.name}.insertsizes.txt", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
     + expand("stats/final/{maplib.name}.idxstats.txt", maplib=[m for m in maplibs])
 )
 bigwigs = (
@@ -237,6 +240,21 @@ for lib in direct_libraries:
             fastq="fastq/{lib.fastqbase}_R{{r}}.fastq.gz".format(lib=lib)
         shell:
             "ln -s ../../{input} {output}"
+
+
+rule demultiplex_stats:
+    input:
+        fastq="final/demultiplexed/{library}_R1.fastq.gz",
+    output:
+        stats="stats/final/{library}.nreads.txt",
+    run:
+        with xopen(input.fastq) as f:
+            lines = sum(1 for _ in f)
+        
+        with open(output.stats, "w") as fo:
+            # PE data: FASTQ have 4 lines per read, but
+            # we have to count both mates (because flagstat does)
+            print(lines // 2, file=fo)
 
 
 rule bowtie2:
@@ -530,15 +548,29 @@ rule replicate_stats:
         dedup_flagstat="stats/7-dedup/{library}.{reference}.flagstat.txt",
         final_flagstat="stats/final/{library}.{reference}.flagstat.txt",
         insertsizes="stats/final/{library}.{reference}.insertsizes.txt",
+        demux_stats="stats/final/{library}.nreads.txt",
     run:
-        d = dict(library=wildcards.library, reference=wildcards.reference)
+        d = dict(
+                map_id=f"{wildcards.library}.{wildcards.reference}",
+                library=wildcards.library,
+                reference=wildcards.reference
+            )
         for flagstat, name in [
             (input.mapped_flagstat, "raw_mapped"),
             (input.dedup_flagstat, "dedup_mapped"),
             (input.final_flagstat, "final_mapped"),
         ]:
             d[name] = parse_flagstat(flagstat).mapped_reads
-        d["library_size"] = parse_duplication_metrics(input.metrics)["estimated_library_size"]
+
+        d["raw_demultiplexed"] = read_int_from_file(input.demux_stats)
+        
+        # Note that here we use as total/unique single ended fragments, because we deduplicate
+        # based on 1st mate. However if we used proper-pairs the result would be very similar,
+        # since in any case the paired-end read is a single sequencing event.
+        d["library_size"] = estimate_library_size(
+            parse_duplication_metrics(input.metrics)["unpaired_reads_examined"],
+            parse_duplication_metrics(input.metrics)["unpaired_read_duplicates"])
+
         d["percent_duplication"] = parse_duplication_metrics(input.metrics)["percent_duplication"]
         d["insert_size"] = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
         with open(output.txt, "w") as f:
@@ -553,8 +585,12 @@ rule pooled_stats:
         final_flagstat="stats/final/{library}_pooled.{reference}.flagstat.txt",
         insertsizes="stats/final/{library}_pooled.{reference}.insertsizes.txt",
     run:
-        d = dict(library=f"{wildcards.library}_pooled", reference=wildcards.reference)
-        for key in ["raw_mapped", "dedup_mapped", "library_size", "percent_duplication"]:
+        d = dict(
+                map_id=f"{wildcards.library}_pooled.{wildcards.reference}",
+                library=f"{wildcards.library}_pooled",
+                reference=wildcards.reference
+            )
+        for key in ["raw_demultiplexed", "raw_mapped", "dedup_mapped", "library_size", "percent_duplication"]:
             d[key] = "."
         d["final_mapped"] = parse_flagstat(input.final_flagstat).mapped_reads
         d["insert_size"] = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
@@ -570,8 +606,10 @@ rule stats_summary:
         expand("stats/9-stats/{maplib.name}.txt", maplib=maplibs)
     run:
         header = [
+            "map_id",
             "library",
             "reference",
+            "raw_demultiplexed",
             "raw_mapped",
             "dedup_mapped",
             "final_mapped",
