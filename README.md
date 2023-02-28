@@ -3,7 +3,7 @@
 ## Setup
 
 - Install Conda and Bioconda. Use the
-  [Bioconda instructions](https://bioconda.github.io/user/install.html) if you
+  [Bioconda instructions](https://bioconda.github.io) if you
   don’t have Conda and/or Bioconda, yet.
 - Optionally, but highly recommend is to install [Mamba](https://github.com/mamba-org/mamba), which is a faster
   alternative to Conda:
