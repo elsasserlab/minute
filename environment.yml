@@ -7,9 +7,7 @@ dependencies:
   - python
   # - importlib-metadata   # [py<38]
   - ruamel.yaml
-  # Version that works and also prints errors
-  # See issue: https://github.com/NBISweden/minute/issues/159
-  - snakemake-minimal =7.16.0
+  - snakemake-minimal >= 7.22.0
   - samtools >=1.13
   - cutadapt >=3.7
   - bowtie2 >=2.4.4
