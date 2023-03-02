@@ -212,25 +212,6 @@ for fastq_base, libs in map_fastq_prefix_to_list_of_libraries(multiplexed_librar
             " > {log}"
 
 
-def set_demultiplex_rule_names():
-    """
-    This sets the names of the demultiplexing rules, which need to be
-    defined anonymously because they are defined (above) in a loop.
-    """
-    prefix = "tmp/2-noadapters/"
-    for rul in workflow.rules:
-        if not "barcodes_fasta" in rul.input.keys():
-            # Ensure we get the demultiplexing rules only
-            continue
-        input = rul.input["r1"]
-        assert input.startswith(prefix)
-        # Remove the prefix and the ".1.fastq.gz" suffix
-        rul.name = "demultiplex_" + rul.input["r1"][len(prefix):-11]
-
-
-set_demultiplex_rule_names()
-
-
 for lib in direct_libraries:
 
     rule:
@@ -463,20 +444,6 @@ for group in scaling_groups:
                 for factor, factor_path in zip(factors, output.factors):
                     with open(factor_path, "w") as f:
                         print(factor, file=f)
-
-
-def set_compute_scaling_rule_names():
-    """
-    This sets the names of the compute scaling rules, which need to be
-    defined anonymously because they are defined (above) in a loop.
-    """
-    prefix = "stats/8-scalinginfo/"
-    for rul in workflow.rules:
-        if "controls" in rul.input.keys():
-            rul.name = "compute_scaling_factors_group_" + rul.output["info"][len(prefix):-4]
-
-
-set_compute_scaling_rule_names()
 
 
 rule summarize_scaling_factors:
