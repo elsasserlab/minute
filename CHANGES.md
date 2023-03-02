@@ -1,5 +1,12 @@
 # minute Changelog
 
+## v0.3.1
+
+### Bug fixes
+
+* Issue #159: Temporary removed dynamically renaming of dynamically generated
+rules to avoid issues with recent versions of snakemake.
+
 ## v0.3.0
 
 ### Bug fixes
