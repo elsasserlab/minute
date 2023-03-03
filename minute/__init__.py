@@ -172,8 +172,9 @@ def make_references(config) -> Dict[str, Reference]:
     for name, ref in config.items():
         fasta = Path(ref["fasta"])
         exclude_bed = Path(ref["exclude"]) if ref["exclude"] else None
+        bowtie_index = Path(ref["bowtie2_index"]) if ref["bowtie2_index"] else None
         try:
-            bowtie_index = validate_bowtie_index(ref["bowtie2_index"])
+            bowtie_index = validate_bowtie_index(bowtie_index)
         except (FileNotFoundError, TypeError, KeyError):
             bowtie_index = None
         references[name] = Reference(
