@@ -27,7 +27,7 @@ class ParseError(Exception):
 class Reference:
     name: str
     fasta: Path
-    bowtie_index: Path
+    bowtie_index: Optional[Path]
     exclude_bed: Optional[Path]
 
 
@@ -172,10 +172,11 @@ def make_references(config) -> Dict[str, Reference]:
     for name, ref in config.items():
         fasta = Path(ref["fasta"])
         exclude_bed = Path(ref["exclude"]) if ref["exclude"] else None
+        bowtie_index = Path(ref["bowtie2_index"]) if ref["bowtie2_index"] else None
         try:
-            bowtie_index = detect_bowtie_index_name(ref["fasta"])
-        except FileNotFoundError as e:
-            sys.exit(str(e))
+            bowtie_index = validate_bowtie_index(bowtie_index)
+        except (FileNotFoundError, TypeError, KeyError):
+            bowtie_index = None
         references[name] = Reference(
             name=name,
             fasta=fasta,
@@ -328,33 +329,28 @@ def compute_genome_size(fasta: str) -> int:
     return n
 
 
-def detect_bowtie_index_name(fasta_path: str) -> Path:
+def validate_bowtie_index(base_path: str) -> Path:
     """
-    Given the path to a reference FASTA (which may optionally be compressed),
-    detect the base name of the Bowtie2 index assumed to be in the same
-    location.
-
-    Given "ref.fasta.gz", this function checks for the existence of
-    - "ref.fasta.gz.1.bt2"
-    - "ref.fasta.1.bt2"
-    - "ref.1.bt2"
-    in that order and then returns the name of the first file it finds
-    minus the ".1.bt2" suffix.
+    Given a base bowtie2 index name, checks that all 6 index files exist.
+    If any of the indexes are missing, it raises an exception. Otherwise it
+    returns the same bowtie2 base path.
     """
-    path = Path(fasta_path)
-    bowtie_index_extension = ".1.bt2"
-    bases = [path]
-    if path.suffix == ".gz":
-        bases.append(path.with_suffix(""))
-    if bases[-1].suffix:
-        bases.append(bases[-1].with_suffix(""))
-    for base in bases:
-        if base.with_name(base.name + bowtie_index_extension).exists():
-            return base
-    raise FileNotFoundError(
-        f"No Bowtie2 index found for '{fasta_path}', expected one of\n- "
-        + "\n- ".join(str(b) + bowtie_index_extension for b in bases)
-    )
+    path = Path(base_path)
+    bowtie_index_extensions = [
+        ".1.bt2",
+        ".2.bt2",
+        ".3.bt2",
+        ".4.bt2",
+        ".rev.1.bt2",
+        ".rev.2.bt2",
+    ]
+    for ext in bowtie_index_extensions:
+        if not path.with_name(path.name + ext).exists():
+            raise FileNotFoundError(
+                f"Bowtie2 index file missing for '{path}'\n- "
+                + str(path) + ext
+            )
+    return(path)
 
 
 def get_replicates(libraries, sample):

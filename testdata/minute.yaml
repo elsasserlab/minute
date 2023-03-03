@@ -5,8 +5,12 @@ references:
   mini:  # Arbitrary name for this reference. This is also used in output file names.
 
     # Path to a reference FASTA file (may be gzip-compressed).
-    # A matching Bowtie2 index must exist in the same location.
     fasta: "ref/ref1.fa.gz"
+
+    # Matching Bowtie2 index name without extension (any of the index files
+    # not including the final .1.bt2 / .rev.1.bt2 etc).
+    # If this is empty, minute will build the index dynamically.
+    bowtie2_index:
 
     # Path to a BED file with regions to exclude.
     # If this is empty, no regions are excluded.
@@ -14,6 +18,7 @@ references:
 
   small:
     fasta: "ref/ref2.fa.gz"
+    bowtie2_index: "ref/ref2"
     exclude:
 
 
