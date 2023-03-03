@@ -1,5 +1,13 @@
 # minute Changelog
 
+## v0.4.0
+
+### Features
+
+* PR #164: Bowtie2 indexes are now explicit on `minute.yaml` file as a
+`bowtie2_index` field, and will be dynamically generated if this field is
+missing or the path provided is not valid.
+
 ## v0.3.1
 
 ### Bug fixes
