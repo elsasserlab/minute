@@ -27,7 +27,7 @@ class ParseError(Exception):
 class Reference:
     name: str
     fasta: Path
-    bowtie_index: Path
+    bowtie_index: Optional[Path]
     exclude_bed: Optional[Path]
 
 
@@ -172,7 +172,12 @@ def make_references(config) -> Dict[str, Reference]:
     for name, ref in config.items():
         fasta = Path(ref["fasta"])
         exclude_bed = Path(ref["exclude"]) if ref["exclude"] else None
-        bowtie_index = validate_bowtie_index(Path(ref["bowtie2_index"]))
+        try:
+            bowtie_index = validate_bowtie_index(ref["bowtie2_index"])
+        except (FileNotFoundError, TypeError):
+            print(f"Bowtie2 index files not found for ref {name}. "
+                  f"Generating index files dynamically.")
+            bowtie_index = None
         references[name] = Reference(
             name=name,
             fasta=fasta,

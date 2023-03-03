@@ -238,6 +238,35 @@ rule demultiplex_stats:
             print(lines // 2, file=fo)
 
 
+bowtie2_ext = [
+    "1.bt2",
+    "2.bt2",
+    "3.bt2",
+    "4.bt2",
+    "rev.1.bt2",
+    "rev.2.bt2",
+]
+
+rule bowtie2_build:
+    output:
+        index=expand("bowtie2_indexes/{{reference}}.{ext}", ext=bowtie2_ext),
+        flag=touch("bowtie2_indexes/{reference}.flag"),
+    input:
+        fasta=lambda wildcards: str(references[wildcards.reference].fasta),
+    params:
+        index=lambda wildcards: references[wildcards.reference].bowtie_index,
+    run:
+        if params.index:
+            for index_file in output.index:
+                matched_ext = "".join(Path(index_file).suffixes)
+                os.link(
+                    Path(params.index).with_suffix(matched_ext),
+                    index_file,
+                )
+        else:
+            shell("bowtie2-build -q {input.fasta} bowtie2_indexes/{wildcards.reference}")
+
+
 rule bowtie2:
     threads:
         19  # One fewer than available to allow other jobs to run in parallel
@@ -246,8 +275,7 @@ rule bowtie2:
     input:
         r1="final/demultiplexed/{sample}_rep{replicate}_R1.fastq.gz",
         r2="final/demultiplexed/{sample}_rep{replicate}_R2.fastq.gz",
-    params:
-        index=lambda wildcards: references[wildcards.reference].bowtie_index
+        ref="bowtie2_indexes/{reference}.flag",
     log:
         "log/4-mapped/{sample}_rep{replicate}.{reference}.log"
     # TODO
@@ -259,7 +287,7 @@ rule bowtie2:
         "bowtie2"
         " --reorder"
         " -p {threads}"
-        " -x {params.index}"
+        " -x bowtie2_indexes/{wildcards.reference}"
         " -1 {input.r1}"
         " -2 {input.r2}"
         " --fast"
