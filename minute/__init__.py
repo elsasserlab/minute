@@ -174,7 +174,7 @@ def make_references(config) -> Dict[str, Reference]:
         exclude_bed = Path(ref["exclude"]) if ref["exclude"] else None
         try:
             bowtie_index = validate_bowtie_index(ref["bowtie2_index"])
-        except (FileNotFoundError, TypeError):
+        except (FileNotFoundError, TypeError, KeyError):
             print(f"Bowtie2 index files not found for ref {name}. "
                   f"Generating index files dynamically.")
             bowtie_index = None
