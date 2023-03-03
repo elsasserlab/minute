@@ -257,6 +257,8 @@ rule bowtie2_build:
         index=lambda wildcards: references[wildcards.reference].bowtie_index,
     log:
         "log/bowtie2_build/{reference}.log"
+    threads:
+        8
     run:
         if params.index:
             with open(str(log), "w") as logf:
@@ -270,7 +272,13 @@ rule bowtie2_build:
         else:
             with open(str(log), "w") as logf:
                 print(f"Generating index files for {wildcards.reference}.", file=logf)
-            shell("bowtie2-build {input.fasta} bowtie2_indexes/{wildcards.reference} >> {log}")
+            shell(
+                "bowtie2-build"
+                " {input.fasta}"
+                " bowtie2_indexes/{wildcards.reference}"
+                " --threads {threads}"
+                " >> {log}"
+            )
 
 
 rule bowtie2:
