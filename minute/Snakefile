@@ -91,6 +91,11 @@ rule quick:
         "reports/multiqc_report_without_fingerprints.html",
 
 
+rule no_bigwigs:
+    input:
+        "reports/multiqc_report_without_fingerprints.html",
+
+
 rule multiqc:
     output: "reports/multiqc_report.html"
     input:
