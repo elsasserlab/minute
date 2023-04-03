@@ -19,4 +19,4 @@ jobs:
           source $CONDA/etc/profile.d/conda.sh
           conda activate testenv
           pip install .
-          ./test.sh quick
+          ./test.sh
