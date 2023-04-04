@@ -5,9 +5,9 @@ Calls Snakemake to produce all the output files.
 
 Any arguments that this wrapper script does not recognize are forwarded to Snakemake.
 This can be used to provide file(s) to create, targets to run or any other Snakemake
-options. For example, this runs the "quick" target (without fingerprinting) in dry-run mode:
+options. For example, this runs the "full" target (including fingerprinting) in dry-run mode:
 
-    minute run --dryrun quick
+    minute run --dryrun full
 
 Run 'snakemake --help' or see the Snakemake documentation to see valid snakemake arguments.
 """

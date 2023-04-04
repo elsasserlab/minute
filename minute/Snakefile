@@ -85,37 +85,41 @@ rule final:
         "reports/multiqc_report.html",
 
 
-rule quick:
+rule full:
     input:
         bigwigs,
-        "reports/multiqc_report_without_fingerprints.html",
+        "reports/multiqc_report_full.html",
 
 
-rule multiqc:
-    output: "reports/multiqc_report.html"
+rule no_bigwigs:
+    input:
+        "reports/multiqc_report.html",
+
+
+rule multiqc_full:
+    output: "reports/multiqc_report_full.html"
     input:
         multiqc_inputs,
         expand("stats/final/{maplib.name}.fingerprint.log", maplib=maplibs),
         expand("stats/final/{maplib.name}.fingerprint.metrics", maplib=maplibs),
         multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
     log:
-        "log/multiqc_report.log"
-    shell:
-        "multiqc -f -o reports/ -c {input.multiqc_config} {input} 'stats/final' 2> {log}"
-
-
-
-rule multiqc_without_fingerprints:
-    output: "reports/multiqc_report_without_fingerprints.html"
-    input:
-        multiqc_inputs,
-        multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
-    log:
-        "log/multiqc_report_without_fingerprints.log"
+        "log/multiqc_report_full.log"
     shell:
         "multiqc -f -o reports/ -c {input.multiqc_config} {input} 'stats/final' 2> {log}"
         " && "
         " mv reports/multiqc_report.html {output}"
+
+
+rule multiqc:
+    output: "reports/multiqc_report.html"
+    input:
+        multiqc_inputs,
+        multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
+    log:
+        "log/multiqc_report.log"
+    shell:
+        "multiqc -f -o reports/ -c {input.multiqc_config} {input} 'stats/final' 2> {log}"
 
 
 rule clean:
