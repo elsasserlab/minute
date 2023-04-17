@@ -85,6 +85,12 @@ rule final:
         "reports/multiqc_report.html",
 
 
+rule quick:
+    input:
+        bigwigs,
+        "reports/multiqc_report.html",
+
+
 rule full:
     input:
         bigwigs,
