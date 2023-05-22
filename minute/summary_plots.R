@@ -18,7 +18,7 @@ minute_scaled_grouped_barplot <- function(scaling_file) {
     aes(x = rep_grp, y = msr, color = scaling_group, fill = scaling_group) + 
     geom_point(data = scaling[scaling$is_pool == FALSE, ]) +
     geom_bar(data = scaling[scaling$is_pool == TRUE, ], stat = "identity", alpha = 0.5) +
-    style_minute_barplot(max_y = max(scaling$msr)) +
+    style_minute_barplot() +
     labs(subtitle = "Points - Replicates; Bars - Pooled")
 }
 
@@ -37,7 +37,7 @@ minute_scaled_replicates_barplot <- function(scaling_file) {
   ggplot(data = scaling) + 
     aes(x = sample_name, y = msr, color = scaling_group, fill = scaling_group) + 
     geom_bar(data = scaling[scaling$is_pool == FALSE, ], stat = "identity", alpha = 0.5) +
-    style_minute_barplot(max_y = max(scaling$msr)) 
+    style_minute_barplot()
 }
 
 
@@ -61,16 +61,13 @@ calculate_ratios_and_groups <- function(scaling) {
 
 #' Appearance ggplot functions common to minute scaled barplots
 #'
-#' @param max_y Maximum value on the y axis.
-#'
 #' @return A list of ggproto objects
-style_minute_barplot <- function(max_y) {
+style_minute_barplot <- function() {
   list(theme_classic(base_size = 10),
        facet_wrap(~scaling_group, scales = "free_x", ncol = 2),
        geom_hline(yintercept = 1, linetype = "dotted", alpha = 0.4),
        theme(legend.position = "None",
              axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)),
-       scale_y_continuous(breaks = seq(0, max_y, by = 0.2)),
        labs(title = "MINUTE-ChIP scaled global read levels",
             x = "Sample",
             y = "Minute-ChIP Scaled Fraction"))
