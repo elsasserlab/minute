@@ -78,11 +78,17 @@ bigwigs = (
         maplib=flatten_scaling_groups(scaling_groups, controls=False))
 )
 
+bams = expand("final/bam/{maplib.name}.bam", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
 
 rule final:
     input:
         bigwigs,
         "reports/multiqc_report.html",
+
+rule minimal:
+    input:
+        bams,
+        "reports/mapping.txt",
 
 
 rule quick:
@@ -516,6 +522,34 @@ rule scaled_bigwig:
         " 2> {log}"
 
 
+rule mapping_stats:
+    output:
+        txt="stats/9-mapping-stats/{library}.{reference}.txt"
+    input:
+        mapped_flagstat="stats/4-mapped/{library}.{reference}.flagstat.txt",
+        dedup_flagstat="stats/7-dedup/{library}.{reference}.flagstat.txt",
+        final_flagstat="stats/final/{library}.{reference}.flagstat.txt",
+        demux_stats="stats/final/{library}.nreads.txt",
+    run:
+        d = dict(
+                map_id=f"{wildcards.library}.{wildcards.reference}",
+                library=wildcards.library,
+                reference=wildcards.reference
+            )
+        for flagstat, name in [
+            (input.mapped_flagstat, "raw_mapped"),
+            (input.dedup_flagstat, "dedup_mapped"),
+            (input.final_flagstat, "final_mapped"),
+        ]:
+            d[name] = parse_flagstat(flagstat).mapped_reads
+
+        d["raw_demultiplexed"] = read_int_from_file(input.demux_stats)
+
+        with open(output.txt, "w") as f:
+            print(*d.keys(), sep="\t", file=f)
+            print(*d.values(), sep="\t", file=f)
+
+
 rule replicate_stats:
     output:
         txt="stats/9-stats/{library}.{reference}.txt"
@@ -574,6 +608,30 @@ rule pooled_stats:
         with open(output.txt, "w") as f:
             print(*d.keys(), sep="\t", file=f)
             print(*d.values(), sep="\t", file=f)
+
+
+rule mapping_summary:
+    output:
+        txt="reports/mapping.txt"
+    input:
+        expand("stats/9-mapping-stats/{maplib.name}.txt", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
+    run:
+        header = [
+            "map_id",
+            "library",
+            "reference",
+            "raw_demultiplexed",
+            "raw_mapped",
+            "dedup_mapped",
+            "final_mapped"
+        ]
+
+        with open(output.txt, "w") as f:
+            print(*header, sep="\t", file=f)
+            for stats_file in sorted(input):
+                summary = parse_stats_fields(stats_file)
+                row = [summary[k] for k in header]
+                print(*row, sep="\t", file=f)
 
 
 rule stats_summary:
