@@ -1,5 +1,12 @@
 # minute Changelog
 
+## v0.4.0
+
+### Features
+
+* Added `--barcodes` and `--input` parameters to `minute init` functionality to
+streamline configuration of standard `minute` runs.
+
 ## v0.3.1
 
 ### Bug fixes
