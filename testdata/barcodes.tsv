@@ -1,0 +1,13 @@
+# Barcode information file
+#
+# Run with minute init utility:
+# minute init myexperiment --reads path/to/reads --barcodes path/to/this/file --input input_prefix
+# to create a myexperiment directory. Then:
+# cd myexperiment && minute run
+#
+# Columns: barcode name, replicate id, barcode, reference
+SL_CTR	1	CATGCTTA	mini
+SL_CTR	2	GCACATCT	mini
+SL_CTR	3	AGTTGCTT	mini
+2i_CTR	1	GGTCCAGA	small
+2i_CTR	2	GTATAACA	small
