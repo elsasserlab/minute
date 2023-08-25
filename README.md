@@ -26,6 +26,51 @@ with `pip install .`.
 
 ## Running Minute
 
+### Standard run
+
+The simplest way to run `minute` assumes that the demultiplexing is performed
+the same way across all your FASTQ file pairs. So you can simply specify
+which condition corresponds to each barcode sequence in a `barcodes.tsv` file
+that has the following columns:
+
+1. Condition name
+2. Replicate id
+3. Barcode sequence
+4. Genome reference to map it to.
+
+This standard run makes certain assumptions: 
+
+1. Every FASTQ R1/R2 pair comprises its own scaling group.
+2. All barcodes in `barcodes.tsv` are applied to each FASTQ R1/R2 pair.
+3. The first line in the barcodes file corresponds to the reference condition for
+every scaling group, pooling the replicates.
+4. Replicates of the same condition are mapped to the same reference.
+
+#### Steps
+
+1. Create a barcodes `barcodes.tsv` file describing the barcodes for each 
+condition of your experiment as described below.
+2. Run `minute init myexperiment --reads path/to/fastq --barcodes path/to/barcodes.tsv --input input_name`. Note
+that `input_name` must match a FASTQ read pair in your `fastq` directory: `input_name_R1.fastq.gz`, `input_name_R2.fastq.gz`.
+This will create a `myexperiment` directory that contains a `fastq` subdirectory
+with symlinks to each FASTQ file in `path/to/fastq`, a template `minute.yaml`
+configuration file and `libraries.tsv`, `groups.tsv` files (for a description
+of what is in these files, see below).
+3. Edit `minute.yaml` as required. References present in `barcodes.tsv` must be 
+specified in it. For example, if you specify `hg38` as reference genome, there 
+must be a `hg38` entry in `minute.yaml` with paths to matching bowtie2 indexes
+and FASTA reference.
+4. Move to your experiment directory and run minute: `cd myexperiment && minute run`.
+
+Additionally, you may want to run `minute run` with the option `-n` first, which
+will do a “dry run”, that is, it only shows which steps would be executed and
+does not actually run them.
+
+### Custom run
+
+Alternatively, you can create manually `libraries.tsv` and `groups.tsv` as 
+described below. 
+
 1. Create an empty folder somewhere (called `myexperiment` in the following)
 2. Create a subfolder `fastq` in the `myexperiment` folder
 3. Create symbolic links within the `fastq/` folder that point to your input
@@ -37,9 +82,6 @@ with `pip install .`.
    (see below).
 6. Run `minute run`
 
-Additionally, you may want to run `minute run` with the option `-n` first, which
-will do a “dry run”, that is, it only shows which steps would be executed and
-does not actually run them.
 
 ## Configuration files
 
