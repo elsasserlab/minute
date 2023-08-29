@@ -68,7 +68,7 @@ does not actually run them.
 
 ### Custom run
 
-Alternatively, you can create manually `libraries.tsv` and `groups.tsv` as 
+Alternatively, you can manually create `libraries.tsv` and `groups.tsv` as 
 described below. 
 
 1. Create an empty folder somewhere (called `myexperiment` in the following)

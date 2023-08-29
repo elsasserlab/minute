@@ -31,7 +31,7 @@ tar --strip-components=1 -xf ../${testdata_file}
 mkdir fastq && mv -- testdata-*.fastq.gz fastq/
 
 cd ..
-minute init testrun_std --reads ./data_std/fastq --barcodes ./testdata/barcodes.tsv --input testdata-Inp
+minute init testrun_std --reads data_std/fastq --barcodes testdata/barcodes.tsv --input testdata-Inp
 cd testrun_std
 cp ../testdata/*.{bed,sizes,yaml} .
 mkdir ref && mv ../data_std/ref*.fa.gz ref/

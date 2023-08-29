@@ -54,12 +54,12 @@ def run_init(directory: Path, reads: Optional[Path], barcodes: Optional[Path], i
     if reads is not None:
         relative_symlink(reads, directory / "fastq")
     else:
+        if barcodes is not None:
+            raise CommandLineError("--reads parameter must be specified if --barcodes option is used")
         logger.info(
             "Option --reads not used, please create and populate directory %s/fastq/ manually",
             directory,
         )
-        if barcodes is not None:
-            raise CommandLineError("--reads parameter must be specified if --barcodes option is used")
 
     if barcodes is not None:
         libraries = make_libraries_from_barcodes_and_reads(barcodes, reads)
