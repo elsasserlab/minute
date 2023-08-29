@@ -1,0 +1,7 @@
+graft testdata
+include test.sh
+include environment.yml
+include src/minute/Snakefile
+include src/minute/multiqc_config.yaml
+include src/minute/summary_plots.R
+include src/minute/minute.yaml
