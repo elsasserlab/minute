@@ -8,6 +8,8 @@ dependencies:
   # - importlib-metadata   # [py<38]
   - ruamel.yaml
   - snakemake-minimal >= 7.22.0
+  # Explicit openjdk dependency should not be needed - remove when Picard is bumped to 3.0.1 or later
+  - openjdk >= 17.0.0
   - samtools >=1.13
   - cutadapt >=3.7
   - bowtie2 >=2.4.4
