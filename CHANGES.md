@@ -1,5 +1,11 @@
 # minute Changelog
 
+## v0.4.1
+
+### Bug fixes
+
+* Handle missing/incorrect `--input` parameter values on `minute init`.
+
 ## v0.4.0
 
 ### Features
