@@ -116,7 +116,12 @@ def make_groups_from_barcodes_and_reads(barcodes, reads_directory, input):
     FASTQ R1/R2 pair in the reads_directory; input must correspond to one file
     pair in the reads_directory.
     """
-    prefixes = [p for p in parse_library_prefixes(reads_directory) if p != input]
+    prefixes = parse_library_prefixes(reads_directory)
+    if input not in prefixes:
+        msg = f"input ({input}) must match a FASTQ file prefix, found: {prefixes}"
+        raise ValueError(msg)
+
+    prefixes = [p for p in prefixes if p != input]
     barcodes_info = list(read_tsv(barcodes, columns=4))
     barcodes_refmap = {bc[0]: bc[3] for bc in barcodes_info}
 
