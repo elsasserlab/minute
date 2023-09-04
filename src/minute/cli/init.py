@@ -62,6 +62,9 @@ def run_init(directory: Path, reads: Optional[Path], barcodes: Optional[Path], i
         )
 
     if barcodes is not None:
+        if input is None:
+            raise CommandLineError("--input must be specified if --barcodes option is used")
+
         libraries = make_libraries_from_barcodes_and_reads(barcodes, reads)
         groups = make_groups_from_barcodes_and_reads(barcodes, reads, input)
         write_tsv(libraries, directory / "libraries.tsv")
