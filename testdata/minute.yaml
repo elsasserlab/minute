@@ -29,3 +29,7 @@ max_barcode_errors: 1
 # Filter out reads under certain mapping quality (0: no filtering)
 mapping_quality: 0
 
+# If filtered_bigwigs rule is run, additional bigWig files are produced,
+# where reads with MQ lower than this value are filtered out. This parameter
+# is independent of mapping_quality parameter above.
+mapping_quality_bigwig: 20
