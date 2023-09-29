@@ -25,3 +25,6 @@ fragment_size: 150
 
 # Allow this many errors in the barcode when demultiplexing
 max_barcode_errors: 1
+
+# Filter out reads under certain mapping quality (0: no filtering)
+mapping_quality: 0

@@ -33,7 +33,7 @@ module_order:
       target: ""
       info: "Read mapping of demultiplexed reads with Bowtie2"
       path_filters:
-        - "log/4-mapped/*.log"
+        - "log/5-mapped/*.log"
   - samtools:
       name: "Samtools stats"
       anchor: "samtools"
@@ -68,6 +68,9 @@ custom_data:
         format: "{:,.0f}"
       raw_mapped:
         description: "Number of mapped reads"
+        format: "{:,.0f}"
+      mapq_mapped:
+        description: "Number of mapped reads after filtering for mapping quality"
         format: "{:,.0f}"
       dedup_mapped:
         description: "Number of reads mapped after deduplication"
@@ -126,6 +129,7 @@ table_columns_placement:
     library: 1
     raw_demultiplexed: 2.5
     raw_mapped: 3
+    mapq_mapped: 3.5
     dedup_mapped: 4
     final_mapped: 5
     demultiplexed: 6

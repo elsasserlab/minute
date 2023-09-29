@@ -68,7 +68,7 @@ multiqc_inputs = (
     + expand("reports/fastqc/{library.fastqbase}_R{read}_fastqc/fastqc_data.txt", library=multiplexed_libraries, read=(1, 2))
     + expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=multiplexed_libraries)
     + expand("log/4-mapped/{maplib.name}.log", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
-    + expand("stats/6-dupmarked/{maplib.name}.metrics", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
+    + expand("stats/7-dupmarked/{maplib.name}.metrics", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
     + expand("stats/final/{maplib.name}.insertsizes.txt", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
     + expand("stats/final/{maplib.name}.idxstats.txt", maplib=[m for m in maplibs])
 )
@@ -278,6 +278,19 @@ rule bowtie2:
         "| samtools sort -@ {threads} -o {output.bam} -"
 
 
+rule quality_filter_reads:
+    output:
+        bam=temp("tmp/5-mapq-filtered/{sample}_rep{replicate}.{reference}.bam")
+    input:
+        bam="tmp/4-mapped/{sample}_rep{replicate}.{reference}.bam"
+    run:
+        mapq = config.get("mapping_quality", 0)
+        if mapq == 0:
+            os.link(input.bam, output.bam)
+        else:
+            shell("samtools view -h -b {input.bam} -q {mapq} > {output.bam}")
+
+
 rule pool_replicates:
     output:
         bam="final/bam/{sample}_pooled.{reference}.bam"
@@ -296,9 +309,9 @@ rule pool_replicates:
 rule convert_to_single_end:
     """Convert SAM files to single-end for marking duplicates"""
     output:
-        bam=temp("tmp/5-mapped_se/{library}.bam")
+        bam=temp("tmp/6-mapped_se/{library}.bam")
     input:
-        bam="tmp/4-mapped/{library}.bam"
+        bam="tmp/5-mapq-filtered/{library}.bam"
     group: "duplicate_marking"
     run:
         se_bam.convert_paired_end_to_single_end_bam(
@@ -330,12 +343,12 @@ def dupmark_command(wildcards):
 rule mark_duplicates:
     """UMI-aware duplicate marking with je suite (or MarkDuplicates if UMIs are missing)"""
     output:
-        bam=temp("tmp/6-dupmarked/{maplib}.bam"),
-        metrics="stats/6-dupmarked/{maplib}.metrics"
+        bam=temp("tmp/7-dupmarked/{maplib}.bam"),
+        metrics="stats/7-dupmarked/{maplib}.metrics"
     input:
-        bam="tmp/5-mapped_se/{maplib}.bam"
+        bam="tmp/6-mapped_se/{maplib}.bam"
     log:
-        "log/6-dupmarked/{maplib}.bam.log"
+        "log/7-dupmarked/{maplib}.bam.log"
     group: "duplicate_marking"
     params: command=dupmark_command
     shell:
@@ -352,10 +365,10 @@ rule mark_pe_duplicates:
     resources:
         mem_mb = lambda wildcards, attempt: attempt * 6400
     output:
-        bam=temp("tmp/7-dedup/{library}.bam")
+        bam=temp("tmp/8-dedup/{library}.bam")
     input:
-        target_bam="tmp/4-mapped/{library}.bam",
-        proxy_bam="tmp/6-dupmarked/{library}.bam"
+        target_bam="tmp/5-mapq-filtered/{library}.bam",
+        proxy_bam="tmp/7-dupmarked/{library}.bam"
     run:
         se_bam.mark_duplicates_by_proxy_bam(
             input.target_bam,
@@ -372,7 +385,7 @@ rule remove_exclude_regions:
     output:
         bam="final/bam/{library}.{reference}.bam"
     input:
-        bam="tmp/7-dedup/{library}.{reference}.bam",
+        bam="tmp/8-dedup/{library}.{reference}.bam",
         bed=exclude_bed,
     run:
         if input.bed:
@@ -521,8 +534,9 @@ rule replicate_stats:
         txt="stats/9-stats/{library}.{reference}.txt"
     input:
         mapped_flagstat="stats/4-mapped/{library}.{reference}.flagstat.txt",
-        metrics="stats/6-dupmarked/{library}.{reference}.metrics",
-        dedup_flagstat="stats/7-dedup/{library}.{reference}.flagstat.txt",
+        mapq_flagstat="stats/5-mapq-filtered/{library}.{reference}.flagstat.txt",
+        metrics="stats/7-dupmarked/{library}.{reference}.metrics",
+        dedup_flagstat="stats/8-dedup/{library}.{reference}.flagstat.txt",
         final_flagstat="stats/final/{library}.{reference}.flagstat.txt",
         insertsizes="stats/final/{library}.{reference}.insertsizes.txt",
         demux_stats="stats/final/{library}.nreads.txt",
@@ -534,13 +548,14 @@ rule replicate_stats:
             )
         for flagstat, name in [
             (input.mapped_flagstat, "raw_mapped"),
+            (input.mapq_flagstat, "mapq_mapped"),
             (input.dedup_flagstat, "dedup_mapped"),
             (input.final_flagstat, "final_mapped"),
         ]:
             d[name] = parse_flagstat(flagstat).mapped_reads
 
         d["raw_demultiplexed"] = read_int_from_file(input.demux_stats)
-        
+
         # Note that here we use as total/unique single ended fragments, because we deduplicate
         # based on 1st mate. However if we used proper-pairs the result would be very similar,
         # since in any case the paired-end read is a single sequencing event.
@@ -567,7 +582,7 @@ rule pooled_stats:
                 library=f"{wildcards.library}_pooled",
                 reference=wildcards.reference
             )
-        for key in ["raw_demultiplexed", "raw_mapped", "dedup_mapped", "library_size", "percent_duplication"]:
+        for key in ["raw_demultiplexed", "raw_mapped", "mapq_mapped", "dedup_mapped", "library_size", "percent_duplication"]:
             d[key] = "."
         d["final_mapped"] = parse_flagstat(input.final_flagstat).mapped_reads
         d["insert_size"] = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
@@ -588,6 +603,7 @@ rule stats_summary:
             "reference",
             "raw_demultiplexed",
             "raw_mapped",
+            "mapq_mapped",
             "dedup_mapped",
             "final_mapped",
             "library_size",
