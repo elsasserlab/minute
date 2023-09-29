@@ -28,3 +28,4 @@ max_barcode_errors: 1
 
 # Filter out reads under certain mapping quality (0: no filtering)
 mapping_quality: 0
+

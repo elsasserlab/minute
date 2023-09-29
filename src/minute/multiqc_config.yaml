@@ -81,6 +81,9 @@ custom_data:
       percent_duplication:
         description: "Percentage duplication"
         format: "{:,.3f}"
+      frac_mapq_filtered:
+        description: "Fraction of (raw) aligned reads that was filtered by mapping quality"
+        format: "{:,.3f}"
       insert_size:
         description: "Insert size median"
         format: "{:,.0f}"
@@ -136,6 +139,7 @@ table_columns_placement:
     percent_duplication: 10
     insert_size: 12
     library_size: 13
+    frac_mapq_filtered: 13.5
     reference: 14
   scalinginfo:
     sample_name: 1
