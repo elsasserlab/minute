@@ -33,7 +33,7 @@ module_order:
       target: ""
       info: "Read mapping of demultiplexed reads with Bowtie2"
       path_filters:
-        - "log/4-mapped/*.log"
+        - "log/5-mapped/*.log"
   - samtools:
       name: "Samtools stats"
       anchor: "samtools"
@@ -69,6 +69,9 @@ custom_data:
       raw_mapped:
         description: "Number of mapped reads"
         format: "{:,.0f}"
+      mapq_mapped:
+        description: "Number of mapped reads after filtering for mapping quality"
+        format: "{:,.0f}"
       dedup_mapped:
         description: "Number of reads mapped after deduplication"
         format: "{:,.0f}"
@@ -77,6 +80,9 @@ custom_data:
         format: "{:,.0f}"
       percent_duplication:
         description: "Percentage duplication"
+        format: "{:,.3f}"
+      frac_mapq_filtered:
+        description: "Fraction of (raw) aligned reads that was filtered by mapping quality"
         format: "{:,.3f}"
       insert_size:
         description: "Insert size median"
@@ -126,12 +132,14 @@ table_columns_placement:
     library: 1
     raw_demultiplexed: 2.5
     raw_mapped: 3
+    mapq_mapped: 3.5
     dedup_mapped: 4
     final_mapped: 5
     demultiplexed: 6
     percent_duplication: 10
     insert_size: 12
     library_size: 13
+    frac_mapq_filtered: 13.5
     reference: 14
   scalinginfo:
     sample_name: 1

@@ -1,5 +1,15 @@
 # minute Changelog
 
+## v0.5.0
+
+### Features
+
+* Added `mapping_quality` optional parameter to filter out reads under a certain
+mapping quality threshold. By default, this value is set to zero (keep all).
+* Added `mapping_quality_bigwig` specific to `mapq_bigwigs` new rule that
+generates both final unfiltered bigWigs and `mapq.bw` filtered bigWigs according
+to this parameter. By default, those filtered bigWigs are not generated.
+
 ## v0.4.1
 
 ### Bug fixes
