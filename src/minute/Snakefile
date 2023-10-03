@@ -289,7 +289,7 @@ rule bowtie2:
         "| samtools sort -@ {threads} -o {output.bam} -"
 
 
-rule quality_filter_reads:
+rule filter_by_mapq:
     output:
         bam=temp("tmp/5-mapq-filtered/{sample}_rep{replicate}.{reference}.bam")
     input:
@@ -299,7 +299,7 @@ rule quality_filter_reads:
         if mapq == 0:
             os.link(input.bam, output.bam)
         else:
-            shell("samtools view -h -b {input.bam} -q {mapq} > {output.bam}")
+            shell("samtools view -q {mapq} -o {output.bam} {input.bam}")
 
 
 rule pool_replicates:
