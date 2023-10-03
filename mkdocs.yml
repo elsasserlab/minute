@@ -1,0 +1,12 @@
+site_name: minute
+theme:
+  name: readthedocs
+
+nav:
+  - Home: index.md
+  - Installation: install.md
+  - User guide: guide.md
+  - Reference: reference.md
+
+markdown_extensions:
+  - admonition
