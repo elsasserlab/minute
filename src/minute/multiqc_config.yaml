@@ -172,19 +172,3 @@ table_columns_placement:
 table_columns_name:
   summary:
     library: "library name"
-
-table_cond_formatting_rules:
-  percent_duplication:
-      pass:
-        - lt: 0.1
-      warn:
-        - gt: 0.1
-      fail:
-        - gt: 0.25
-  insert_size:
-        pass:
-          - gt: 130
-        warn:
-          - lt: 130
-        fail:
-          - lt: 100
