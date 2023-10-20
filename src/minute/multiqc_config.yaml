@@ -60,7 +60,7 @@ custom_data:
       namespace: "summary"
     headers:
       library:
-        description: "Library name"
+        description: "Library name plus replicate number"
       reference:
         description: "Reference to which reads were mapped"
       raw_demultiplexed:
@@ -171,4 +171,4 @@ table_columns_placement:
 
 table_columns_name:
   summary:
-    library: "library name"
+    library: "extended library name"
