@@ -37,8 +37,9 @@ localrules:
     summarize_scaling_factors,
     extract_fragment_size,
     pooled_stats,
+    pooled_stats_summary,
     replicate_stats,
-    stats_summary,
+    replicate_stats_summary,
     convert_to_single_end,
     mark_duplicates,
     samtools_index,
@@ -62,6 +63,7 @@ multiqc_inputs = (
     [
         "reports/scalinginfo.txt",
         "reports/stats_summary.txt",
+        "reports/pooled_stats_summary.txt",
         "reports/scaling_barplot.png",
         "reports/grouped_scaling_barplot.png",
     ]
@@ -654,11 +656,11 @@ rule pooled_stats:
             print(*d.values(), sep="\t", file=f)
 
 
-rule stats_summary:
+rule replicate_stats_summary:
     output:
         txt="reports/stats_summary.txt"
     input:
-        expand("stats/9-stats/{maplib.name}.txt", maplib=maplibs)
+        expand("stats/9-stats/{maplib.name}.txt", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
     run:
         header = [
             "map_id",
@@ -672,6 +674,28 @@ rule stats_summary:
             "library_size",
             "percent_duplication",
             "frac_mapq_filtered",
+            "insert_size",
+        ]
+
+        with open(output.txt, "w") as f:
+            print(*header, sep="\t", file=f)
+            for stats_file in sorted(input):
+                summary = parse_stats_fields(stats_file)
+                row = [summary[k] for k in header]
+                print(*row, sep="\t", file=f)
+
+
+rule pooled_stats_summary:
+    output:
+        txt="reports/pooled_stats_summary.txt"
+    input:
+        expand("stats/9-stats/{maplib.name}.txt", maplib=[m for m in maplibs if isinstance(m.library, Pool)])
+    run:
+        header = [
+            "map_id",
+            "library",
+            "reference",
+            "final_mapped",
             "insert_size",
         ]
 
