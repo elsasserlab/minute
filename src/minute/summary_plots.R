@@ -19,6 +19,7 @@ minute_scaled_grouped_barplot <- function(scaling_file) {
     geom_point(data = scaling[scaling$is_pool == FALSE, ]) +
     geom_bar(data = scaling[scaling$is_pool == TRUE, ], stat = "identity", alpha = 0.5) +
     style_minute_barplot() +
+    theme(legend.position = "none") +
     labs(subtitle = "Points - Replicates; Bars - Pooled")
 }
 
@@ -33,11 +34,19 @@ minute_scaled_grouped_barplot <- function(scaling_file) {
 minute_scaled_replicates_barplot <- function(scaling_file) {
   scaling <- read.table(scaling_file, sep="\t", header = T, comment.char = "")
   scaling <- calculate_ratios_and_groups(scaling)
-  
   ggplot(data = scaling) + 
-    aes(x = sample_name, y = msr, color = scaling_group, fill = scaling_group) + 
-    geom_bar(data = scaling[scaling$is_pool == FALSE, ], stat = "identity", alpha = 0.5) +
-    style_minute_barplot()
+    aes(x = rep_grp, y = msr, fill = rep_number) +
+    geom_bar(
+      data = scaling[scaling$is_pool == FALSE, ],
+      stat = "identity",
+      alpha = 0.9,
+      position = position_dodge2(preserve = "single"),
+      color = "#555555",
+      linewidth = 0.2
+    ) +
+    style_minute_barplot() +
+    theme(legend.position = "bottom") +
+    scale_fill_distiller()
 }
 
 
@@ -50,10 +59,14 @@ minute_scaled_replicates_barplot <- function(scaling_file) {
 #'
 #' @return A tibble with new columns inr, msr, rep_group and is_pool
 calculate_ratios_and_groups <- function(scaling) {
+  extract_rep_number <- function(str) {
+    as.integer(gsub(".+[_rep|pooled]([0-9]*)\\.[[:alnum:]]+", "\\1", str))
+  }
   scaling %>% 
     mutate(inr = X.reads / n_input_reads,
            rep_grp = gsub("_(pooled|rep[1-9]).*", "", sample_name),
-           is_pool = grepl("pooled", sample_name)) %>% 
+           is_pool = grepl("pooled", sample_name),
+           rep_number = extract_rep_number(sample_name)) %>%
     group_by(scaling_group) %>% 
     mutate(msr = inr / first(inr))
 }
@@ -66,8 +79,7 @@ style_minute_barplot <- function() {
   list(theme_classic(base_size = 10),
        facet_wrap(~scaling_group, scales = "free_x", ncol = 2),
        geom_hline(yintercept = 1, linetype = "dotted", alpha = 0.4),
-       theme(legend.position = "None",
-             axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)),
+       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)),
        labs(title = "MINUTE-ChIP scaled global read levels",
             x = "Sample",
             y = "Minute-ChIP Scaled Fraction"))
