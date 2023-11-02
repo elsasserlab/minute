@@ -133,6 +133,12 @@ custom_data:
     section_name: "Minute scaled read stats"
   replicatescaling:
     section_name: "Minute scaled read stats - replicates only"
+  barcodes:
+    section_name: "Barcode representation"
+  barcodes_perc:
+    section_name: "Barcode representation (perc)"
+
+
 
 sp:
   summary:
@@ -145,6 +151,11 @@ sp:
     fn: "grouped_scaling_barplot.png"
   replicatescaling:
     fn: "scaling_barplot.png"
+  barcodes:
+    fn: "barcode_representation.png"
+  barcodes_perc:
+    fn: "barcode_representation_perc.png"
+
 
 table_columns_placement:       
   summary:

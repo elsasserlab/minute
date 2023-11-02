@@ -66,6 +66,8 @@ multiqc_inputs = (
         "reports/pooled_stats_summary.txt",
         "reports/scaling_barplot.png",
         "reports/grouped_scaling_barplot.png",
+        "reports/barcode_representation.png",
+        "reports/barcode_representation_perc.png"
     ]
     + expand("reports/fastqc/{library.fastqbase}_R{read}_fastqc/fastqc_data.txt", library=multiplexed_libraries, read=(1, 2))
     + expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=multiplexed_libraries)
@@ -525,7 +527,9 @@ rule summarize_scaling_factors:
 rule summary_scaled_barplots:
     output:
         plot=expand("reports/scaling_barplot.{ext}", ext=["png", "pdf"]),
-        grouped_plot=expand("reports/grouped_scaling_barplot.{ext}", ext=["png", "pdf"])
+        grouped_plot=expand("reports/grouped_scaling_barplot.{ext}", ext=["png", "pdf"]),
+        barcode_plot=expand("reports/barcode_representation.{ext}", ext=["png", "pdf"]),
+        barcode_plot_perc=expand("reports/barcode_representation_perc.{ext}", ext=["png", "pdf"])
     input:
         info="reports/scalinginfo.txt"
     script:
