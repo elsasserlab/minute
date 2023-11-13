@@ -54,13 +54,13 @@ module_order:
 custom_data:
   summary:
     file_format: "tsv"
-    section_name: "Statistics summary"
+    section_name: "Replicates summary"
     pconfig:
       id: "summary"
       namespace: "summary"
     headers:
       library:
-        description: "Library name"
+        description: "Library name plus replicate number"
       reference:
         description: "Reference to which reads were mapped"
       raw_demultiplexed:
@@ -90,6 +90,23 @@ custom_data:
       library_size:
         description: "Library size estimate"
         format: "{:,.0f}"
+  pools:
+    file_format: "tsv"
+    section_name: "Pools summary"
+    pconfig:
+      id: "pools"
+      namespace: "pools"
+    headers:
+      library:
+        description: "Library name"
+      reference:
+        description: "Reference to which reads were mapped"
+      final_mapped:
+        description: "Number of reads mapped after deduplication and blocklist filter"
+        format: "{:,.0f}"
+      insert_size:
+        description: "Insert size median"
+        format: "{:,.0f}"
   scalinginfo:
     file_format: "tsv"
     section_name: "Scaling factors"
@@ -116,16 +133,29 @@ custom_data:
     section_name: "Minute scaled read stats"
   replicatescaling:
     section_name: "Minute scaled read stats - replicates only"
+  barcodes:
+    section_name: "Barcode representation"
+  barcodes_perc:
+    section_name: "Barcode representation (perc)"
+
+
 
 sp:
   summary:
     fn: "stats_summary.txt"
+  pools:
+    fn: "pooled_stats_summary.txt"
   scalinginfo:
     fn: "scalinginfo.txt"
   groupedscaling:
     fn: "grouped_scaling_barplot.png"
   replicatescaling:
     fn: "scaling_barplot.png"
+  barcodes:
+    fn: "barcode_representation.png"
+  barcodes_perc:
+    fn: "barcode_representation_perc.png"
+
 
 table_columns_placement:       
   summary:
@@ -152,20 +182,4 @@ table_columns_placement:
 
 table_columns_name:
   summary:
-    library: "library name"
-
-table_cond_formatting_rules:
-  percent_duplication:
-      pass:
-        - lt: 0.1
-      warn:
-        - gt: 0.1
-      fail:
-        - gt: 0.25
-  insert_size:
-        pass:
-          - gt: 130
-        warn:
-          - lt: 130
-        fail:
-          - lt: 100
+    library: "extended library name"

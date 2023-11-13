@@ -1,5 +1,18 @@
 # minute Changelog
 
+## v0.6.0
+
+### Features
+
+* Barcode representation barplots, final number of mapped reads and percentage
+of total.
+* Stats summary table is now separated in replicates and pool for easier reading.
+
+### Other
+* Minor: expanded library name column so it is now wider.
+* Automatic formatting of QC pass for insert size and duplication rates are 
+removed.
+
 ## v0.5.0
 
 ### Features
