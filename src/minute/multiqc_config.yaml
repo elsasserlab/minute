@@ -4,6 +4,8 @@ intro_text: ""
 show_analysis_paths: False
 skip_generalstats: true
 ignore_images: false
+output_fn_name: "multiqc_report.html"
+data_dir_name: "multiqc_data"
 
 run_modules:
   - fastqc
