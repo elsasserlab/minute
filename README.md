@@ -5,23 +5,16 @@
 - Install Conda and Bioconda. Use the
   [Bioconda instructions](https://bioconda.github.io) if you
   don’t have Conda and/or Bioconda, yet.
-- Optionally, but highly recommend is to install [Mamba](https://github.com/mamba-org/mamba), which is a faster
-  alternative to Conda:
-
-      conda install mamba
-
-  If you skip this, write `conda` instead of `mamba` in the next step,
-  but the installation will take longer.
 - Install Minute from Bioconda into a new environment:
 
-      mamba create -n minute minute
+      conda create -n minute minute
 
 - Activate the environment
 
       conda activate minute
 
 If you are a developer: Instead of the above, install the dependencies with
-`mamba env create -n minute -f environment.yml` and install Minute
+`conda env create -n minute -f environment.yml` and install Minute
 with `pip install .`.
 
 ## Running Minute
