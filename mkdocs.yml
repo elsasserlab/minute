@@ -7,6 +7,7 @@ nav:
   - Installation: install.md
   - User guide: guide.md
   - Reference: reference.md
+  - GitHub repository: https://github.com/elsasserlab/minute
 
 markdown_extensions:
   - admonition
