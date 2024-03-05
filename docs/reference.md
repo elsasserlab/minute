@@ -24,6 +24,12 @@ template configurations.
 
 Initialize a minute run. Parameters:
 
+#### Positional
+
+**`first`**. Path to the target directory where minute will run.
+
+#### Named
+
 **`--reads`** Path to the directory where the FASTQ file pairs are located.
 
 **`--barcodes`** Path to the barcodes.tsv file. If not provided, `init` will
@@ -32,6 +38,9 @@ not create libraries.tsv, groups.tsv files. Requires `--reads` to be provided.
 **`--input`** Prefix of the FASTQ file pair that corresponds to the Input sample.
 It must match a file pair in the path specified by `--reads`. Required if 
 `--barcodes` is provded.  
+
+**`--config`** Path to a `minute.yaml` file to reuse. It will be copied in the
+target directory.
 
 
 ### download
