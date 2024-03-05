@@ -46,6 +46,25 @@ def run_init(directory: Path, reads: Optional[Path], barcodes: Optional[Path], i
     if reads is not None and not reads.is_dir():
         raise CommandLineError(f"'{reads}' must be a directory")
 
+    if reads is None and barcodes is not None:
+        raise CommandLineError("--reads parameter must be specified if --barcodes option is used")
+        logger.info(
+            "Option --reads not used, please create and populate directory %s/fastq/ manually",
+            directory,
+        )
+
+    if barcodes is not None:
+        if not os.path.isfile(barcodes):
+            raise CommandLineError(f"--barcodes '{barcodes}' file not found")
+        if input is None:
+            raise CommandLineError("--input must be specified if --barcodes option is used")
+
+        libraries = make_libraries_from_barcodes_and_reads(barcodes, reads)
+        try:
+            groups = make_groups_from_barcodes_and_reads(barcodes, reads, input)
+        except ValueError as e:
+            raise CommandLineError(f"Invalid --input value: {e}")
+
     try:
         directory.mkdir()
     except OSError as e:
@@ -53,25 +72,8 @@ def run_init(directory: Path, reads: Optional[Path], barcodes: Optional[Path], i
 
     if reads is not None:
         relative_symlink(reads, directory / "fastq")
-    else:
-        if barcodes is not None:
-            raise CommandLineError("--reads parameter must be specified if --barcodes option is used")
-        logger.info(
-            "Option --reads not used, please create and populate directory %s/fastq/ manually",
-            directory,
-        )
 
     if barcodes is not None:
-        if input is None:
-            raise CommandLineError("--input must be specified if --barcodes option is used")
-
-        libraries = make_libraries_from_barcodes_and_reads(barcodes, reads)
-
-        try:
-            groups = make_groups_from_barcodes_and_reads(barcodes, reads, input)
-        except ValueError as e:
-            raise CommandLineError(f"Invalid --input value: {e}")
-
         write_tsv(libraries, directory / "libraries.tsv")
         write_tsv(groups, directory / "groups.tsv")
 
