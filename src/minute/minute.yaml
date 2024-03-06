@@ -18,7 +18,7 @@ references:
 
 
 # Length of the 5' UMI
-umi_length: 6
+umi_length: 8
 
 # Fragment length (insert size)
 fragment_size: 150

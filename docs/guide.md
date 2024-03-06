@@ -53,10 +53,22 @@ Note that `inp_prefix` **must match one of the FASTQ read pairs** in your `fastq
 with symlinks to each FASTQ file in `path/to/fastq`, a template `minute.yaml`
 configuration file and `libraries.tsv`, `groups.tsv` files.
 
-4. Edit [`minute.yaml`](guide.md#the-minuteyaml-file) as required. References present in `barcodes.tsv` must be 
+      Optionally, if you have ran `minute` before in your system and you already
+have some `minute.yaml` configuration you want to reuse, you can specify it via
+the `--config` parameter. This will make a copy of the provided file in the 
+directory where `minute` will run.
+
+         minute init myexperiment \
+            --reads path/to/fastq \
+            --barcodes path/to/barcodes.tsv \
+            --input inp_prefix \
+            --config path/to/minute.yaml
+
+4. Edit [`minute.yaml`](guide.md#the-minuteyaml-file) if required. References present in `barcodes.tsv` must be 
 specified in it. For example, if you specify `mm39` as reference genome, there 
 must be a `mm39` entry in `minute.yaml` with paths to matching bowtie2 indexes
 and FASTA reference. 
+
 
 !!! Note
 

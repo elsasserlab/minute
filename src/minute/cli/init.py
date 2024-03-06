@@ -3,6 +3,7 @@ Create and initialize a new pipeline directory
 """
 import logging
 import os
+import shutil
 from pathlib import Path
 import importlib.resources
 from typing import Optional
@@ -30,6 +31,11 @@ def add_arguments(parser):
         type=str,
         help="Name of the input sample (FASTQ name without _R1/_R2)."
     )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="Optional minute.yaml file to use as configuration. If not provided, a template will be created."
+    )
     parser.add_argument("directory", type=Path, help="New pipeline directory to create")
 
 
@@ -39,12 +45,35 @@ def main(args, arguments):
     run_init(**vars(args))
 
 
-def run_init(directory: Path, reads: Optional[Path], barcodes: Optional[Path], input: Optional[str]):
+def run_init(directory: Path, reads: Optional[Path], barcodes: Optional[Path], input: Optional[str], config: Optional[Path]):
     if " " in str(directory):
         raise CommandLineError("The name of the pipeline directory must not contain spaces")
 
     if reads is not None and not reads.is_dir():
         raise CommandLineError(f"'{reads}' must be a directory")
+
+    if reads is None and barcodes is not None:
+        raise CommandLineError("--reads parameter must be specified if --barcodes option is used")
+        logger.info(
+            "Option --reads not used, please create and populate directory %s/fastq/ manually",
+            directory,
+        )
+
+    if barcodes is not None:
+        if not os.path.isfile(barcodes):
+            raise CommandLineError(f"--barcodes '{barcodes}' file not found")
+        if input is None:
+            raise CommandLineError("--input must be specified if --barcodes option is used")
+
+        libraries = make_libraries_from_barcodes_and_reads(barcodes, reads)
+        try:
+            groups = make_groups_from_barcodes_and_reads(barcodes, reads, input)
+        except ValueError as e:
+            raise CommandLineError(f"Invalid --input value: {e}")
+
+    if config is not None:
+        if not os.path.isfile(config):
+            raise CommandLineError(f"--config '{config}' file not found")
 
     try:
         directory.mkdir()
@@ -53,35 +82,21 @@ def run_init(directory: Path, reads: Optional[Path], barcodes: Optional[Path], i
 
     if reads is not None:
         relative_symlink(reads, directory / "fastq")
-    else:
-        if barcodes is not None:
-            raise CommandLineError("--reads parameter must be specified if --barcodes option is used")
-        logger.info(
-            "Option --reads not used, please create and populate directory %s/fastq/ manually",
-            directory,
-        )
 
     if barcodes is not None:
-        if input is None:
-            raise CommandLineError("--input must be specified if --barcodes option is used")
-
-        libraries = make_libraries_from_barcodes_and_reads(barcodes, reads)
-
-        try:
-            groups = make_groups_from_barcodes_and_reads(barcodes, reads, input)
-        except ValueError as e:
-            raise CommandLineError(f"Invalid --input value: {e}")
-
         write_tsv(libraries, directory / "libraries.tsv")
         write_tsv(groups, directory / "groups.tsv")
 
-    configuration = importlib.resources.read_text("minute", "minute.yaml")
-    with open(Path(directory) / "minute.yaml", "w") as f:
-        f.write(configuration)
+    if config is not None:
+        shutil.copyfile(config, directory / "minute.yaml")
+    else:
+        configuration = importlib.resources.read_text("minute", "minute.yaml")
+        with open(Path(directory) / "minute.yaml", "w") as f:
+            f.write(configuration)
 
     logger.info("Pipeline directory %s created", directory)
     logger.info(
-        'Edit %s/%s and run "cd %s && minute run" to start the analysis',
+        'Edit %s/%s if necessary and run "cd %s && minute run" to start the analysis',
         directory,
         "minute.yaml",
         directory,

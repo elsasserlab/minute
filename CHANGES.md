@@ -1,5 +1,17 @@
 # minute Changelog
 
+## v0.7.0
+
+### Features
+
+* `minute init` now can accept a `--config` parameter to copy an already
+existing `minute.yaml` into the run directory.
+
+### Bug fixes
+
+* Improved parameter check of `minute init`. Now a directory will not be created
+if an error occurs.
+
 ## v0.6.0
 
 ### Features
