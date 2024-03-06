@@ -74,7 +74,6 @@ def run_init(directory: Path, reads: Optional[Path], barcodes: Optional[Path], i
     if config is not None:
         if not os.path.isfile(config):
             raise CommandLineError(f"--config '{config}' file not found")
-        
 
     try:
         directory.mkdir()

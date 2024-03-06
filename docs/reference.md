@@ -39,7 +39,7 @@ not create libraries.tsv, groups.tsv files. Requires `--reads` to be provided.
 It must match a file pair in the path specified by `--reads`. Required if 
 `--barcodes` is provded.  
 
-**`--config`** Path to a `minute.yaml` file to reuse. It will be copied in the
+**`--config`** Path to a `minute.yaml` file to reuse. It will be copied into the
 target directory.
 
 
