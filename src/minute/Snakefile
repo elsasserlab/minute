@@ -18,6 +18,7 @@ from minute import (
     map_fastq_prefix_to_list_of_libraries,
     make_references,
     flatten_scaling_groups,
+    get_all_pools,
     Pool,
     MultiplexedReplicate,
     estimate_library_size,
@@ -87,9 +88,9 @@ mapping_quality_bigwigs = (
         maplib=flatten_scaling_groups(scaling_groups, controls=False))
 )
 pool_bigwigs = (
-    expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=[m for m in maplibs if isinstance(m.library, Pool)])
+    expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=get_all_pools(maplibs))
     + expand("final/bigwig/{maplib.name}.scaled.bw",
-        maplib=[m for m in flatten_scaling_groups(scaling_groups, controls=False) if isinstance(m.library, Pool)])
+        maplib=get_all_pools(flatten_scaling_groups(scaling_groups, controls=False)))
 )
 
 rule final:

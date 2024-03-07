@@ -167,6 +167,10 @@ def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True
                     yield maplib
 
 
+def get_all_pools(maplibs: Iterable[LibraryWithReference]) -> List[LibraryWithReference]:
+    return [m for m in maplibs if isinstance(m.library, Pool)]
+
+
 def make_references(config) -> Dict[str, Reference]:
     references = dict()
     for name, ref in config.items():
