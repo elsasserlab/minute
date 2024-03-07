@@ -1,5 +1,12 @@
 # minute Changelog
 
+## v0.8.0
+
+### Features
+
+* New target rule `pooled_only` to skip individual replicates and generate 
+bigwig tracks only for replicate pools.
+
 ## v0.7.0
 
 ### Features
