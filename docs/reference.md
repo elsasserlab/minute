@@ -78,3 +78,4 @@ to run.
 
 **`mapq_bigwigs`**. Produces extra bigWigs `mapq.bw` filtered by mapping quality.
 
+**`pooled_only`**. Produces only the bigWigs for the pooled replicates.

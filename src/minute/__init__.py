@@ -167,6 +167,14 @@ def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True
                     yield maplib
 
 
+def get_all_pools(maplibs: Iterable[LibraryWithReference]) -> List[LibraryWithReference]:
+    return [m for m in maplibs if isinstance(m.library, Pool)]
+
+
+def get_all_replicates(maplibs: Iterable[LibraryWithReference]) -> List[LibraryWithReference]:
+    return [m for m in maplibs if not isinstance(m.library, Pool)]
+
+
 def make_references(config) -> Dict[str, Reference]:
     references = dict()
     for name, ref in config.items():
@@ -357,7 +365,7 @@ def detect_bowtie_index_name(fasta_path: str) -> Path:
     )
 
 
-def get_replicates(libraries, sample):
+def get_sample_replicates(libraries, sample):
     replicates = [lib.replicate for lib in libraries if lib.sample == sample]
     return replicates
 

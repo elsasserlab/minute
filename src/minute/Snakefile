@@ -12,12 +12,14 @@ from minute import (
     parse_stats_fields,
     read_int_from_file,
     compute_genome_size,
-    get_replicates,
+    get_sample_replicates,
     format_metadata_overview,
     is_snakemake_calling_itself,
     map_fastq_prefix_to_list_of_libraries,
     make_references,
     flatten_scaling_groups,
+    get_all_pools,
+    get_all_replicates,
     Pool,
     MultiplexedReplicate,
     estimate_library_size,
@@ -71,9 +73,9 @@ multiqc_inputs = (
     ]
     + expand("reports/fastqc/{library.fastqbase}_R{read}_fastqc/fastqc_data.txt", library=multiplexed_libraries, read=(1, 2))
     + expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=multiplexed_libraries)
-    + expand("log/4-mapped/{maplib.name}.log", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
-    + expand("stats/7-dupmarked/{maplib.name}.metrics", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
-    + expand("stats/final/{maplib.name}.insertsizes.txt", maplib=[m for m in maplibs if not isinstance(m.library, Pool)])
+    + expand("log/4-mapped/{maplib.name}.log", maplib=get_all_replicates(maplibs))
+    + expand("stats/7-dupmarked/{maplib.name}.metrics", maplib=get_all_replicates(maplibs))
+    + expand("stats/final/{maplib.name}.insertsizes.txt", maplib=get_all_replicates(maplibs))
     + expand("stats/final/{maplib.name}.idxstats.txt", maplib=[m for m in maplibs])
 )
 bigwigs = (
@@ -85,6 +87,11 @@ mapping_quality_bigwigs = (
     expand("final/bigwig/{maplib.name}.unscaled.mapq.bw", maplib=maplibs)
     + expand("final/bigwig/{maplib.name}.scaled.mapq.bw",
         maplib=flatten_scaling_groups(scaling_groups, controls=False))
+)
+pool_bigwigs = (
+    expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=get_all_pools(maplibs))
+    + expand("final/bigwig/{maplib.name}.scaled.bw",
+        maplib=get_all_pools(flatten_scaling_groups(scaling_groups, controls=False)))
 )
 
 rule final:
@@ -103,6 +110,12 @@ rule full:
     input:
         bigwigs,
         "reports/multiqc_report_full.html",
+
+
+rule pooled_only:
+    input:
+        pool_bigwigs,
+        "reports/multiqc_report.html"
 
 
 rule mapq_bigwigs:
@@ -312,7 +325,7 @@ rule pool_replicates:
     input:
         bam_replicates=lambda wildcards: expand(
             "final/bam/{{sample}}_rep{replicate}.{{reference}}.bam",
-            replicate=get_replicates(libraries, wildcards.sample))
+            replicate=get_sample_replicates(libraries, wildcards.sample))
     run:
         if len(input.bam_replicates) == 1:
             os.link(input.bam_replicates[0], output.bam)
