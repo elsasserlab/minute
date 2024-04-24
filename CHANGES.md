@@ -1,5 +1,11 @@
 # minute Changelog
 
+## v0.9.0
+
+### Features
+
+* bowtie2 alignment mode is now a parameter that can be included in `minute.yaml`.
+
 ## v0.8.0
 
 ### Features
