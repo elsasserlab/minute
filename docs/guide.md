@@ -277,6 +277,10 @@ an editor, read through the comments and edit as required.
       # is independent of mapping_quality parameter above.
       mapping_quality_bigwig: 20
 
+      # bowtie2 aligner parameter setting. Any accepted bowtie2 (minus the --)
+      # example: fast, sensitive, fast-local, very-sensitive
+      bowtie2_mode: "fast"
+
 
 ## Downloading data from the Sequence Read Archive (SRA)
 
