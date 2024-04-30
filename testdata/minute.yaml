@@ -36,4 +36,8 @@ mapping_quality_bigwig: 20
 
 # Aligner to use in the genome alignment step
 # Valid options: bowtie2, strobealign
-aligner: "strobealign"
+aligner: "bowtie2"
+
+# Bowtie2 alignment mode:
+# fast, fast-local, sensitive, sensitive-local, very-sensitive
+bowtie2_mode: "fast-local"

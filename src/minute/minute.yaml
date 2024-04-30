@@ -29,3 +29,7 @@ max_barcode_errors: 1
 # Aligner to use in the genome alignment step
 # Valid options: bowtie2, strobealign
 aligner: "strobealign"
+
+# Bowtie2 alignment mode:
+# fast, fast-local, sensitive, sensitive-local, very-sensitive
+bowtie2_mode: "fast"

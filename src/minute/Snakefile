@@ -296,13 +296,14 @@ rule align_to_reference:
     run:
         aligner = config.get("aligner", "bowtie2")
         if aligner == "bowtie2":
+            bowtie_mode = config.get("bowtie2_mode", "fast")
             shell("bowtie2"
                   " --reorder"
                   " -p {threads}"
                   " -x {params.reference.bowtie_index}"
                   " -1 {input.r1}"
                   " -2 {input.r2}"
-                  " --fast"
+                  " --{bowtie_mode}"
                   " 2> {log}"
                   " "
                   "| samtools sort -@ {threads} -o {output.bam} -"
