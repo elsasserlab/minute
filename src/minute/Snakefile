@@ -292,7 +292,6 @@ rule align_to_reference:
     # - --sensitive (instead of --fast) would be default
     # - write uncompressed BAM?
     # - filter unmapped reads directly? (samtools view -F 4 or bowtie2 --no-unal)
-    # - add RG header
     run:
         aligner = config.get("aligner", "bowtie2")
         if aligner == "bowtie2":
@@ -304,6 +303,9 @@ rule align_to_reference:
                   " -1 {input.r1}"
                   " -2 {input.r2}"
                   " --{bowtie_mode}"
+                  " --rg-id {wildcards.sample}_rep{wildcards.replicate}"
+                  " --rg SM:{wildcards.sample}"
+                  " --rg LB:{wildcards.sample}_rep{wildcards.replicate}"
                   " 2> {log}"
                   " "
                   "| samtools sort -@ {threads} -o {output.bam} -"
@@ -314,6 +316,9 @@ rule align_to_reference:
                   " {params.reference.fasta}"
                   " {input.r1}"
                   " {input.r2}"
+                  " --rg-id={wildcards.sample}_rep{wildcards.replicate}"
+                  " --rg=SM:{wildcards.sample}"
+                  " --rg=LB:{wildcards.sample}_rep{wildcards.replicate}"
                   " 2> {log}"
                   " "
                   "| samtools sort -@ {threads} -o {output.bam} -"
