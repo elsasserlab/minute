@@ -276,6 +276,12 @@ rule demultiplex_stats:
             print(lines // 2, file=fo)
 
 
+def read_group_flags(wildcards, sep=" "):
+    return (f" --rg-id {wildcards.sample}_rep{wildcards.replicate}"
+            f" --rg{sep}SM:{wildcards.sample}"
+            f" --rg{sep}LB:{wildcards.sample}_rep{wildcards.replicate}")
+
+
 rule align_to_reference:
     threads:
         19  # One fewer than available to allow other jobs to run in parallel
@@ -296,6 +302,7 @@ rule align_to_reference:
         aligner = config.get("aligner", "bowtie2")
         if aligner == "bowtie2":
             bowtie_mode = config.get("bowtie2_mode", "fast")
+            group_flags = read_group_flags(wildcards)
             shell("bowtie2"
                   " --reorder"
                   " -p {threads}"
@@ -303,22 +310,19 @@ rule align_to_reference:
                   " -1 {input.r1}"
                   " -2 {input.r2}"
                   " --{bowtie_mode}"
-                  " --rg-id {wildcards.sample}_rep{wildcards.replicate}"
-                  " --rg SM:{wildcards.sample}"
-                  " --rg LB:{wildcards.sample}_rep{wildcards.replicate}"
+                  " {group_flags}"
                   " 2> {log}"
                   " "
                   "| samtools sort -@ {threads} -o {output.bam} -"
             )
         elif aligner == "strobealign":
+            group_flags = read_group_flags(wildcards, sep = "=")
             shell("strobealign"
                   " -t {threads}"
                   " {params.reference.fasta}"
                   " {input.r1}"
                   " {input.r2}"
-                  " --rg-id={wildcards.sample}_rep{wildcards.replicate}"
-                  " --rg=SM:{wildcards.sample}"
-                  " --rg=LB:{wildcards.sample}_rep{wildcards.replicate}"
+                  " {group_flags}"
                   " 2> {log}"
                   " "
                   "| samtools sort -@ {threads} -o {output.bam} -"
