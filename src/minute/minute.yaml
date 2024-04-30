@@ -27,5 +27,5 @@ fragment_size: 150
 max_barcode_errors: 1
 
 # Aligner to use in the genome alignment step
-# Valid options: bowtie2
-aligner: "bowtie2"
+# Valid options: bowtie2, strobealign
+aligner: "strobealign"

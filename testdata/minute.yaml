@@ -35,5 +35,5 @@ mapping_quality: 0
 mapping_quality_bigwig: 20
 
 # Aligner to use in the genome alignment step
-# Valid options: bowtie2
-aligner: "bowtie2"
+# Valid options: bowtie2, strobealign
+aligner: "strobealign"
