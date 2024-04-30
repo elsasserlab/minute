@@ -67,7 +67,7 @@ directory where `minute` will run.
 4. Edit [`minute.yaml`](guide.md#the-minuteyaml-file) if required. References present in `barcodes.tsv` must be 
 specified in it. For example, if you specify `mm39` as reference genome, there 
 must be a `mm39` entry in `minute.yaml` with paths to matching bowtie2 indexes
-and FASTA reference. 
+(if aligning with bowtie2) and FASTA reference.
 
 
 !!! Note
@@ -276,6 +276,14 @@ an editor, read through the comments and edit as required.
       # where reads with MQ lower than this value are filtered out. This parameter
       # is independent of mapping_quality parameter above.
       mapping_quality_bigwig: 20
+
+      # Aligner to use in the genome alignment step
+      # Valid options: bowtie2, strobealign
+      aligner: "bowtie2"
+
+      # Bowtie2 alignment mode:
+      # fast, fast-local, sensitive, sensitive-local, very-sensitive
+      bowtie2_mode: "fast"
 
 
 ## Downloading data from the Sequence Read Archive (SRA)
