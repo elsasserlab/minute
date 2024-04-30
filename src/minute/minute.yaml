@@ -25,3 +25,7 @@ fragment_size: 150
 
 # Allow this many errors in the barcode when demultiplexing
 max_barcode_errors: 1
+
+# Aligner to use in the genome alignment step
+# Valid options: bowtie2
+aligner: "bowtie2"

@@ -293,17 +293,23 @@ rule bowtie2:
     # - write uncompressed BAM?
     # - filter unmapped reads directly? (samtools view -F 4 or bowtie2 --no-unal)
     # - add RG header
-    shell:
-        "bowtie2"
-        " --reorder"
-        " -p {threads}"
-        " -x {params.index}"
-        " -1 {input.r1}"
-        " -2 {input.r2}"
-        " --fast"
-        " 2> {log}"
-        " "
-        "| samtools sort -@ {threads} -o {output.bam} -"
+    run:
+        aligner = config.get("aligner", "bowtie2")
+        if aligner == "bowtie2":
+            shell("bowtie2"
+                  " --reorder"
+                  " -p {threads}"
+                  " -x {params.index}"
+                  " -1 {input.r1}"
+                  " -2 {input.r2}"
+                  " --fast"
+                  " 2> {log}"
+                  " "
+                  "| samtools sort -@ {threads} -o {output.bam} -"
+            )
+        else:
+            msg = f"Unknown aligner: {aligner}. Valid choices: bowtie2"
+            raise ValueError(msg)
 
 
 rule filter_by_mapq:
