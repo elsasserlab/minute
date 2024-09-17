@@ -25,3 +25,19 @@ fragment_size: 150
 
 # Allow this many errors in the barcode when demultiplexing
 max_barcode_errors: 1
+
+# Filter out reads under certain mapping quality (0: no filtering)
+mapping_quality: 0
+
+# If filtered_bigwigs rule is run, additional bigWig files are produced,
+# where reads with MQ lower than this value are filtered out. This parameter
+# is independent of mapping_quality parameter above.
+mapping_quality_bigwig: 20
+
+# Aligner to use in the genome alignment step
+# Valid options: bowtie2, strobealign
+aligner: "bowtie2"
+
+# Bowtie2 alignment mode:
+# fast, fast-local, sensitive, sensitive-local, very-sensitive
+bowtie2_mode: "fast"

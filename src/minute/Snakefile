@@ -276,7 +276,13 @@ rule demultiplex_stats:
             print(lines // 2, file=fo)
 
 
-rule bowtie2:
+def read_group_flags(wildcards, sep=" "):
+    return (f" --rg-id {wildcards.sample}_rep{wildcards.replicate}"
+            f" --rg{sep}SM:{wildcards.sample}"
+            f" --rg{sep}LB:{wildcards.sample}_rep{wildcards.replicate}")
+
+
+rule align_to_reference:
     threads:
         19  # One fewer than available to allow other jobs to run in parallel
     output:
@@ -285,25 +291,45 @@ rule bowtie2:
         r1="final/demultiplexed/{sample}_rep{replicate}_R1.fastq.gz",
         r2="final/demultiplexed/{sample}_rep{replicate}_R2.fastq.gz",
     params:
-        index=lambda wildcards: references[wildcards.reference].bowtie_index
+        reference=lambda wildcards: references[wildcards.reference]
     log:
         "log/4-mapped/{sample}_rep{replicate}.{reference}.log"
     # TODO
     # - --sensitive (instead of --fast) would be default
     # - write uncompressed BAM?
     # - filter unmapped reads directly? (samtools view -F 4 or bowtie2 --no-unal)
-    # - add RG header
-    shell:
-        "bowtie2"
-        " --reorder"
-        " -p {threads}"
-        " -x {params.index}"
-        " -1 {input.r1}"
-        " -2 {input.r2}"
-        " --fast"
-        " 2> {log}"
-        " "
-        "| samtools sort -@ {threads} -o {output.bam} -"
+    run:
+        aligner = config.get("aligner", "bowtie2")
+        if aligner == "bowtie2":
+            bowtie_mode = config.get("bowtie2_mode", "fast")
+            group_flags = read_group_flags(wildcards)
+            shell("bowtie2"
+                  " --reorder"
+                  " -p {threads}"
+                  " -x {params.reference.bowtie_index}"
+                  " -1 {input.r1}"
+                  " -2 {input.r2}"
+                  " --{bowtie_mode}"
+                  " {group_flags}"
+                  " 2> {log}"
+                  " "
+                  "| samtools sort -@ {threads} -o {output.bam} -"
+            )
+        elif aligner == "strobealign":
+            group_flags = read_group_flags(wildcards, sep = "=")
+            shell("strobealign"
+                  " -t {threads}"
+                  " {params.reference.fasta}"
+                  " {input.r1}"
+                  " {input.r2}"
+                  " {group_flags}"
+                  " 2> {log}"
+                  " "
+                  "| samtools sort -@ {threads} -o {output.bam} -"
+            )
+        else:
+            msg = f"Unknown aligner: {aligner}. Valid choices: bowtie2, strobealign"
+            raise ValueError(msg)
 
 
 rule filter_by_mapq:

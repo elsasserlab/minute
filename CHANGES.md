@@ -1,5 +1,15 @@
 # minute Changelog
 
+## v0.9.0
+
+### Features
+
+* Bowtie2 run mode can be configured in `minute.yaml` to any of the bowtie2 
+accepted modes. Default is still `--fast`.
+* Optionally align reads with `strobealign` instead of `bowtie2`.
+* Add read group RG to output BAM headers and read group ID to individual
+alignments.
+
 ## v0.8.0
 
 ### Features

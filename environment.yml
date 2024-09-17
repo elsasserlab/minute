@@ -14,6 +14,7 @@ dependencies:
   - cutadapt >=3.7
   # bowtie2 2.5.2 crashes on the tests
   - bowtie2 =2.5.1
+  - strobealign >= 0.13.0
   - je-suite >=2.0.RC
   - igvtools >=2.5.3
   - deeptools >=3.5.0
