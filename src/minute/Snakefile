@@ -463,15 +463,22 @@ rule insert_size_metrics:
         bam="final/bam/{name}.bam"
     log:
         "log/final/{name}.insertsizes.txt.log"
-    shell:
-        "picard"
-        " CollectInsertSizeMetrics"
-        " I={input.bam}"
-        " O={output.txt}"
-        " HISTOGRAM_FILE={output.pdf}"
-        " MINIMUM_PCT=0.5"
-        " STOP_AFTER=10000000"
-        " 2> {log}"
+    run:
+        picard_cmd = (
+            "picard"
+            " CollectInsertSizeMetrics"
+            " I={input.bam}"
+            " O={output.txt}"
+            " HISTOGRAM_FILE={output.pdf}"
+            " MINIMUM_PCT=0.5"
+            " STOP_AFTER=10000000"
+            " 2> {log}"
+        )
+        shell(picard_cmd)
+        # Picard does not produce any output on empty BAM files
+        if not os.path.isfile(output.txt):
+            open(output.txt, "a").close()
+            open(output.pdf, "a").close()
 
 
 rule unscaled_bigwig:
@@ -663,6 +670,7 @@ rule replicate_stats:
 
         d["raw_demultiplexed"] = read_int_from_file(input.demux_stats)
         d["frac_mapq_filtered"] = (d["raw_mapped"] - d["mapq_mapped"]) / d["raw_mapped"]
+
 
         # Note that here we use as total/unique single ended fragments, because we deduplicate
         # based on 1st mate. However if we used proper-pairs the result would be very similar,
