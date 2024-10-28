@@ -287,23 +287,29 @@ def compute_scaling(scaling_group, treatments, controls, infofile, genome_sizes,
     for pair, treatment_path, control_path, genome_size in zip(scaling_group.normalization_pairs, treatments, controls, genome_sizes):
         treatment_reads = parse_flagstat(treatment_path).mapped_reads
         control_reads = parse_flagstat(control_path).mapped_reads
-        if first:
-            scaling_factor = (
-                genome_size / fragment_size / treatment_reads * control_reads
-            )
-            treatment_reads_ref = treatment_reads
-            control_reads_ref = control_reads
-            first = False
 
-        sample_scaling_factor = scaling_factor / control_reads
-        scaled_treatment_reads = sample_scaling_factor * treatment_reads
+        try:
+            if first:
+                scaling_factor = (
+                    genome_size / fragment_size / treatment_reads * control_reads
+                )
+                treatment_reads_ref = treatment_reads
+                control_reads_ref = control_reads
+                first = False
 
-        # TODO factor this out
-        print(pair.treatment.name, treatment_reads, scaled_treatment_reads, pair.control.name, control_reads, sample_scaling_factor, scaling_group.name, sep="\t", file=infofile)
+            sample_scaling_factor = scaling_factor / control_reads
+            scaled_treatment_reads = sample_scaling_factor * treatment_reads
+        except ZeroDivisionError:
+            sample_scaling_factor = "NA"
+            print(pair.treatment.name, treatment_reads, scaled_treatment_reads, pair.control.name, control_reads, sample_scaling_factor, scaling_group.name, sep="\t", file=infofile)
+            yield sample_scaling_factor
+        else:
+            # TODO factor this out
+            print(pair.treatment.name, treatment_reads, scaled_treatment_reads, pair.control.name, control_reads, sample_scaling_factor, scaling_group.name, sep="\t", file=infofile)
 
-        # TODO scaled.idxstats.txt file
+            # TODO scaled.idxstats.txt file
 
-        yield sample_scaling_factor
+            yield sample_scaling_factor
 
 
 def parse_stats_fields(stats_file):

@@ -669,8 +669,11 @@ rule replicate_stats:
             d[name] = parse_flagstat(flagstat).mapped_reads
 
         d["raw_demultiplexed"] = read_int_from_file(input.demux_stats)
-        d["frac_mapq_filtered"] = (d["raw_mapped"] - d["mapq_mapped"]) / d["raw_mapped"]
 
+        try:
+            d["frac_mapq_filtered"] = (d["raw_mapped"] - d["mapq_mapped"]) / d["raw_mapped"]
+        except ZeroDivisionError:
+            d["frac_mapq_filtered"] = "NA"
 
         # Note that here we use as total/unique single ended fragments, because we deduplicate
         # based on 1st mate. However if we used proper-pairs the result would be very similar,
@@ -679,8 +682,13 @@ rule replicate_stats:
             parse_duplication_metrics(input.metrics)["unpaired_reads_examined"],
             parse_duplication_metrics(input.metrics)["unpaired_read_duplicates"])
 
+        try:
+            is_metrics = parse_insert_size_metrics(input.insertsizes)
+        except StopIteration:
+            is_metrics = dict()
+
         d["percent_duplication"] = parse_duplication_metrics(input.metrics)["percent_duplication"]
-        d["insert_size"] = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
+        d["insert_size"] = is_metrics.get("median_insert_size", "NA")
         with open(output.txt, "w") as f:
             print(*d.keys(), sep="\t", file=f)
             print(*d.values(), sep="\t", file=f)
@@ -701,7 +709,12 @@ rule pooled_stats:
         for key in ["raw_demultiplexed", "raw_mapped", "mapq_mapped", "dedup_mapped", "library_size", "percent_duplication", "frac_mapq_filtered"]:
             d[key] = "."
         d["final_mapped"] = parse_flagstat(input.final_flagstat).mapped_reads
-        d["insert_size"] = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
+
+        try:
+            is_metrics = parse_insert_size_metrics(input.insertsizes)
+        except StopIteration:
+            is_metrics = dict()
+        d["insert_size"] = is_metrics.get("median_insert_size", "NA")
         with open(output.txt, "w") as f:
             print(*d.keys(), sep="\t", file=f)
             print(*d.values(), sep="\t", file=f)
