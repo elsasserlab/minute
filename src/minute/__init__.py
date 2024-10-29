@@ -278,6 +278,11 @@ def parse_picard_metrics(path, metrics_class: str):
         values.append('NA')
 
     result = {key.lower(): float_or_int(value) for key, value in zip(header, values)}
+
+    # Je outputs missing value as ?
+    if result.get("percent_duplication") == "?":
+        result["percent_duplication"] = "NA"
+
     return result
 
 
@@ -460,7 +465,7 @@ def estimate_library_size(total_reads, duplicate_reads):
     """
     unique_reads = total_reads - duplicate_reads
     if total_reads == 0 or duplicate_reads == 0:
-        return None
+        return "NA"
 
     m = 1.0
     M = 100.0
