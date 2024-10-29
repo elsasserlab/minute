@@ -589,7 +589,12 @@ rule extract_fragment_size:
         fragsize=temp("{base}.fragsize.txt")
     run:
         with open(output.fragsize, "w") as f:
-            print(int(parse_insert_size_metrics(input.insertsizes)["median_insert_size"]),
+            try:
+                is_metrics = parse_insert_size_metrics(input.insertsizes)
+            except StopIteration:
+                is_metrics = dict()
+
+            print(int(is_metrics.get("median_insert_size", "NA")),
                   file=f)
 
 
