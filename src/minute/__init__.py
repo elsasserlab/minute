@@ -174,6 +174,10 @@ def get_all_pools(maplibs: Iterable[LibraryWithReference]) -> List[LibraryWithRe
 def get_all_replicates(maplibs: Iterable[LibraryWithReference]) -> List[LibraryWithReference]:
     return [m for m in maplibs if not isinstance(m.library, Pool)]
 
+def get_maplib_by_name(maplibs: Iterable[LibraryWithReference], name: str) -> LibraryWithReference:
+    for m in maplibs:
+        if m.library.name == name:
+            return m
 
 def make_references(config) -> Dict[str, Reference]:
     references = dict()

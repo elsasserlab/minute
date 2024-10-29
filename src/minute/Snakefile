@@ -20,6 +20,7 @@ from minute import (
     flatten_scaling_groups,
     get_all_pools,
     get_all_replicates,
+    get_maplib_by_name,
     Pool,
     MultiplexedReplicate,
     estimate_library_size,
@@ -56,7 +57,6 @@ multiplexed_libraries = [lib for lib in libraries if isinstance(lib, Multiplexed
 direct_libraries = [lib for lib in libraries if not isinstance(lib, MultiplexedReplicate)]
 scaling_groups = list(read_scaling_groups("groups.tsv", libraries))
 maplibs = list(flatten_scaling_groups(scaling_groups))
-
 
 if not is_snakemake_calling_itself():
     print(format_metadata_overview(references, libraries, maplibs, scaling_groups), file=sys.stderr)
@@ -665,6 +665,11 @@ rule replicate_stats:
                 library=wildcards.library,
                 reference=wildcards.reference
             )
+        d["barcode"] = "."
+        mlib = get_maplib_by_name(maplibs, wildcards.library)
+        if isinstance(mlib.library, MultiplexedReplicate):
+            d["barcode"] = mlib.library.barcode
+
         for flagstat, name in [
             (input.mapped_flagstat, "raw_mapped"),
             (input.mapq_flagstat, "mapq_mapped"),
@@ -734,6 +739,7 @@ rule replicate_stats_summary:
         header = [
             "map_id",
             "library",
+            "barcode",
             "reference",
             "raw_demultiplexed",
             "raw_mapped",
