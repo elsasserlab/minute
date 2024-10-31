@@ -42,14 +42,13 @@ minute_scaled_replicates_barplot <- function(scaling_file) {
       stat = "identity",
       alpha = 0.9,
       position = position_dodge2(preserve = "single"),
-      color = "#555555",
-      linewidth = 0.2
+      color = "#555555"
     ) +
     style_minute_barplot() +
     theme(legend.position = "bottom") +
     scale_x_discrete(labels = scales::label_wrap(20)) +
-    labs(fill = "Replicate") +
-    scale_fill_discrete()
+    labs(fill = "Replicate", x = "") +
+    scale_fill_brewer(palette = "Blues")
 }
 
 
@@ -122,10 +121,16 @@ style_minute_barplot <- function() {
   list(theme_classic(base_size = 8),
        facet_wrap(~scaling_group, scales = "free_x", ncol = 2),
        geom_hline(yintercept = 1, linetype = "dotted", alpha = 0.4),
-       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)),
+       theme(
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        strip.background = element_blank()
+       ),
        labs(title = "MINUTE-ChIP scaled global read levels",
-            x = "Sample",
-            y = "Minute-ChIP Scaled Fraction"))
+            x = "",
+            y = "Minute-ChIP Scaled Fraction"),
+       scale_fill_brewer(palette = "Set1"),
+       scale_color_brewer(palette = "Set1")
+  )
 }
 
 
@@ -139,12 +144,13 @@ style_barcode_representation <- function() {
     theme(panel.grid.major.y = element_blank(),
           panel.grid.minor.y = element_blank(),
           axis.ticks.x = element_line(),
-          axis.ticks.length.x = grid::unit(2, "mm"),
+          axis.ticks.length.x = grid::unit(1, "mm"),
           legend.position = "bottom"),
     labs(title = "Barcode representation",
          x = "",
          colour = "Condition",
-         fill = "Condition")
+         fill = "Condition"),
+    scale_fill_brewer(palette = "Set1")
   )
 }
 
@@ -196,7 +202,8 @@ stacked_replicate_groups_plot <- function(df_combined, value_column) {
       stat="identity",
       color="white",
       alpha = 0.5,
-      linewidth = 1.2
+      linewidth = 1,
+      linejoin = "mitre"
     )
 }
 
