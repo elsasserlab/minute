@@ -1,5 +1,16 @@
 # minute Changelog
 
+## v0.9.1
+
+### Features
+* Handle barcode dropouts. Zero values appear in the final report, and
+this does not prevent final stats report to be produced.
+* Carry barcode sequence to stats_summary.txt
+
+### Other
+
+* Minor: Styling changes made to the final Minute barcode barplots
+
 ## v0.9.0
 
 ### Features
