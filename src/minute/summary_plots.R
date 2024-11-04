@@ -127,9 +127,7 @@ style_minute_barplot <- function() {
        ),
        labs(title = "MINUTE-ChIP scaled global read levels",
             x = "",
-            y = "Minute-ChIP Scaled Fraction"),
-       scale_fill_brewer(palette = "Set1"),
-       scale_color_brewer(palette = "Set1")
+            y = "Minute-ChIP Scaled Fraction")
   )
 }
 
@@ -149,8 +147,7 @@ style_barcode_representation <- function() {
     labs(title = "Barcode representation",
          x = "",
          colour = "Condition",
-         fill = "Condition"),
-    scale_fill_brewer(palette = "Set1")
+         fill = "Condition")
   )
 }
 
@@ -283,3 +280,4 @@ ggsave(snakemake@output[[8]],
        height = 7,
        dpi = 300,
        units = "cm")
+
