@@ -15,11 +15,12 @@ minute_scaled_grouped_barplot <- function(scaling_file) {
   scaling <- calculate_ratios_and_groups(scaling)
   
   ggplot(data = scaling) + 
-    aes(x = rep_grp, y = msr, color = scaling_group, fill = scaling_group) + 
+    aes(x = replace_delims_with_spaces(rep_grp), y = msr, color = scaling_group, fill = scaling_group) +
     geom_point(data = scaling[scaling$is_pool == FALSE, ]) +
     geom_bar(data = scaling[scaling$is_pool == TRUE, ], stat = "identity", alpha = 0.5) +
     style_minute_barplot() +
     theme(legend.position = "none") +
+    scale_x_discrete(labels = scales::label_wrap(20)) +
     labs(subtitle = "Points - Replicates; Bars - Pooled")
 }
 
@@ -35,18 +36,19 @@ minute_scaled_replicates_barplot <- function(scaling_file) {
   scaling <- read.table(scaling_file, sep="\t", header = T, comment.char = "")
   scaling <- calculate_ratios_and_groups(scaling)
   ggplot(data = scaling) + 
-    aes(x = rep_grp, y = msr, fill = rep_number) +
+    aes(x = replace_delims_with_spaces(rep_grp), y = msr, fill = as.factor(rep_number)) +
     geom_bar(
       data = scaling[scaling$is_pool == FALSE, ],
       stat = "identity",
       alpha = 0.9,
       position = position_dodge2(preserve = "single"),
-      color = "#555555",
-      linewidth = 0.2
+      color = "#555555"
     ) +
     style_minute_barplot() +
     theme(legend.position = "bottom") +
-    scale_fill_distiller()
+    scale_x_discrete(labels = scales::label_wrap(20)) +
+    labs(fill = "Replicate", x = "") +
+    scale_fill_brewer(palette = "Blues")
 }
 
 
@@ -116,13 +118,17 @@ calculate_ratios_and_groups <- function(scaling) {
 #'
 #' @return A list of ggproto objects
 style_minute_barplot <- function() {
-  list(theme_classic(base_size = 10),
+  list(theme_classic(base_size = 8),
        facet_wrap(~scaling_group, scales = "free_x", ncol = 2),
        geom_hline(yintercept = 1, linetype = "dotted", alpha = 0.4),
-       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)),
+       theme(
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        strip.background = element_blank()
+       ),
        labs(title = "MINUTE-ChIP scaled global read levels",
-            x = "Sample",
-            y = "Minute-ChIP Scaled Fraction"))
+            x = "",
+            y = "Minute-ChIP Scaled Fraction")
+  )
 }
 
 
@@ -132,17 +138,36 @@ style_minute_barplot <- function() {
 style_barcode_representation <- function() {
   list(
     coord_flip(),
-    theme_minimal(base_size = 10),
+    theme_minimal(base_size = 8),
     theme(panel.grid.major.y = element_blank(),
           panel.grid.minor.y = element_blank(),
           axis.ticks.x = element_line(),
-          axis.ticks.length.x = grid::unit(2, "mm"),
+          axis.ticks.length.x = grid::unit(1, "mm"),
           legend.position = "bottom"),
     labs(title = "Barcode representation",
-         x = "")
+         x = "",
+         colour = "Condition",
+         fill = "Condition")
   )
 }
 
+#' Replace dashes, underscores and points with spaces for labelling
+#' @param s String to clean up
+#' @return A string
+replace_delims_with_spaces <- function(s) {
+  gsub("_|-|\\.", " ", s)
+}
+
+#' Split a string into shorter strings delimited by \n
+#'
+#' @param s String to split
+#' @param width Max width
+#' @return A string
+wrap_label <- function(s, width) {
+  s <- sapply(s, function(x) {paste0(strwrap(x, width = width), collapse = "\n")})
+  names(s) <- NULL
+  s
+}
 
 #' Main part of the stacked barcode representation plot.
 #' Overlays the pool values with the replicate groups to have separate lines
@@ -156,13 +181,16 @@ stacked_replicate_groups_plot <- function(df_combined, value_column) {
   # using .groups is experimental, so it is probably better to silence
   options(dplyr.summarise.inform = FALSE)
 
+  df_combined <- df_combined %>%
+    mutate(condition = replace_delims_with_spaces(condition))
+
   df_blocks <- df_combined %>%
     group_by(scaling_group, rep_grp, condition) %>%
     summarise(total = sum(.data[[value_column]]))
 
   ggplot(
     df_combined,
-    aes(x=scaling_group, y=!!sym(value_column), fill=condition, color=condition)
+    aes(x=scaling_group, y=!!sym(value_column), fill=wrap_label(condition, 20), color=wrap_label(condition, 20))
   ) +
     geom_bar(stat="identity", color="white", linewidth=0.2, alpha = 0.8) +
     geom_bar(
@@ -171,10 +199,10 @@ stacked_replicate_groups_plot <- function(df_combined, value_column) {
       stat="identity",
       color="white",
       alpha = 0.5,
-      linewidth = 1.2
+      linewidth = 1,
+      linejoin = "mitre"
     )
 }
-
 
 #' Calculate number of groups in a scalinginfo.txt file
 #' 
@@ -187,10 +215,10 @@ get_scaling_groups_number <- function(scaling_file) {
 scalinginfo <- snakemake@input[[1]]
 ngroups <- get_scaling_groups_number(scalinginfo)
 
-single_width <- 6
+single_width <- 5
 
 # Account for longer names
-single_height <- 10 
+single_height <- 9
 
 panel_width <- single_width * 2
 panel_height <- ceiling(ngroups / 2) * single_height
@@ -252,3 +280,4 @@ ggsave(snakemake@output[[8]],
        height = 7,
        dpi = 300,
        units = "cm")
+

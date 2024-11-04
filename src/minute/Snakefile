@@ -20,6 +20,7 @@ from minute import (
     flatten_scaling_groups,
     get_all_pools,
     get_all_replicates,
+    get_maplib_by_name,
     Pool,
     MultiplexedReplicate,
     estimate_library_size,
@@ -56,7 +57,6 @@ multiplexed_libraries = [lib for lib in libraries if isinstance(lib, Multiplexed
 direct_libraries = [lib for lib in libraries if not isinstance(lib, MultiplexedReplicate)]
 scaling_groups = list(read_scaling_groups("groups.tsv", libraries))
 maplibs = list(flatten_scaling_groups(scaling_groups))
-
 
 if not is_snakemake_calling_itself():
     print(format_metadata_overview(references, libraries, maplibs, scaling_groups), file=sys.stderr)
@@ -463,15 +463,22 @@ rule insert_size_metrics:
         bam="final/bam/{name}.bam"
     log:
         "log/final/{name}.insertsizes.txt.log"
-    shell:
-        "picard"
-        " CollectInsertSizeMetrics"
-        " I={input.bam}"
-        " O={output.txt}"
-        " HISTOGRAM_FILE={output.pdf}"
-        " MINIMUM_PCT=0.5"
-        " STOP_AFTER=10000000"
-        " 2> {log}"
+    run:
+        picard_cmd = (
+            "picard"
+            " CollectInsertSizeMetrics"
+            " I={input.bam}"
+            " O={output.txt}"
+            " HISTOGRAM_FILE={output.pdf}"
+            " MINIMUM_PCT=0.5"
+            " STOP_AFTER=10000000"
+            " 2> {log}"
+        )
+        shell(picard_cmd)
+        # Picard does not produce any output on empty BAM files
+        if not os.path.isfile(output.txt):
+            open(output.txt, "a").close()
+            open(output.pdf, "a").close()
 
 
 rule unscaled_bigwig:
@@ -582,7 +589,12 @@ rule extract_fragment_size:
         fragsize=temp("{base}.fragsize.txt")
     run:
         with open(output.fragsize, "w") as f:
-            print(int(parse_insert_size_metrics(input.insertsizes)["median_insert_size"]),
+            try:
+                is_metrics = parse_insert_size_metrics(input.insertsizes)
+            except StopIteration:
+                is_metrics = dict()
+
+            print(int(is_metrics.get("median_insert_size", "NA")),
                   file=f)
 
 
@@ -653,6 +665,11 @@ rule replicate_stats:
                 library=wildcards.library,
                 reference=wildcards.reference
             )
+        d["barcode"] = "."
+        mlib = get_maplib_by_name(maplibs, wildcards.library)
+        if isinstance(mlib.library, MultiplexedReplicate):
+            d["barcode"] = mlib.library.barcode
+
         for flagstat, name in [
             (input.mapped_flagstat, "raw_mapped"),
             (input.mapq_flagstat, "mapq_mapped"),
@@ -662,7 +679,11 @@ rule replicate_stats:
             d[name] = parse_flagstat(flagstat).mapped_reads
 
         d["raw_demultiplexed"] = read_int_from_file(input.demux_stats)
-        d["frac_mapq_filtered"] = (d["raw_mapped"] - d["mapq_mapped"]) / d["raw_mapped"]
+
+        try:
+            d["frac_mapq_filtered"] = (d["raw_mapped"] - d["mapq_mapped"]) / d["raw_mapped"]
+        except ZeroDivisionError:
+            d["frac_mapq_filtered"] = "NA"
 
         # Note that here we use as total/unique single ended fragments, because we deduplicate
         # based on 1st mate. However if we used proper-pairs the result would be very similar,
@@ -671,8 +692,13 @@ rule replicate_stats:
             parse_duplication_metrics(input.metrics)["unpaired_reads_examined"],
             parse_duplication_metrics(input.metrics)["unpaired_read_duplicates"])
 
+        try:
+            is_metrics = parse_insert_size_metrics(input.insertsizes)
+        except StopIteration:
+            is_metrics = dict()
+
         d["percent_duplication"] = parse_duplication_metrics(input.metrics)["percent_duplication"]
-        d["insert_size"] = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
+        d["insert_size"] = is_metrics.get("median_insert_size", "NA")
         with open(output.txt, "w") as f:
             print(*d.keys(), sep="\t", file=f)
             print(*d.values(), sep="\t", file=f)
@@ -693,7 +719,12 @@ rule pooled_stats:
         for key in ["raw_demultiplexed", "raw_mapped", "mapq_mapped", "dedup_mapped", "library_size", "percent_duplication", "frac_mapq_filtered"]:
             d[key] = "."
         d["final_mapped"] = parse_flagstat(input.final_flagstat).mapped_reads
-        d["insert_size"] = parse_insert_size_metrics(input.insertsizes)["median_insert_size"]
+
+        try:
+            is_metrics = parse_insert_size_metrics(input.insertsizes)
+        except StopIteration:
+            is_metrics = dict()
+        d["insert_size"] = is_metrics.get("median_insert_size", "NA")
         with open(output.txt, "w") as f:
             print(*d.keys(), sep="\t", file=f)
             print(*d.values(), sep="\t", file=f)
@@ -708,6 +739,7 @@ rule replicate_stats_summary:
         header = [
             "map_id",
             "library",
+            "barcode",
             "reference",
             "raw_demultiplexed",
             "raw_mapped",
