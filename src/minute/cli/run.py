@@ -79,10 +79,11 @@ def run_snakemake(
 
 def validate_config_file(yaml):
     """
-    Checks that the configuration minute.yaml file exists and has valid structure
+    Checks that the configuration minute.yaml file exists and has valid
+    structure and field values.
     """
     try:
-        _ = YAML(typ="safe").load(yaml)
+        config = YAML(typ="safe").load(yaml)
     except FileNotFoundError as e:
         sys.exit(
             f"Pipeline configuration file '{e.filename}' not found. "
@@ -95,6 +96,20 @@ def validate_config_file(yaml):
             f"{e}"
             f"\n\nCheck example minute.yaml file on the "
             f"documentation for reference. "
+        )
+
+    required = set([
+        "references",
+        "umi_length",
+        "fragment_size",
+        "max_barcode_errors",
+    ])
+    yaml_fields = set(config.keys())
+    if not required.issubset(yaml_fields):
+        sys.exit(
+            f"Missing required fields in {yaml} configuration file.\n"
+            f"Missing: {required.difference(yaml_fields)}.\n"
+            f"Present: {yaml_fields}"
         )
 
 
