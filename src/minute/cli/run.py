@@ -50,13 +50,8 @@ def run_snakemake(
     cores=None,
     arguments=None,
 ):
-    try:
-        _ = YAML(typ="safe").load(Path("minute.yaml"))
-    except FileNotFoundError as e:
-        sys.exit(
-            f"Pipeline configuration file '{e.filename}' not found. "
-            f"Please see the documentation for how to create it."
-        )
+    validate_config_file(Path("minute.yaml"))
+
     try:
         libraries = list(read_libraries("libraries.tsv"))
         scaling_groups = list(read_scaling_groups("groups.tsv", libraries))
@@ -79,6 +74,19 @@ def run_snakemake(
 
     warn_about_unused_libraries(libraries, scaling_groups)
     sys.exit(exit_code)
+
+
+def validate_config_file(yaml):
+    """
+    Checks that the configuration minute.yaml file exists
+    """
+    try:
+        _ = YAML(typ="safe").load(yaml)
+    except FileNotFoundError as e:
+        sys.exit(
+            f"Pipeline configuration file '{e.filename}' not found. "
+            f"Please see the documentation for how to create it."
+        )
 
 
 def warn_about_unused_libraries(libraries, scaling_groups, limit=4):
