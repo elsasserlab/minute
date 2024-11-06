@@ -19,7 +19,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 from ruamel.yaml import scanner
 
-from .. import libraries_unused_in_groups, read_libraries, read_scaling_groups
+from .. import libraries_unused_in_groups, read_libraries, read_scaling_groups, make_references
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +112,14 @@ def validate_config_file(yaml):
             f"Present: {yaml_fields}"
         )
 
+    for name, ref in config["references"].items():
+        fasta = Path(ref["fasta"])
+        if not fasta.exists():
+            sys.exit(
+                f"Reference file {fasta} for genome {name} not found."
+            )
+
+    make_references(config["references"], config.get("aligner", "bowtie2"))
 
 def warn_about_unused_libraries(libraries, scaling_groups, limit=4):
     """
