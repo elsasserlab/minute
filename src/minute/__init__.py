@@ -179,15 +179,17 @@ def get_maplib_by_name(maplibs: Iterable[LibraryWithReference], name: str) -> Li
         if m.library.name == name:
             return m
 
-def make_references(config) -> Dict[str, Reference]:
+def make_references(config, aligner) -> Dict[str, Reference]:
     references = dict()
     for name, ref in config.items():
         fasta = Path(ref["fasta"])
         exclude_bed = Path(ref["exclude"]) if ref["exclude"] else None
-        try:
-            bowtie_index = detect_bowtie_index_name(ref["fasta"])
-        except FileNotFoundError as e:
-            sys.exit(str(e))
+        bowtie_index = None
+        if aligner == "bowtie2":
+            try:
+                bowtie_index = detect_bowtie_index_name(ref["fasta"])
+            except FileNotFoundError as e:
+                sys.exit(str(e))
         references[name] = Reference(
             name=name,
             fasta=fasta,
