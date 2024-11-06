@@ -17,6 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 from ruamel.yaml import YAML
+from ruamel.yaml import scanner
 
 from .. import libraries_unused_in_groups, read_libraries, read_scaling_groups
 
@@ -78,7 +79,7 @@ def run_snakemake(
 
 def validate_config_file(yaml):
     """
-    Checks that the configuration minute.yaml file exists
+    Checks that the configuration minute.yaml file exists and has valid structure
     """
     try:
         _ = YAML(typ="safe").load(yaml)
@@ -86,6 +87,14 @@ def validate_config_file(yaml):
         sys.exit(
             f"Pipeline configuration file '{e.filename}' not found. "
             f"Please see the documentation for how to create it."
+        )
+    except scanner.ScannerError as e:
+        sys.exit(
+            f"Pipeline configuration file '{yaml}' not correctly formed. "
+            f"See error below.\n\n"
+            f"{e}"
+            f"\n\nCheck example minute.yaml file on the "
+            f"documentation for reference. "
         )
 
 
