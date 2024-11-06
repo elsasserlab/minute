@@ -61,7 +61,10 @@ def run_snakemake(
         libraries = list(read_libraries("libraries.tsv"))
         scaling_groups = list(read_scaling_groups("groups.tsv", libraries))
     except FileNotFoundError as e:
-        sys.exit(e)
+        sys.exit(
+            f"Samples configuration file '{e.filename}' not found. "
+            f"Please see the documentation for how to create it."
+        )
 
     with importlib.resources.path("minute", "Snakefile") as snakefile:
         command = [
