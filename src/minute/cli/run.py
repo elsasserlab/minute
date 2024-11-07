@@ -52,7 +52,14 @@ def run_snakemake(
     cores=None,
     arguments=None,
 ):
-    validate_config_file(Path("minute.yaml"))
+    required = [
+        "references",
+        "umi_length",
+        "fragment_size",
+        "max_barcode_errors",
+    ]
+
+    validate_config_file(Path("minute.yaml"), required)
 
     try:
         libraries = list(read_libraries("libraries.tsv"))
@@ -79,10 +86,14 @@ def run_snakemake(
     sys.exit(exit_code)
 
 
-def validate_config_file(yaml):
+def validate_config_file(yaml, required):
     """
     Checks that the configuration minute.yaml file exists and has valid
     structure and field values.
+
+    Arguments:
+        yaml: Path to config file
+        required: List of required fields
     """
     try:
         config = YAML(typ="safe").load(yaml)
@@ -99,20 +110,7 @@ def validate_config_file(yaml):
             f"\n\nCheck example minute.yaml file on the "
             f"documentation for reference. "
         )
-
-    required = set([
-        "references",
-        "umi_length",
-        "fragment_size",
-        "max_barcode_errors",
-    ])
-    yaml_fields = set(config.keys())
-    if not required.issubset(yaml_fields):
-        sys.exit(
-            f"Missing required fields in {yaml} configuration file.\n"
-            f"Missing: {required.difference(yaml_fields)}.\n"
-            f"Present: {yaml_fields}"
-        )
+    check_required_fields_exist(yaml, required)
 
     for name, ref in config["references"].items():
         fasta = Path(ref["fasta"])
@@ -122,6 +120,26 @@ def validate_config_file(yaml):
             )
 
     make_references(config["references"], config.get("aligner", "bowtie2"))
+
+def check_required_fields_exist(yaml, required):
+    """
+    Checks that required fields for minute execution that have no defaults 
+    are present in the YAML file. If any required field is missing it prints
+    an error and exits.
+
+    Arguments:
+        yaml: Path to YAML config file
+        required: List of required fields
+    """
+    config = YAML(typ="safe").load(yaml)
+    yaml_fields = set(config.keys())
+    required = set(required)
+    if not required.issubset(yaml_fields):
+        sys.exit(
+            f"Missing required fields in '{yaml}': "
+            f"{', '.join([f for f in required.difference(yaml_fields)])}.\n"
+            f"Present: {', '.join([f for f in yaml_fields])}."
+        )
 
 def check_fastq_basenames_exist(libraries, fastq_dir = "fastq"):
     """
