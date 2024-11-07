@@ -183,6 +183,8 @@ def make_references(config, aligner) -> Dict[str, Reference]:
     references = dict()
     for name, ref in config.items():
         fasta = Path(ref["fasta"])
+        if not fasta.exists():
+            sys.exit(f"Reference file {fasta} not found.")
         exclude_bed = Path(ref["exclude"]) if ref["exclude"] else None
         bowtie_index = None
         if aligner == "bowtie2":

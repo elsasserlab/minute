@@ -111,14 +111,6 @@ def validate_config_file(yaml, required):
             f"documentation for reference. "
         )
     check_required_fields_exist(yaml, required)
-
-    for name, ref in config["references"].items():
-        fasta = Path(ref["fasta"])
-        if not fasta.exists():
-            sys.exit(
-                f"Reference file {fasta} for genome {name} not found."
-            )
-
     make_references(config["references"], config.get("aligner", "bowtie2"))
 
 def check_required_fields_exist(yaml, required):
