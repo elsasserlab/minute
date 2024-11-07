@@ -13,6 +13,7 @@ Run 'snakemake --help' or see the Snakemake documentation to see valid snakemake
 """
 import importlib
 import logging
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -62,6 +63,7 @@ def run_snakemake(
             f"Please see the documentation for how to create it."
         )
 
+    check_fastq_basenames_exist(libraries)
     with importlib.resources.path("minute", "Snakefile") as snakefile:
         command = [
             "snakemake", f"--cores={'all' if cores is None else cores}", "-p", "-s", snakefile
@@ -120,6 +122,32 @@ def validate_config_file(yaml):
             )
 
     make_references(config["references"], config.get("aligner", "bowtie2"))
+
+def check_fastq_basenames_exist(libraries, fastq_dir = "fastq"):
+    """
+    Check that every fastq base specified in libraries.tsv is present as
+    a pair of FASTQ files _R1.fastq.gz, _R2.fastq.gz
+
+    Arguments:
+        libraries: List of Library objects
+        fastq_dir: Directory where FASTQ files are
+    """
+    basenames = set([lib.fastqbase for lib in libraries])
+    missing = []
+    for b in basenames:
+        r1 = Path(Path(fastq_dir) / (b + "_R1.fastq.gz"))
+        if not r1.exists():
+            missing.append(str(r1.name))
+
+        r2 = Path(Path(fastq_dir) / (b + "_R2.fastq.gz"))
+        if not r2.exists():
+            missing.append(str(r2.name))
+
+    if len(missing) > 0:
+        sys.exit(
+            f"Missing files in {fastq_dir} directory with fastq base in 'libraries.tsv': "
+            f"{', '.join([m for m in missing])}"
+        )
 
 def warn_about_unused_libraries(libraries, scaling_groups, limit=4):
     """
