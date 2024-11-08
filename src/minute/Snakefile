@@ -51,7 +51,7 @@ localrules:
     insert_size_metrics,
 
 
-references = make_references(config["references"])
+references = make_references(config["references"], config.get("aligner", "bowtie2"))
 libraries = list(read_libraries("libraries.tsv"))
 multiplexed_libraries = [lib for lib in libraries if isinstance(lib, MultiplexedReplicate)]
 direct_libraries = [lib for lib in libraries if not isinstance(lib, MultiplexedReplicate)]
