@@ -20,7 +20,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 from ruamel.yaml import scanner
 
-from .. import libraries_unused_in_groups, read_libraries, read_scaling_groups, make_references
+from .. import libraries_unused_in_groups, read_libraries, read_scaling_groups, make_references, ParseError
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +69,8 @@ def run_snakemake(
             f"Samples configuration file '{e.filename}' not found. "
             f"Please see the documentation for how to create it."
         )
+    except ParseError as e:
+        sys.exit(f"Error parsing config files: {e}")
 
     check_fastq_basenames_exist(libraries)
     with importlib.resources.path("minute", "Snakefile") as snakefile:
