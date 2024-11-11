@@ -1,5 +1,14 @@
 # minute Changelog
 
+## v0.9.2
+
+### Minor
+* More thorough check of user input, including: validating minute.yaml
+has required fields, reference files exist, FASTQ files match libraries.tsv,
+bowtie2 index is not required if aligner strobealign is used.
+* More verbose command line messages when an error occurs.
+* More verbose docstring for `minute run` command.
+
 ## v0.9.1
 
 ### Features
