@@ -61,15 +61,10 @@ maplibs = list(flatten_scaling_groups(scaling_groups))
 if not is_snakemake_calling_itself():
     print(format_metadata_overview(references, libraries, maplibs, scaling_groups), file=sys.stderr)
 
-multiqc_inputs = (
+multiqc_unscaled_inputs = (
     [
-        "reports/scalinginfo.txt",
         "reports/stats_summary.txt",
-        "reports/pooled_stats_summary.txt",
-        "reports/scaling_barplot.png",
-        "reports/grouped_scaling_barplot.png",
-        "reports/barcode_representation.png",
-        "reports/barcode_representation_perc.png"
+        "reports/pooled_stats_summary.txt"
     ]
     + expand("reports/fastqc/{library.fastqbase}_R{read}_fastqc/fastqc_data.txt", library=multiplexed_libraries, read=(1, 2))
     + expand("log/2-noadapters/{library.fastqbase}.trimmed.log", library=multiplexed_libraries)
@@ -78,8 +73,21 @@ multiqc_inputs = (
     + expand("stats/final/{maplib.name}.insertsizes.txt", maplib=get_all_replicates(maplibs))
     + expand("stats/final/{maplib.name}.idxstats.txt", maplib=[m for m in maplibs])
 )
+
+multiqc_inputs = (
+    multiqc_unscaled_inputs
+    + [
+        "reports/scalinginfo.txt",
+        "reports/scaling_barplot.png",
+        "reports/grouped_scaling_barplot.png",
+        "reports/barcode_representation.png",
+        "reports/barcode_representation_perc.png"
+    ]
+)
+
+unscaled_bigwigs = expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=maplibs)
 bigwigs = (
-    expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=maplibs)
+    unscaled_bigwigs
     + expand("final/bigwig/{maplib.name}.scaled.bw",
         maplib=flatten_scaling_groups(scaling_groups, controls=False))
 )
@@ -130,6 +138,12 @@ rule no_bigwigs:
         "reports/multiqc_report.html",
 
 
+rule no_scaling:
+    input:
+        unscaled_bigwigs,
+        "reports/multiqc_report_unscaled.html"
+
+
 rule multiqc_full:
     output: "reports/multiqc_report_full.html"
     input:
@@ -154,6 +168,19 @@ rule multiqc:
         "log/multiqc_report.log"
     shell:
         "multiqc -f -o reports/ -c {input.multiqc_config} {input} 'stats/final' 2> {log}"
+
+
+rule multiqc_no_scaling:
+    output: "reports/multiqc_report_unscaled.html"
+    input:
+        multiqc_unscaled_inputs,
+        multiqc_config=os.path.join(os.path.dirname(workflow.snakefile), "multiqc_config.yaml")
+    log:
+        "log/multiqc_report_unscaled.log"
+    shell:
+        "multiqc -f -o reports/ -c {input.multiqc_config} {input} 'stats/final' 2> {log}"
+        " && "
+        " mv reports/multiqc_report.html {output}"
 
 
 rule clean:
