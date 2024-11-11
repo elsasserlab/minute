@@ -77,5 +77,14 @@ still produces full scaling information and MultiQC report, and it is very quick
 to run.
 
 **`mapq_bigwigs`**. Produces extra bigWigs `mapq.bw` filtered by mapping quality.
+This requires a `mapping_quality_bigwig` parameter value higher than zero in the
+`minute.yaml` configuration.
 
 **`pooled_only`**. Produces only the bigWigs for the pooled replicates.
+
+**`no_bigwigs`**. Runs the default pipeline but skips the bigWig generation
+entirely. This is useful for a quick check on QC metrics, since the rest of the
+steps are significantly faster than bigWig generation.
+
+**`no_scaling`**. Skips entirely the scaling statistics and bigWigs. Produces
+only unscaled bigWigs and a MultiQC report with only non-scaling QC metrics.
