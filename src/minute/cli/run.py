@@ -3,13 +3,43 @@ Run the Minute pipeline
 
 Calls Snakemake to produce all the output files.
 
-Any arguments that this wrapper script does not recognize are forwarded to Snakemake.
-This can be used to provide file(s) to create, targets to run or any other Snakemake
-options. For example, this runs the "full" target (including fingerprinting) in dry-run mode:
+minute run will execute a default set of rules and produce a set of final bigWig
+files and a MultiQC report.
+
+Any further arguments that this wrapper script does not recognize are forwarded
+to Snakemake. This can be used to provide file(s) to create, targets to run or
+any other Snakemake options. For example, this runs the "full" target (including
+fingerprinting) in dry-run mode:
 
     minute run --dryrun full
 
-Run 'snakemake --help' or see the Snakemake documentation to see valid snakemake arguments.
+Alternative target rules:
+
+    final (default) Default pipeline that does not include fingerprint plots.
+                    It runs quicker than the full version.
+
+    full            Runs the default pipeline plus deepTools fingerprint. This
+                    is a computationally expensive step that can significantly
+                    increase runtime on highly multiplexed minute runs.
+
+    pooled_only     Runs the default pipeline, but only generates the bigWig
+                    files corresponding to the pooled replicates.
+
+    mapq_bigwigs    Generates an additional set of bigWig files where each final
+                    BAM alignment is also filtered for mapping quality. This
+                    requires a mapping_quality_bigwig parameter value higher
+                    than zero in the minute.yaml configuration.
+
+    no_bigwigs      Runs the default pipeline but skips the bigWig generation
+                    entirely. This is useful for a quick check on QC metrics,
+                    since the rest of the steps are significantly faster than
+                    bigWig generation.
+
+See minute documentation for a more detailed description of the available target
+rules and their outputs.
+
+Run 'snakemake --help' or see the Snakemake documentation to see valid snakemake
+arguments.
 """
 import importlib
 import logging
@@ -23,7 +53,6 @@ from ruamel.yaml import scanner
 from .. import libraries_unused_in_groups, read_libraries, read_scaling_groups, make_references, ParseError
 
 logger = logging.getLogger(__name__)
-
 
 def add_arguments(parser):
     parser.add_argument(
@@ -42,10 +71,8 @@ def add_arguments(parser):
         help="Do not execute anything",
     )
 
-
 def main(args, arguments):
     run_snakemake(**vars(args), arguments=arguments)
-
 
 def run_snakemake(
     dryrun=False,
@@ -87,7 +114,6 @@ def run_snakemake(
     warn_about_unused_libraries(libraries, scaling_groups)
     sys.exit(exit_code)
 
-
 def validate_config_file(yaml, required):
     """
     Checks that the configuration minute.yaml file exists and has valid
@@ -117,7 +143,8 @@ def validate_config_file(yaml, required):
 
 def check_required_fields_exist(yaml, required):
     """
-    Checks that required fields for minute execution that have no defaults 
+    Checks that required fields for minute execution that have no defaults
+
     are present in the YAML file. If any required field is missing it prints
     an error and exits.
 

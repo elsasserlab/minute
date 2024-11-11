@@ -6,7 +6,7 @@ import ast
 import logging
 import pkgutil
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import importlib.resources
 
@@ -28,7 +28,7 @@ def main(arguments=None):
 #    parser.add_argument("--version", action="version", version=__version__)
     subparsers = parser.add_subparsers()
     subparser = subparsers.add_parser(
-        subcommand_name, help=module.__doc__.split("\n")[1], description=module.__doc__
+        subcommand_name, help=module.__doc__.split("\n")[1], description=module.__doc__, formatter_class=RawDescriptionHelpFormatter
     )
     module.add_arguments(subparser)
     args, remainder = parser.parse_known_args(arguments)
