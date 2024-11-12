@@ -35,6 +35,10 @@ Alternative target rules:
                     since the rest of the steps are significantly faster than
                     bigWig generation.
 
+    no_scaling      Skips entirely the scaling statistics and bigWigs. Produces
+                    only unscaled bigWigs and a MultiQC report with only
+                    non-scaling QC metrics.
+
 See minute documentation for a more detailed description of the available target
 rules and their outputs.
 

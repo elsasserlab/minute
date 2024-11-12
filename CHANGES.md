@@ -1,5 +1,13 @@
 # minute Changelog
 
+## v0.10.0
+
+### Features
+
+* New target rule `no_scaling` to skip the scaling process completely and
+produce only the unscaled bigWig files and a final MultiQC report with
+non-scaling related QC metrics.
+
 ## v0.9.2
 
 ### Minor
