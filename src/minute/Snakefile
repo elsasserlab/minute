@@ -621,8 +621,18 @@ rule extract_fragment_size:
             except StopIteration:
                 is_metrics = dict()
 
-            print(int(is_metrics.get("median_insert_size", "NA")),
-                  file=f)
+            median_size = is_metrics.get("median_insert_size", "NA")
+            # bamCoverage needs an --int value for --extendReads
+            try:
+                median_size = int(median_size)
+            except ValueError:
+                print(
+                    f"Median insert size not numerical. Resorting to config "
+                    f"fragment size {config['fragment_size']} for bigWig "
+                    f"generation."
+                )
+                median_size = int(config["fragment_size"])
+            print(median_size, file=f)
 
 
 rule scaled_bigwig:
