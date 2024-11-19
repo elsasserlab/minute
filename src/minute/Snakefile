@@ -145,6 +145,7 @@ rule no_scaling:
 
 
 rule multiqc_full:
+    priority: 10
     output: "reports/multiqc_report_full.html"
     input:
         multiqc_inputs,
@@ -160,6 +161,7 @@ rule multiqc_full:
 
 
 rule multiqc:
+    priority: 10
     output: "reports/multiqc_report.html"
     input:
         multiqc_inputs,
@@ -171,6 +173,7 @@ rule multiqc:
 
 
 rule multiqc_no_scaling:
+    priority: 10
     output: "reports/multiqc_report_unscaled.html"
     input:
         multiqc_unscaled_inputs,
@@ -584,6 +587,7 @@ for group in scaling_groups:
 
 
 rule summarize_scaling_factors:
+    priority: 10
     output:
         info="reports/scalinginfo.txt"
     input:
@@ -598,6 +602,7 @@ rule summarize_scaling_factors:
 
 
 rule summary_scaled_barplots:
+    priority: 10
     output:
         plot=expand("reports/scaling_barplot.{ext}", ext=["png", "pdf"]),
         grouped_plot=expand("reports/grouped_scaling_barplot.{ext}", ext=["png", "pdf"]),
@@ -768,6 +773,7 @@ rule pooled_stats:
 
 
 rule replicate_stats_summary:
+    priority: 10
     output:
         txt="reports/stats_summary.txt"
     input:
@@ -798,6 +804,7 @@ rule replicate_stats_summary:
 
 
 rule pooled_stats_summary:
+    priority: 10
     output:
         txt="reports/pooled_stats_summary.txt"
     input:
