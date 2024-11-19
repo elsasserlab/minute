@@ -1,5 +1,16 @@
 # minute Changelog
 
+## v0.10.1
+
+### Bug fixes
+
+* Fix edge-case exception when trying to convert NA value to int after parsing
+an empty insert size metrics file.
+
+### Other
+
+* Prioritize reporting rules over bigWig generation rules.
+
 ## v0.10.0
 
 ### Features
