@@ -22,6 +22,11 @@ Alternative target rules:
                     is a computationally expensive step that can significantly
                     increase runtime on highly multiplexed minute runs.
 
+    quick           Runs the default pipeline but reduces the amount of bigWig
+                    files produced. Only scaled bigWig files will be generated
+                    for treatments, and unscaled bigWig files will be generated
+                    for controls.
+
     pooled_only     Runs the default pipeline, but only generates the bigWig
                     files corresponding to the pooled replicates.
 

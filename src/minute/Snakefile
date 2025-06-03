@@ -90,6 +90,10 @@ multiqc_inputs = (
 )
 
 unscaled_bigwigs = expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=maplibs)
+bigwigs_minimal = (
+    expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=controls)
+    + expand("final/bigwig/{maplib.name}.scaled.bw", maplib=treatments)
+)
 bigwigs = (
     unscaled_bigwigs
     + expand("final/bigwig/{maplib.name}.scaled.bw", maplib=treatments)
@@ -115,7 +119,7 @@ rule final:
 
 rule quick:
     input:
-        bigwigs,
+        bigwigs_minimal,
         "reports/multiqc_report.html",
 
 
