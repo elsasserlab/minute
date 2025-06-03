@@ -1,5 +1,15 @@
 # minute Changelog
 
+## v0.11.0
+
+### Features
+
+* Introduced pooled_only_minimal rule that generates only scaled replicate pool
+for treatments, and unscaled replicate pools for controls in the groups.tsv
+file.
+* Rule quick now produces the equivalent minimal set of bigWig (independent 
+replicate files: scaled for treatment, unscaled for controls).
+
 ## v0.10.1
 
 ### Bug fixes
