@@ -25,6 +25,10 @@ Alternative target rules:
     pooled_only     Runs the default pipeline, but only generates the bigWig
                     files corresponding to the pooled replicates.
 
+    pooled_only_minimal Runs the default pipeline, but it only generates bigWig
+                    files for the pools present in groups.tsv, scaled for
+                    treatment libraries and unscaled for the controls.
+
     mapq_bigwigs    Generates an additional set of bigWig files where each final
                     BAM alignment is also filtered for mapping quality. This
                     requires a mapping_quality_bigwig parameter value higher

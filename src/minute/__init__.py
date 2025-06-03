@@ -167,6 +167,16 @@ def flatten_scaling_groups(groups: Iterable[ScalingGroup], controls: bool = True
                     yield maplib
 
 
+def get_all_controls(groups: Iterable[ScalingGroup]) -> Iterable[LibraryWithReference]:
+    seen = set()
+    maplibs = list()
+    for group in groups:
+        for pair in group.normalization_pairs:
+            if pair.control.name not in seen:
+                seen.add(pair.control.name)
+                yield pair.control
+
+
 def get_all_pools(maplibs: Iterable[LibraryWithReference]) -> List[LibraryWithReference]:
     return [m for m in maplibs if isinstance(m.library, Pool)]
 
