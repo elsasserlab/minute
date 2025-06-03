@@ -58,6 +58,7 @@ multiplexed_libraries = [lib for lib in libraries if isinstance(lib, Multiplexed
 direct_libraries = [lib for lib in libraries if not isinstance(lib, MultiplexedReplicate)]
 scaling_groups = list(read_scaling_groups("groups.tsv", libraries))
 maplibs = list(flatten_scaling_groups(scaling_groups))
+treatments = list(flatten_scaling_groups(scaling_groups, controls = False))
 controls = list(get_all_controls(scaling_groups))
 
 
@@ -91,23 +92,19 @@ multiqc_inputs = (
 unscaled_bigwigs = expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=maplibs)
 bigwigs = (
     unscaled_bigwigs
-    + expand("final/bigwig/{maplib.name}.scaled.bw",
-        maplib=flatten_scaling_groups(scaling_groups, controls=False))
+    + expand("final/bigwig/{maplib.name}.scaled.bw", maplib=treatments)
 )
 mapping_quality_bigwigs = (
     expand("final/bigwig/{maplib.name}.unscaled.mapq.bw", maplib=maplibs)
-    + expand("final/bigwig/{maplib.name}.scaled.mapq.bw",
-        maplib=flatten_scaling_groups(scaling_groups, controls=False))
+    + expand("final/bigwig/{maplib.name}.scaled.mapq.bw", maplib=treatments)
 )
 pool_bigwigs = (
     expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=get_all_pools(maplibs))
-    + expand("final/bigwig/{maplib.name}.scaled.bw",
-        maplib=get_all_pools(flatten_scaling_groups(scaling_groups, controls=False)))
+    + expand("final/bigwig/{maplib.name}.scaled.bw", maplib=get_all_pools(treatments))
 )
 pool_bigwigs_minimal = (
     expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=get_all_pools(controls))
-    + expand("final/bigwig/{maplib.name}.scaled.bw",
-        maplib=get_all_pools(flatten_scaling_groups(scaling_groups, controls=False)))
+    + expand("final/bigwig/{maplib.name}.scaled.bw", maplib=get_all_pools(treatments))
 )
 
 rule final:
