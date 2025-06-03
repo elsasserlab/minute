@@ -72,6 +72,10 @@ Alternative to this are:
 
 **`full`**. Includes computationally costly extra QC: deepTools fingerprint.
 
+**`quick`**. Runs the default pipeline but reduces the amount of bigWig files
+produced. Only scaled bigWig files will be generated for treatments, and
+unscaled bigWig files will be generated for controls.
+
 **`no_bigwigs`**. Runs demultiplexing and alignment, but no bigWig generation. This
 still produces full scaling information and MultiQC report, and it is very quick
 to run.
@@ -81,6 +85,10 @@ This requires a `mapping_quality_bigwig` parameter value higher than zero in the
 `minute.yaml` configuration.
 
 **`pooled_only`**. Produces only the bigWigs for the pooled replicates.
+
+**`pooled_only_minimal`**. Runs the default pipeline, but it only generates
+bigWig files for the pools present in groups.tsv, scaled for treatment libraries
+and unscaled for the controls.
 
 **`no_bigwigs`**. Runs the default pipeline but skips the bigWig generation
 entirely. This is useful for a quick check on QC metrics, since the rest of the
