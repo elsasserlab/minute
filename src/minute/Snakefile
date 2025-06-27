@@ -18,6 +18,7 @@ from minute import (
     map_fastq_prefix_to_list_of_libraries,
     make_references,
     flatten_scaling_groups,
+    get_all_controls,
     get_all_pools,
     get_all_replicates,
     get_maplib_by_name,
@@ -57,6 +58,9 @@ multiplexed_libraries = [lib for lib in libraries if isinstance(lib, Multiplexed
 direct_libraries = [lib for lib in libraries if not isinstance(lib, MultiplexedReplicate)]
 scaling_groups = list(read_scaling_groups("groups.tsv", libraries))
 maplibs = list(flatten_scaling_groups(scaling_groups))
+treatments = list(flatten_scaling_groups(scaling_groups, controls = False))
+controls = list(get_all_controls(scaling_groups))
+
 
 if not is_snakemake_calling_itself():
     print(format_metadata_overview(references, libraries, maplibs, scaling_groups), file=sys.stderr)
@@ -86,20 +90,25 @@ multiqc_inputs = (
 )
 
 unscaled_bigwigs = expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=maplibs)
+bigwigs_minimal = (
+    expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=controls)
+    + expand("final/bigwig/{maplib.name}.scaled.bw", maplib=treatments)
+)
 bigwigs = (
     unscaled_bigwigs
-    + expand("final/bigwig/{maplib.name}.scaled.bw",
-        maplib=flatten_scaling_groups(scaling_groups, controls=False))
+    + expand("final/bigwig/{maplib.name}.scaled.bw", maplib=treatments)
 )
 mapping_quality_bigwigs = (
     expand("final/bigwig/{maplib.name}.unscaled.mapq.bw", maplib=maplibs)
-    + expand("final/bigwig/{maplib.name}.scaled.mapq.bw",
-        maplib=flatten_scaling_groups(scaling_groups, controls=False))
+    + expand("final/bigwig/{maplib.name}.scaled.mapq.bw", maplib=treatments)
 )
 pool_bigwigs = (
     expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=get_all_pools(maplibs))
-    + expand("final/bigwig/{maplib.name}.scaled.bw",
-        maplib=get_all_pools(flatten_scaling_groups(scaling_groups, controls=False)))
+    + expand("final/bigwig/{maplib.name}.scaled.bw", maplib=get_all_pools(treatments))
+)
+pool_bigwigs_minimal = (
+    expand("final/bigwig/{maplib.name}.unscaled.bw", maplib=get_all_pools(controls))
+    + expand("final/bigwig/{maplib.name}.scaled.bw", maplib=get_all_pools(treatments))
 )
 
 rule final:
@@ -110,7 +119,7 @@ rule final:
 
 rule quick:
     input:
-        bigwigs,
+        bigwigs_minimal,
         "reports/multiqc_report.html",
 
 
@@ -123,6 +132,12 @@ rule full:
 rule pooled_only:
     input:
         pool_bigwigs,
+        "reports/multiqc_report.html"
+
+
+rule pooled_only_minimal:
+    input:
+        pool_bigwigs_minimal,
         "reports/multiqc_report.html"
 
 

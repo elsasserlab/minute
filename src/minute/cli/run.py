@@ -22,8 +22,17 @@ Alternative target rules:
                     is a computationally expensive step that can significantly
                     increase runtime on highly multiplexed minute runs.
 
+    quick           Runs the default pipeline but reduces the amount of bigWig
+                    files produced. Only scaled bigWig files will be generated
+                    for treatments, and unscaled bigWig files will be generated
+                    for controls.
+
     pooled_only     Runs the default pipeline, but only generates the bigWig
                     files corresponding to the pooled replicates.
+
+    pooled_only_minimal Runs the default pipeline, but it only generates bigWig
+                    files for the pools present in groups.tsv, scaled for
+                    treatment libraries and unscaled for the controls.
 
     mapq_bigwigs    Generates an additional set of bigWig files where each final
                     BAM alignment is also filtered for mapping quality. This
