@@ -1,5 +1,12 @@
 # minute Changelog
 
+## v0.11.1
+
+### Other
+
+* Conda environment specification updated to point to more recent versions of
+bowtie2, MultiQC, and cutadapt.
+
 ## v0.11.0
 
 ### Features
