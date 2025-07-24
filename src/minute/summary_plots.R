@@ -208,17 +208,25 @@ get_scaling_groups_number <- function(scaling_df) {
   length(levels(as.factor(scaling_df$scaling_group)))
 }
 
+get_conditions_number <- function(scaling_df) {
+  length(levels(as.factor(scaling_df$condition)))
+}
+
 scalinginfo <- snakemake@input[[1]]
 scaling_df <- read.table(scalinginfo, sep="\t", header = T, comment.char = "")
 ngroups <- get_scaling_groups_number(scaling_df)
+nconditions <- get_conditions_number(calculate_ratios_and_groups(scaling_df))
 
-single_width <- 5
+single_width <- max(4, 0.75 * nconditions)
 
 # Account for longer names
 single_height <- 9
 
 panel_width <- single_width * 2
 panel_height <- ceiling(ngroups / 2) * single_height
+
+bc_rep_height <- max(8, ngroups + (nconditions / 4))
+bc_rep_width <- max(12, 0.75 * nconditions)
 
 ggsave(snakemake@output[[1]],
        plot = minute_scaled_replicates_barplot(scaling_df),
@@ -250,31 +258,31 @@ ggsave(snakemake@output[[4]],
 
 ggsave(snakemake@output[[5]],
        plot = barcode_representation_barplot(scaling_df),
-       width = 12,
-       height = 7,
+       width = bc_rep_width,
+       height = bc_rep_height,
        dpi = 150,
        units = "cm",
        bg = "white")
 
 ggsave(snakemake@output[[6]],
        plot = barcode_representation_barplot(scaling_df),
-       width = 12,
-       height = 7,
+       width = bc_rep_width,
+       height = bc_rep_height,
        dpi = 300,
        units = "cm")
 
 ggsave(snakemake@output[[7]],
        plot = barcode_representation_barplot(scaling_df, percent = TRUE),
-       width = 12,
-       height = 7,
+       width = bc_rep_width,
+       height = bc_rep_height,
        dpi = 150,
        units = "cm",
        bg = "white")
 
 ggsave(snakemake@output[[8]],
        plot = barcode_representation_barplot(scaling_df, percent = TRUE),
-       width = 12,
-       height = 7,
+       width = bc_rep_width,
+       height = bc_rep_height,
        dpi = 300,
        units = "cm")
 
