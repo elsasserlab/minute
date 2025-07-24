@@ -279,7 +279,7 @@ ggsave(snakemake@output[[8]],
        units = "cm")
 
 write.table(
-  calculate_ratios_and_groups(scaling_df),
+  calculate_ratios_and_groups(scaling_df) %>% dplyr::select(!c("rep_grp", "is_pool", "rep_number", "reference", "condition")),
   file = snakemake@output[[9]],
   sep = "\t",
   quote = FALSE,
