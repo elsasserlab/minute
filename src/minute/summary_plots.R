@@ -10,8 +10,7 @@ suppressMessages(library(dplyr))
 #' @param scaling_file scalinginfo.txt out of the minute pipeline
 #'
 #' @return A ggplot
-minute_scaled_grouped_barplot <- function(scaling_file) {
-  scaling <- read.table(scaling_file, sep="\t", header = T, comment.char = "")
+minute_scaled_grouped_barplot <- function(scaling) {
   scaling <- calculate_ratios_and_groups(scaling)
   
   ggplot(data = scaling) + 
@@ -32,8 +31,7 @@ minute_scaled_grouped_barplot <- function(scaling_file) {
 #' @param scaling_file scalinginfo.txt out of the minute pipeline
 #'
 #' @return A ggplot
-minute_scaled_replicates_barplot <- function(scaling_file) {
-  scaling <- read.table(scaling_file, sep="\t", header = T, comment.char = "")
+minute_scaled_replicates_barplot <- function(scaling) {
   scaling <- calculate_ratios_and_groups(scaling)
   ggplot(data = scaling) + 
     aes(x = replace_delims_with_spaces(rep_grp), y = msr, fill = as.factor(rep_number)) +
@@ -57,8 +55,7 @@ minute_scaled_replicates_barplot <- function(scaling_file) {
 #' @param scaling_file scalinginfo.txt out of the minute pipeline
 #'
 #' @return A ggplot showing barcode representation
-barcode_representation_barplot <- function(scaling_file, percent = FALSE) {
-  scaling <- read.table(scaling_file, sep="\t", header = T, comment.char = "")
+barcode_representation_barplot <- function(scaling, percent = FALSE) {
   scaling <- calculate_ratios_and_groups(scaling)
 
   df_input <- scaling %>%
@@ -207,13 +204,13 @@ stacked_replicate_groups_plot <- function(df_combined, value_column) {
 #' Calculate number of groups in a scalinginfo.txt file
 #' 
 #' @param scaling_file Path to scalinginfo.txt file
-get_scaling_groups_number <- function(scaling_file) {
-  scaling <- read.table(scaling_file, sep="\t", header = T, comment.char = "")
-  length(levels(as.factor(scaling$scaling_group)))
+get_scaling_groups_number <- function(scaling_df) {
+  length(levels(as.factor(scaling_df$scaling_group)))
 }
 
 scalinginfo <- snakemake@input[[1]]
-ngroups <- get_scaling_groups_number(scalinginfo)
+scaling_df <- read.table(scalinginfo, sep="\t", header = T, comment.char = "")
+ngroups <- get_scaling_groups_number(scaling_df)
 
 single_width <- 5
 
@@ -224,35 +221,35 @@ panel_width <- single_width * 2
 panel_height <- ceiling(ngroups / 2) * single_height
 
 ggsave(snakemake@output[[1]],
-       plot = minute_scaled_replicates_barplot(scalinginfo),
+       plot = minute_scaled_replicates_barplot(scaling_df),
        width = panel_width,
        height = panel_height,
        dpi = 150,
        units = "cm")
 
 ggsave(snakemake@output[[2]],
-       plot = minute_scaled_replicates_barplot(scalinginfo),
+       plot = minute_scaled_replicates_barplot(scaling_df),
        width = panel_width,
        height = panel_height,
        dpi = 300,
        units = "cm")
 
 ggsave(snakemake@output[[3]],
-       plot = minute_scaled_grouped_barplot(scalinginfo),
+       plot = minute_scaled_grouped_barplot(scaling_df),
        width = panel_width,
        height = panel_height,
        dpi = 150,
        units = "cm")
 
 ggsave(snakemake@output[[4]],
-       plot = minute_scaled_grouped_barplot(scalinginfo),
+       plot = minute_scaled_grouped_barplot(scaling_df),
        width = panel_width,
        height = panel_height,
        dpi = 300,
        units = "cm")
 
 ggsave(snakemake@output[[5]],
-       plot = barcode_representation_barplot(scalinginfo),
+       plot = barcode_representation_barplot(scaling_df),
        width = 12,
        height = 7,
        dpi = 150,
@@ -260,14 +257,14 @@ ggsave(snakemake@output[[5]],
        bg = "white")
 
 ggsave(snakemake@output[[6]],
-       plot = barcode_representation_barplot(scalinginfo),
+       plot = barcode_representation_barplot(scaling_df),
        width = 12,
        height = 7,
        dpi = 300,
        units = "cm")
 
 ggsave(snakemake@output[[7]],
-       plot = barcode_representation_barplot(scalinginfo, percent = TRUE),
+       plot = barcode_representation_barplot(scaling_df, percent = TRUE),
        width = 12,
        height = 7,
        dpi = 150,
@@ -275,12 +272,15 @@ ggsave(snakemake@output[[7]],
        bg = "white")
 
 ggsave(snakemake@output[[8]],
-       plot = barcode_representation_barplot(scalinginfo, percent = TRUE),
+       plot = barcode_representation_barplot(scaling_df, percent = TRUE),
        width = 12,
        height = 7,
        dpi = 300,
        units = "cm")
 
 write.table(
-  calculate_ratios_and_groups(read.table(scalinginfo, sep="\t", header = TRUE, comment.char = "")),
-  file = snakemake@output[[9]], sep = "\t", quote = FALSE, row.names = FALSE)
+  calculate_ratios_and_groups(scaling_df),
+  file = snakemake@output[[9]],
+  sep = "\t",
+  quote = FALSE,
+  row.names = FALSE)
