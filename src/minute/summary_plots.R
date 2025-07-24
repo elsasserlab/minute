@@ -281,3 +281,6 @@ ggsave(snakemake@output[[8]],
        dpi = 300,
        units = "cm")
 
+write.table(
+  calculate_ratios_and_groups(read.table(scalinginfo, sep="\t", header = TRUE, comment.char = "")),
+  file = snakemake@output[[9]], sep = "\t", quote = FALSE, row.names = FALSE)
