@@ -604,7 +604,7 @@ for group in scaling_groups:
 rule summarize_scaling_factors:
     priority: 10
     output:
-        info="reports/scalinginfo.txt"
+        info=temp("reports/scalinginfo_raw.txt")
     input:
         factors=["stats/8-scalinginfo/{scaling_group_name}.txt".format(scaling_group_name=group.name) for group in scaling_groups]
     run:
@@ -622,9 +622,10 @@ rule summary_scaled_barplots:
         plot=expand("reports/scaling_barplot.{ext}", ext=["png", "pdf"]),
         grouped_plot=expand("reports/grouped_scaling_barplot.{ext}", ext=["png", "pdf"]),
         barcode_plot=expand("reports/barcode_representation.{ext}", ext=["png", "pdf"]),
-        barcode_plot_perc=expand("reports/barcode_representation_perc.{ext}", ext=["png", "pdf"])
+        barcode_plot_perc=expand("reports/barcode_representation_perc.{ext}", ext=["png", "pdf"]),
+        info_updated="reports/scalinginfo.txt"
     input:
-        info="reports/scalinginfo.txt"
+        info="reports/scalinginfo_raw.txt"
     script:
         "summary_plots.R"
 

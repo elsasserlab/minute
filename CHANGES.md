@@ -1,5 +1,18 @@
 # minute Changelog
 
+## v0.12.0
+
+### Features
+
+* Scaling info now contains scaled calculated values that are shown in the 
+summary bar plots.
+
+### Bug fixes
+
+* Summary plots scale better on highly demultiplexed runs.
+* Barplots show bars in the case where there is only one replicate per condition.
+
+
 ## v0.11.1
 
 ### Other

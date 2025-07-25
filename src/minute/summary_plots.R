@@ -10,14 +10,19 @@ suppressMessages(library(dplyr))
 #' @param scaling_file scalinginfo.txt out of the minute pipeline
 #'
 #' @return A ggplot
-minute_scaled_grouped_barplot <- function(scaling_file) {
-  scaling <- read.table(scaling_file, sep="\t", header = T, comment.char = "")
+minute_scaled_grouped_barplot <- function(scaling) {
   scaling <- calculate_ratios_and_groups(scaling)
   
+  bars_df <- scaling[scaling$is_pool == TRUE, ]
+  # Make sure we plot the bars if we have single replicates
+  if(any(scaling$is_pool) == FALSE) {
+      bars_df <- scaling
+  }
+
   ggplot(data = scaling) + 
     aes(x = replace_delims_with_spaces(rep_grp), y = msr, color = scaling_group, fill = scaling_group) +
     geom_point(data = scaling[scaling$is_pool == FALSE, ]) +
-    geom_bar(data = scaling[scaling$is_pool == TRUE, ], stat = "identity", alpha = 0.5) +
+    geom_bar(data = bars_df, stat = "identity", alpha = 0.5) +
     style_minute_barplot() +
     theme(legend.position = "none") +
     scale_x_discrete(labels = scales::label_wrap(20)) +
@@ -32,8 +37,7 @@ minute_scaled_grouped_barplot <- function(scaling_file) {
 #' @param scaling_file scalinginfo.txt out of the minute pipeline
 #'
 #' @return A ggplot
-minute_scaled_replicates_barplot <- function(scaling_file) {
-  scaling <- read.table(scaling_file, sep="\t", header = T, comment.char = "")
+minute_scaled_replicates_barplot <- function(scaling) {
   scaling <- calculate_ratios_and_groups(scaling)
   ggplot(data = scaling) + 
     aes(x = replace_delims_with_spaces(rep_grp), y = msr, fill = as.factor(rep_number)) +
@@ -57,8 +61,7 @@ minute_scaled_replicates_barplot <- function(scaling_file) {
 #' @param scaling_file scalinginfo.txt out of the minute pipeline
 #'
 #' @return A ggplot showing barcode representation
-barcode_representation_barplot <- function(scaling_file, percent = FALSE) {
-  scaling <- read.table(scaling_file, sep="\t", header = T, comment.char = "")
+barcode_representation_barplot <- function(scaling, percent = FALSE) {
   scaling <- calculate_ratios_and_groups(scaling)
 
   df_input <- scaling %>%
@@ -207,15 +210,20 @@ stacked_replicate_groups_plot <- function(df_combined, value_column) {
 #' Calculate number of groups in a scalinginfo.txt file
 #' 
 #' @param scaling_file Path to scalinginfo.txt file
-get_scaling_groups_number <- function(scaling_file) {
-  scaling <- read.table(scaling_file, sep="\t", header = T, comment.char = "")
-  length(levels(as.factor(scaling$scaling_group)))
+get_scaling_groups_number <- function(scaling_df) {
+  length(levels(as.factor(scaling_df$scaling_group)))
+}
+
+get_conditions_number <- function(scaling_df) {
+  length(levels(as.factor(scaling_df$condition)))
 }
 
 scalinginfo <- snakemake@input[[1]]
-ngroups <- get_scaling_groups_number(scalinginfo)
+scaling_df <- read.table(scalinginfo, sep="\t", header = T, comment.char = "")
+ngroups <- get_scaling_groups_number(scaling_df)
+nconditions <- get_conditions_number(calculate_ratios_and_groups(scaling_df))
 
-single_width <- 5
+single_width <- max(4, 0.75 * nconditions)
 
 # Account for longer names
 single_height <- 9
@@ -223,61 +231,70 @@ single_height <- 9
 panel_width <- single_width * 2
 panel_height <- ceiling(ngroups / 2) * single_height
 
+bc_rep_height <- max(8, ngroups + (nconditions / 4))
+bc_rep_width <- max(12, 0.75 * nconditions)
+
 ggsave(snakemake@output[[1]],
-       plot = minute_scaled_replicates_barplot(scalinginfo),
+       plot = minute_scaled_replicates_barplot(scaling_df),
        width = panel_width,
        height = panel_height,
        dpi = 150,
        units = "cm")
 
 ggsave(snakemake@output[[2]],
-       plot = minute_scaled_replicates_barplot(scalinginfo),
+       plot = minute_scaled_replicates_barplot(scaling_df),
        width = panel_width,
        height = panel_height,
        dpi = 300,
        units = "cm")
 
 ggsave(snakemake@output[[3]],
-       plot = minute_scaled_grouped_barplot(scalinginfo),
+       plot = minute_scaled_grouped_barplot(scaling_df),
        width = panel_width,
        height = panel_height,
        dpi = 150,
        units = "cm")
 
 ggsave(snakemake@output[[4]],
-       plot = minute_scaled_grouped_barplot(scalinginfo),
+       plot = minute_scaled_grouped_barplot(scaling_df),
        width = panel_width,
        height = panel_height,
        dpi = 300,
        units = "cm")
 
 ggsave(snakemake@output[[5]],
-       plot = barcode_representation_barplot(scalinginfo),
-       width = 12,
-       height = 7,
+       plot = barcode_representation_barplot(scaling_df),
+       width = bc_rep_width,
+       height = bc_rep_height,
        dpi = 150,
        units = "cm",
        bg = "white")
 
 ggsave(snakemake@output[[6]],
-       plot = barcode_representation_barplot(scalinginfo),
-       width = 12,
-       height = 7,
+       plot = barcode_representation_barplot(scaling_df),
+       width = bc_rep_width,
+       height = bc_rep_height,
        dpi = 300,
        units = "cm")
 
 ggsave(snakemake@output[[7]],
-       plot = barcode_representation_barplot(scalinginfo, percent = TRUE),
-       width = 12,
-       height = 7,
+       plot = barcode_representation_barplot(scaling_df, percent = TRUE),
+       width = bc_rep_width,
+       height = bc_rep_height,
        dpi = 150,
        units = "cm",
        bg = "white")
 
 ggsave(snakemake@output[[8]],
-       plot = barcode_representation_barplot(scalinginfo, percent = TRUE),
-       width = 12,
-       height = 7,
+       plot = barcode_representation_barplot(scaling_df, percent = TRUE),
+       width = bc_rep_width,
+       height = bc_rep_height,
        dpi = 300,
        units = "cm")
 
+write.table(
+  calculate_ratios_and_groups(scaling_df) %>% dplyr::select(!c("rep_grp", "is_pool", "rep_number", "reference", "condition")) %>% rename("#reads"="X.reads"),
+  file = snakemake@output[[9]],
+  sep = "\t",
+  quote = FALSE,
+  row.names = FALSE)
