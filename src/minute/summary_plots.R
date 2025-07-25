@@ -13,10 +13,16 @@ suppressMessages(library(dplyr))
 minute_scaled_grouped_barplot <- function(scaling) {
   scaling <- calculate_ratios_and_groups(scaling)
   
+  bars_df <- scaling[scaling$is_pool == TRUE, ]
+  # Make sure we plot the bars if we have single replicates
+  if(any(scaling$is_pool) == FALSE) {
+      bars_df <- scaling
+  }
+
   ggplot(data = scaling) + 
     aes(x = replace_delims_with_spaces(rep_grp), y = msr, color = scaling_group, fill = scaling_group) +
     geom_point(data = scaling[scaling$is_pool == FALSE, ]) +
-    geom_bar(data = scaling[scaling$is_pool == TRUE, ], stat = "identity", alpha = 0.5) +
+    geom_bar(data = bars_df, stat = "identity", alpha = 0.5) +
     style_minute_barplot() +
     theme(legend.position = "none") +
     scale_x_discrete(labels = scales::label_wrap(20)) +
