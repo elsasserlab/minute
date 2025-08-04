@@ -1,5 +1,13 @@
 # minute Changelog
 
+## v0.12.1
+
+### Bug fixes
+
+* Temporary pinned click to version 8.2.1. Recent release 8.2.2 seems to
+introduce an issue with default config values that in turn made MultiQC step
+(multiqc v1.30) fail.
+
 ## v0.12.0
 
 ### Features
