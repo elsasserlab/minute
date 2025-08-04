@@ -23,3 +23,5 @@ dependencies:
   - r-base >=4.0.0
   - r-ggplot2 >=3.3.0
   - r-dplyr >=1.0.0
+  # click 8.2.2 release crashes MultiQC 1.30
+  - click =8.2.1
